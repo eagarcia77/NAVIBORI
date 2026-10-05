@@ -60,10 +60,14 @@ export default function TwinSandbox() {
     const observer = new ResizeObserver(resize);
     observer.observe(host);
 
+    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+
     let frame = 0;
     function animate() {
       frame = requestAnimationFrame(animate);
-      scene.rotation.y += 0.0018;
+      if (!reducedMotion.matches) {
+        scene.rotation.y += 0.0018;
+      }
       renderer.render(scene, camera);
     }
     animate();
