@@ -19,7 +19,7 @@ export default function VrPage() {
           <h2>Digital Twin</h2>
           <p>El visor 3D utilizará la misma geometría, POI, eventos y comercios del modelo espacial canónico.</p>
           <p>Hasta recibir el plano validado del piloto, NAVIBORI no mostrará una reconstrucción ficticia del Mercado Metropolitano.</p>
-          <button type="button" disabled>Abrir Twin</button>
+          <Link href="/twin" className="xr-action-link">Abrir sandbox 3D</Link>
           <p className="xr-note">El modo 3D de navegador será el fallback para dispositivos sin WebXR.</p>
         </section>
       </section>
