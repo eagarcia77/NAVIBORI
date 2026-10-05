@@ -6,11 +6,9 @@ export interface XrCapabilities {
   cameraApiAvailable: boolean;
 }
 
-interface XrNavigator extends Navigator {
-  xr?: {
-    isSessionSupported(mode: "immersive-ar" | "immersive-vr"): Promise<boolean>;
-  };
-}
+type MinimalXrSystem = {
+  isSessionSupported(mode: XRSessionMode): Promise<boolean>;
+};
 
 export async function detectXrCapabilities(): Promise<XrCapabilities> {
   if (typeof window === "undefined" || typeof navigator === "undefined") {
@@ -23,17 +21,17 @@ export async function detectXrCapabilities(): Promise<XrCapabilities> {
     };
   }
 
-  const xrNavigator = navigator as XrNavigator;
-  const webXrAvailable = Boolean(xrNavigator.xr);
+  const xrSystem = navigator.xr as MinimalXrSystem | undefined;
+  const webXrAvailable = Boolean(xrSystem);
 
   let immersiveAr = false;
   let immersiveVr = false;
 
-  if (xrNavigator.xr) {
+  if (xrSystem) {
     try {
       [immersiveAr, immersiveVr] = await Promise.all([
-        xrNavigator.xr.isSessionSupported("immersive-ar"),
-        xrNavigator.xr.isSessionSupported("immersive-vr")
+        xrSystem.isSessionSupported("immersive-ar"),
+        xrSystem.isSessionSupported("immersive-vr")
       ]);
     } catch {
       immersiveAr = false;
