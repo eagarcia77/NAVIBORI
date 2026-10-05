@@ -30,8 +30,8 @@ export default function Home() {
 
       <nav className="bottom-nav" aria-label="Navegación principal">
         <button className="active" type="button">Explorar</button>
-        <button type="button">AR</button>
-        <button type="button">VR</button>
+        <Link href="/ar">AR</Link>
+        <Link href="/vr">VR</Link>
         <button type="button">Guardados</button>
         <button type="button">Perfil</button>
       </nav>
