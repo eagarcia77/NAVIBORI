@@ -16,8 +16,7 @@ export default function NaviboriMap() {
       container: mapNode.current,
       style: "https://demotiles.maplibre.org/style.json",
       center: JUANA_DIAZ,
-      zoom: 13.5,
-      attributionControl: true
+      zoom: 13.5
     });
 
     map.addControl(new maplibregl.NavigationControl({ showCompass: true }), "top-right");
