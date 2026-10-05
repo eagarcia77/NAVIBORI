@@ -1,0 +1,10 @@
+{
+  "name": "NAVIBORI XR",
+  "short_name": "NAVIBORI",
+  "description": "Puerto Rico Spatial Experience Platform",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#005F8F",
+  "lang": "es-PR"
+}
