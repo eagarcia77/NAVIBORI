@@ -1,3 +1,4 @@
+import Link from "next/link";
 import NaviboriMap from "@/components/navibori-map";
 
 export default function Home() {
@@ -9,9 +10,12 @@ export default function Home() {
           <h1>NAVIBORI <span>XR</span></h1>
           <p className="pilot">Pilot 001 · Mercado Metropolitano de Juana Díaz</p>
         </div>
-        <button className="guide-button" type="button" aria-label="Abrir Navi, guía de NAVIBORI">
-          Navi
-        </button>
+        <div className="topbar-actions">
+          <Link className="studio-link" href="/studio">Studio</Link>
+          <button className="guide-button" type="button" aria-label="Abrir Navi, guía de NAVIBORI">
+            Navi
+          </button>
+        </div>
       </header>
 
       <section className="search-row" aria-label="Explorar">
