@@ -1,0 +1,53 @@
+:root {
+  --ocean: #005f8f;
+  --teal: #00a98f;
+  --coral: #ff7a59;
+  --sand: #f4f5f6;
+  --ink: #103245;
+  --muted: #667884;
+  --line: #d9e1e5;
+  --surface: #ffffff;
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; min-height: 100%; background: #eef3f5; color: var(--ink); }
+body { font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+button, input { font: inherit; }
+button { min-height: 44px; cursor: pointer; }
+button:focus-visible, input:focus-visible { outline: 3px solid var(--coral); outline-offset: 2px; }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+
+.app-shell { width: min(1180px, 100%); margin: 0 auto; background: var(--surface); min-height: 100vh; }
+.topbar { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 20px; border-bottom: 1px solid var(--line); }
+.eyebrow { margin: 0 0 4px; color: var(--muted); font-size: .78rem; text-transform: uppercase; letter-spacing: .09em; }
+h1 { margin: 0; font-size: clamp(1.7rem, 5vw, 2.5rem); letter-spacing: -.04em; }
+h1 span { color: var(--teal); }
+.pilot { margin: 6px 0 0; color: var(--muted); }
+.guide-button { border: 0; border-radius: 999px; padding: 0 18px; background: var(--ocean); color: white; font-weight: 800; }
+
+.search-row { display: grid; grid-template-columns: 1fr auto; gap: 10px; padding: 14px 20px; }
+.search input { width: 100%; min-height: 48px; border: 1px solid var(--line); border-radius: 14px; padding: 0 16px; font-size: 16px; }
+.search-row > button { border: 1px solid var(--line); background: white; border-radius: 14px; padding: 0 16px; }
+
+.map-panel { position: relative; margin: 0 20px 18px; border: 1px solid var(--line); border-radius: 22px; overflow: hidden; background: var(--sand); }
+.map-toolbar { display: flex; gap: 8px; overflow-x: auto; padding: 12px; border-bottom: 1px solid var(--line); background: white; }
+.map-toolbar button { white-space: nowrap; border: 1px solid var(--line); border-radius: 999px; background: white; padding: 0 14px; color: var(--ink); }
+.map-toolbar button.selected { background: var(--ocean); color: white; border-color: var(--ocean); }
+.map-canvas { height: 60vh; min-height: 420px; }
+.status-card { position: absolute; left: 14px; bottom: 14px; display: grid; gap: 4px; width: min(390px, calc(100% - 28px)); padding: 14px 16px; border-radius: 16px; background: rgba(255,255,255,.95); border: 1px solid var(--line); }
+.status-card span { color: var(--muted); font-size: .9rem; }
+
+.bottom-nav { display: grid; grid-template-columns: repeat(5, 1fr); border-top: 1px solid var(--line); background: white; }
+.bottom-nav button { border: 0; background: transparent; color: var(--muted); padding: 10px 4px; }
+.bottom-nav button.active { color: var(--ocean); font-weight: 800; }
+
+@media (max-width: 620px) {
+  .topbar { align-items: flex-start; }
+  .eyebrow { max-width: 240px; }
+  .search-row { grid-template-columns: 1fr; }
+  .search-row > button { width: 100%; }
+  .map-panel { margin-inline: 10px; }
+  .map-canvas { height: 56vh; min-height: 380px; }
+  .bottom-nav { position: sticky; bottom: 0; }
+  .bottom-nav button { font-size: .78rem; }
+}
