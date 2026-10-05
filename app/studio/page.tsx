@@ -1,5 +1,6 @@
 import Link from "next/link";
 import StudioWorkspace from "@/components/studio/studio-workspace";
+import GeoJsonImporter from "@/components/studio/geojson-importer";
 
 export default function StudioPage() {
   return (
@@ -13,6 +14,7 @@ export default function StudioPage() {
         <Link className="studio-back-link" href="/">Volver al mapa</Link>
       </header>
       <StudioWorkspace />
+      <div className="studio-import-section"><GeoJsonImporter /></div>
     </main>
   );
 }
