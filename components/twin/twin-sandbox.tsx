@@ -9,6 +9,7 @@ export default function TwinSandbox() {
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
+    const host: HTMLDivElement = container;
 
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(55, 1, 0.1, 100);
@@ -17,7 +18,7 @@ export default function TwinSandbox() {
 
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    container.appendChild(renderer.domElement);
+    host.appendChild(renderer.domElement);
 
     const floor = new THREE.Mesh(
       new THREE.BoxGeometry(7, 0.2, 5),
@@ -48,8 +49,8 @@ export default function TwinSandbox() {
     scene.add(directional);
 
     function resize() {
-      const width = container.clientWidth;
-      const height = Math.max(320, container.clientHeight);
+      const width = host.clientWidth;
+      const height = Math.max(320, host.clientHeight);
       renderer.setSize(width, height, false);
       camera.aspect = width / height;
       camera.updateProjectionMatrix();
@@ -57,7 +58,7 @@ export default function TwinSandbox() {
 
     resize();
     const observer = new ResizeObserver(resize);
-    observer.observe(container);
+    observer.observe(host);
 
     let frame = 0;
     function animate() {
