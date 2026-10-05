@@ -133,3 +133,7 @@ h1 span { color: var(--teal); }
   .twin-page-grid { grid-template-columns: 1fr; }
   .twin-sandbox { min-height: 380px; }
 }
+
+.revision-actions { display: flex; flex-wrap: wrap; gap: 8px; margin: 14px 0; }
+.revision-actions button { min-height: 44px; border: 1px solid var(--line); border-radius: 10px; padding: 0 14px; background: white; color: var(--ink); }
+.revision-actions button:disabled { opacity: .45; cursor: not-allowed; }
