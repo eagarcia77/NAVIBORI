@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import * as maplibregl from "maplibre-gl";
 import RealityIntensityControl from "@/components/cockpit/reality-intensity";
+import XenoSignalStrip from "@/components/cockpit/xeno-signal-strip";
 
 const JUANA_DIAZ_REFERENCE: [number, number] = [-66.506, 18.052];
 
@@ -134,6 +135,8 @@ export default function NaviboriMap() {
           </span>
         </div>
       </div>
+
+      <XenoSignalStrip />
 
       <div className="map-toolbar" aria-label="Categorías del mapa">
         <button type="button" className="selected">Todos</button>
