@@ -270,3 +270,25 @@ h1 span { color: var(--teal); }
 .reality-intensity small{color:#9fb2bf;font-size:.68rem;line-height:1.35}
 @media(max-width:920px){.reality-intensity{left:12px;right:12px;top:auto;bottom:92px;width:auto}.cockpit-hud{display:none}}
 @media(max-width:560px){.reality-intensity-track{grid-template-columns:repeat(2,minmax(0,1fr))}.reality-intensity{bottom:88px}}
+
+.navibori-brand{display:flex;align-items:center}
+.navibori-brand img{display:block;width:min(320px,68vw);height:auto;object-fit:contain}
+.navibori-brand.compact img{width:min(210px,54vw)}
+.brand-stack{display:grid;gap:3px}
+.navi-guide{position:fixed;right:20px;bottom:76px;z-index:45}
+.navi-guide-trigger{display:flex;align-items:center;gap:9px;min-height:52px;padding:5px 12px 5px 5px;border:1px solid rgba(0,95,143,.22);border-radius:999px;background:rgba(255,255,255,.96);color:var(--ink);box-shadow:0 14px 34px rgba(16,50,69,.18);backdrop-filter:blur(12px)}
+.navi-guide-trigger img{width:42px;height:42px;border-radius:50%;object-fit:cover;object-position:center top}
+.navi-guide-trigger span{display:grid;text-align:left}.navi-guide-trigger strong{font-size:.88rem}.navi-guide-trigger small{font-size:.67rem;color:var(--muted)}
+.navi-guide-panel{position:absolute;right:0;bottom:62px;width:min(390px,calc(100vw - 28px));display:grid;grid-template-columns:112px 1fr;gap:14px;padding:14px;border:1px solid rgba(0,95,143,.2);border-radius:20px;background:rgba(255,255,255,.98);box-shadow:0 24px 64px rgba(16,50,69,.22)}
+.navi-guide-panel>img{width:112px;height:132px;object-fit:cover;object-position:center top;border-radius:16px}
+.navi-guide-panel h2{margin:2px 0 6px;font-size:1.02rem}.navi-guide-panel p:not(.eyebrow){margin:0;color:var(--muted);font-size:.82rem;line-height:1.4}
+.navi-guide-actions{display:flex;flex-wrap:wrap;gap:7px;margin-top:10px}.navi-guide-actions button{min-height:36px;padding:0 10px;border:1px solid var(--line);border-radius:10px;background:white;color:var(--ink);font-size:.75rem}
+@media(max-width:620px){
+  .navibori-brand img{width:min(250px,78vw)}
+  .navi-guide{right:10px;bottom:68px}
+  .navi-guide-panel{grid-template-columns:82px 1fr;width:min(340px,calc(100vw - 20px))}
+  .navi-guide-panel>img{width:82px;height:102px}
+}
+@media(prefers-reduced-motion:reduce){
+  .navi-guide,.navi-guide-panel,.navi-guide-trigger{scroll-behavior:auto;transition:none!important;animation:none!important}
+}
