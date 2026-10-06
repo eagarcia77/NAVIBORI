@@ -1,5 +1,7 @@
 import Link from "next/link";
 import NovaLab from "@/components/nova/nova-lab";
+import NaviboriBrand from "@/components/brand/navibori-brand";
+import NaviGuide from "@/components/brand/navi-guide";
 
 export const metadata = {
   title: "NOVA Lab | NAVIBORI",
@@ -11,6 +13,7 @@ export default function NovaPage() {
     <main className="nova-shell">
       <header className="nova-header">
         <div>
+          <NaviboriBrand compact />
           <p className="eyebrow">NAVIBORI NOVA LAB</p>
           <h1>Beyond the map.</h1>
           <p>
@@ -21,6 +24,7 @@ export default function NovaPage() {
         <Link href="/">Volver al mapa</Link>
       </header>
       <NovaLab />
+      <NaviGuide mode="nova" />
     </main>
   );
 }
