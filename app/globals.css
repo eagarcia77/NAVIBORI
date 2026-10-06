@@ -156,3 +156,22 @@ h1 span { color: var(--teal); }
 .revision-card { border: 1px solid var(--line); border-radius: 12px; padding: 14px; background: white; }
 .revision-card > div:first-child { display: flex; justify-content: space-between; gap: 12px; align-items: center; }
 .status-chip { border: 1px solid var(--line); border-radius: 999px; padding: 3px 8px; font-size: .78rem; }
+
+
+.nova-shell { min-height: 100dvh; padding: 24px; background: radial-gradient(circle at top, #15263a 0, #08121c 42%, #05090e 100%); color: #f3f8fb; }
+.nova-header { width: min(1180px,100%); margin: 0 auto 24px; display:flex; justify-content:space-between; gap:24px; align-items:flex-start; }
+.nova-header h1 { margin:.25rem 0; font-size:clamp(2.3rem,7vw,5rem); line-height:.95; }
+.nova-header a { color:#d9fbff; }
+.nova-panel { width:min(1180px,100%); margin:0 auto 18px; border:1px solid rgba(205,239,255,.18); border-radius:22px; padding:22px; background:rgba(10,27,42,.72); backdrop-filter:blur(14px); }
+.nova-cap-grid,.nova-module-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(210px,1fr)); gap:12px; margin-top:16px; }
+.nova-cap,.nova-module { border:1px solid rgba(205,239,255,.14); border-radius:16px; padding:14px; background:rgba(255,255,255,.045); }
+.nova-cap { display:grid; grid-template-columns:auto 1fr; column-gap:9px; }
+.nova-cap small { grid-column:2; opacity:.7; }
+.nova-module-top { display:flex; gap:10px; justify-content:space-between; align-items:flex-start; }
+.nova-module ul { margin:10px 0 0; padding-left:18px; opacity:.76; }
+.nova-maturity { font-size:.72rem; text-transform:uppercase; letter-spacing:.06em; border:1px solid currentColor; border-radius:999px; padding:3px 7px; }
+.nova-maturity.ready { color:#7cf0c8; }
+.nova-maturity.pilot { color:#8bd3ff; }
+.nova-maturity.experimental { color:#ffd47a; }
+.nova-maturity.research { color:#e6a2ff; }
+@media (max-width:640px){ .nova-header{display:block}.nova-header a{display:inline-block;margin-top:12px}.nova-shell{padding:16px}.nova-panel{padding:16px} }
