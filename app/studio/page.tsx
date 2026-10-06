@@ -31,9 +31,10 @@ export default async function StudioPage() {
   }
 
   const venue = memberships[0];
+  type Membership = (typeof memberships)[number];
   const venueRoles = memberships
-    .filter((membership) => membership.venue_id === venue.venue_id)
-    .map((membership) => membership.role);
+    .filter((membership: Membership) => membership.venue_id === venue.venue_id)
+    .map((membership: Membership) => membership.role);
 
   const { data: revisions, error: revisionsError } = await supabase
     .from("spatial_revisions")
