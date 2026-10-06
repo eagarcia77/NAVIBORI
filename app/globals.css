@@ -175,3 +175,12 @@ h1 span { color: var(--teal); }
 .nova-maturity.experimental { color:#ffd47a; }
 .nova-maturity.research { color:#e6a2ff; }
 @media (max-width:640px){ .nova-header{display:block}.nova-header a{display:inline-block;margin-top:12px}.nova-shell{padding:16px}.nova-panel{padding:16px} }
+
+.nova-heading-row { display:flex; align-items:flex-start; justify-content:space-between; gap:16px; }
+.nova-scan-state { font-size:.72rem; letter-spacing:.09em; border:1px solid rgba(205,239,255,.24); border-radius:999px; padding:6px 9px; color:#9bf7e3; }
+.nova-os-grid { display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:10px; margin-top:16px; }
+.nova-os-grid article { display:grid; gap:8px; min-height:118px; padding:14px; border:1px solid rgba(205,239,255,.14); border-radius:16px; background:rgba(255,255,255,.045); }
+.nova-os-grid strong { font-size:1.05rem; }
+.nova-os-grid span { opacity:.72; font-size:.86rem; }
+@media (max-width:900px){ .nova-os-grid{grid-template-columns:repeat(2,minmax(0,1fr));} }
+@media (max-width:520px){ .nova-os-grid{grid-template-columns:1fr;} .nova-heading-row{display:block}.nova-scan-state{display:inline-block;margin-top:8px;} }
