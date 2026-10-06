@@ -2,21 +2,12 @@
 
 import { useEffect, useState } from "react";
 import { novaModules } from "@/lib/innovation/nova-registry";
+import {
+  detectNovaDeviceCapabilities,
+  type NovaDeviceCapabilities
+} from "@/lib/innovation/device-capabilities";
 
-interface DeviceCapabilities {
-  secureContext: boolean;
-  webXr: boolean;
-  immersiveAr: boolean;
-  immersiveVr: boolean;
-  webGpu: boolean;
-  webNfc: boolean;
-  geolocation: boolean;
-  deviceOrientation: boolean;
-  vibration: boolean;
-  share: boolean;
-}
-
-const emptyCapabilities: DeviceCapabilities = {
+const emptyCapabilities: NovaDeviceCapabilities = {
   secureContext: false,
   webXr: false,
   immersiveAr: false,
@@ -24,56 +15,31 @@ const emptyCapabilities: DeviceCapabilities = {
   webGpu: false,
   webNfc: false,
   geolocation: false,
-  deviceOrientation: false,
+  orientation: false,
+  motion: false,
   vibration: false,
-  share: false
+  share: false,
+  xrAnchorsSurface: false,
+  xrHitTestSurface: false,
+  xrDepthSurface: false,
+  xrLightEstimationSurface: false
 };
 
 export default function NovaLab() {
-  const [caps, setCaps] = useState<DeviceCapabilities>(emptyCapabilities);
+  const [caps, setCaps] = useState<NovaDeviceCapabilities>(emptyCapabilities);
+  const [ready, setReady] = useState(false);
 
   useEffect(() => {
     let active = true;
-
-    async function detect() {
-      const nav = navigator as Navigator & {
-        xr?: { isSessionSupported(mode: "immersive-ar" | "immersive-vr"): Promise<boolean> };
-        gpu?: unknown;
-      };
-      const win = window as Window & { NDEFReader?: unknown; DeviceOrientationEvent?: unknown };
-
-      let immersiveAr = false;
-      let immersiveVr = false;
-
-      if (nav.xr) {
-        try {
-          [immersiveAr, immersiveVr] = await Promise.all([
-            nav.xr.isSessionSupported("immersive-ar"),
-            nav.xr.isSessionSupported("immersive-vr")
-          ]);
-        } catch {
-          immersiveAr = false;
-          immersiveVr = false;
-        }
-      }
-
+    void detectNovaDeviceCapabilities().then((result) => {
       if (!active) return;
-      setCaps({
-        secureContext: window.isSecureContext,
-        webXr: Boolean(nav.xr),
-        immersiveAr,
-        immersiveVr,
-        webGpu: Boolean(nav.gpu),
-        webNfc: Boolean(win.NDEFReader),
-        geolocation: "geolocation" in navigator,
-        deviceOrientation: "DeviceOrientationEvent" in window,
-        vibration: "vibrate" in navigator,
-        share: "share" in navigator
-      });
-    }
+      setCaps(result);
+      setReady(true);
+    });
 
-    void detect();
-    return () => { active = false; };
+    return () => {
+      active = false;
+    };
   }, []);
 
   const capabilities = [
@@ -84,18 +50,29 @@ export default function NovaLab() {
     ["WebGPU", caps.webGpu],
     ["Web NFC", caps.webNfc],
     ["Geolocation API", caps.geolocation],
-    ["Device orientation", caps.deviceOrientation],
+    ["Device orientation", caps.orientation],
+    ["Motion sensors", caps.motion],
     ["Vibration", caps.vibration],
-    ["Web Share", caps.share]
+    ["Web Share", caps.share],
+    ["XR Anchors surface", caps.xrAnchorsSurface],
+    ["XR Hit Test surface", caps.xrHitTestSurface],
+    ["XR Depth surface", caps.xrDepthSurface],
+    ["XR Lighting surface", caps.xrLightEstimationSurface]
   ] as const;
 
   return (
     <>
       <section className="nova-panel" aria-labelledby="nova-device-title">
-        <h2 id="nova-device-title">Device Reality Scanner</h2>
+        <div className="nova-heading-row">
+          <div>
+            <p className="eyebrow">REALITY CHECK</p>
+            <h2 id="nova-device-title">Device Reality Scanner</h2>
+          </div>
+          <span className="nova-scan-state">{ready ? "SCAN COMPLETE" : "SCANNING…"}</span>
+        </div>
         <p>
-          Detección local y progresiva. No solicita ubicación, cámara, NFC ni sensores;
-          solamente identifica si la superficie de API existe.
+          Detección local y progresiva. No solicita ubicación, cámara, NFC, Bluetooth,
+          micrófono ni sensores; únicamente verifica superficies de API disponibles.
         </p>
         <div className="nova-cap-grid">
           {capabilities.map(([label, available]) => (
@@ -108,11 +85,23 @@ export default function NovaLab() {
         </div>
       </section>
 
+      <section className="nova-panel" aria-labelledby="nova-os-title">
+        <p className="eyebrow">SPATIAL INTELLIGENCE OS</p>
+        <h2 id="nova-os-title">SEE → THINK → PREDICT → PROJECT → REMEMBER</h2>
+        <div className="nova-os-grid">
+          <article><strong>SEE</strong><span>sensores, anchors, mapa, observaciones</span></article>
+          <article><strong>THINK</strong><span>semántica, intención, accesibilidad, contexto</span></article>
+          <article><strong>PREDICT</strong><span>flujo, congestión, escenarios y planificación</span></article>
+          <article><strong>PROJECT</strong><span>2D, Twin, AR, VR, audio y portales</span></article>
+          <article><strong>REMEMBER</strong><span>revisiones, procedencia, cambios y memoria espacial</span></article>
+        </div>
+      </section>
+
       <section className="nova-panel" aria-labelledby="nova-modules-title">
         <h2 id="nova-modules-title">NOVA Engines</h2>
         <p>
-          Portafolio experimental. “Ready” significa que la arquitectura puede construirse
-          ahora; no significa que existan datos oficiales del piloto.
+          “Ready” indica que la arquitectura puede construirse hoy; no significa que existan
+          datos oficiales o hardware compatible en el piloto.
         </p>
         <div className="nova-module-grid">
           {novaModules.map((module) => (
@@ -132,11 +121,12 @@ export default function NovaLab() {
       </section>
 
       <section className="nova-panel">
-        <h2>Prime Directive</h2>
+        <p className="eyebrow">PRIME DIRECTIVE</p>
+        <h2>Innovación extrema, verdad espacial primero.</h2>
         <p>
           Ningún experimento NOVA puede fabricar geometría oficial, rutas de emergencia,
-          accesibilidad o condiciones operacionales. Lo extraordinario sigue subordinado
-          a datos verificables, consentimiento y accesibilidad.
+          accesibilidad, ocupación o condiciones operacionales. Lo extraordinario sigue
+          subordinado a datos verificables, consentimiento, accesibilidad y fallback.
         </p>
       </section>
     </>
