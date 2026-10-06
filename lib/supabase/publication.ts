@@ -21,7 +21,7 @@ export async function runSpatialPublicationAction(
 ): Promise<PublicationActionResult> {
   const { data, error } = await client.rpc(action, {
     p_revision_id: revisionId,
-    p_note: note ?? null
+    p_note: note ?? undefined
   });
 
   if (error) {
