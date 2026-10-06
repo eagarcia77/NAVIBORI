@@ -53,6 +53,13 @@ export type Database = {
             foreignKeyName: "audit_logs_revision_id_fkey"
             columns: ["revision_id"]
             isOneToOne: false
+            referencedRelation: "published_spatial_revisions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "audit_logs_revision_id_fkey"
+            columns: ["revision_id"]
+            isOneToOne: false
             referencedRelation: "spatial_revisions"
             referencedColumns: ["id"]
           },
@@ -402,6 +409,13 @@ export type Database = {
             foreignKeyName: "publication_events_revision_id_fkey"
             columns: ["revision_id"]
             isOneToOne: false
+            referencedRelation: "published_spatial_revisions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "publication_events_revision_id_fkey"
+            columns: ["revision_id"]
+            isOneToOne: false
             referencedRelation: "spatial_revisions"
             referencedColumns: ["id"]
           },
@@ -621,6 +635,13 @@ export type Database = {
             foreignKeyName: "spatial_revisions_supersedes_revision_id_fkey"
             columns: ["supersedes_revision_id"]
             isOneToOne: false
+            referencedRelation: "published_spatial_revisions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "spatial_revisions_supersedes_revision_id_fkey"
+            columns: ["supersedes_revision_id"]
+            isOneToOne: false
             referencedRelation: "spatial_revisions"
             referencedColumns: ["id"]
           },
@@ -705,7 +726,28 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      published_spatial_revisions: {
+        Row: {
+          entity_id: string | null
+          entity_type: string | null
+          id: string | null
+          payload: Json | null
+          published_at: string | null
+          published_by: string | null
+          revision_number: number | null
+          source_label: string | null
+          venue_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "spatial_revisions_venue_id_fkey"
+            columns: ["venue_id"]
+            isOneToOne: false
+            referencedRelation: "venues"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       approve_spatial_revision: {
@@ -765,6 +807,18 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      get_published_spatial_dataset: {
+        Args: { p_venue_id: string }
+        Returns: {
+          entity_id: string
+          entity_type: string
+          id: string
+          payload: Json
+          published_at: string
+          revision_number: number
+          source_label: string
+        }[]
       }
       my_venue_memberships: {
         Args: never
