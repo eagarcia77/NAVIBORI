@@ -4,6 +4,7 @@ export interface NovaDeviceCapabilities {
   immersiveAr: boolean;
   immersiveVr: boolean;
   webGpu: boolean;
+  webNn: boolean;
   webNfc: boolean;
   geolocation: boolean;
   orientation: boolean;
@@ -28,6 +29,7 @@ export async function detectNovaDeviceCapabilities(): Promise<NovaDeviceCapabili
       immersiveAr: false,
       immersiveVr: false,
       webGpu: false,
+      webNn: false,
       webNfc: false,
       geolocation: false,
       orientation: false,
@@ -41,7 +43,7 @@ export async function detectNovaDeviceCapabilities(): Promise<NovaDeviceCapabili
     };
   }
 
-  const nav = navigator as Navigator & { xr?: XrSystemLike; gpu?: unknown };
+  const nav = navigator as Navigator & { xr?: XrSystemLike; gpu?: unknown; ml?: unknown };
   const win = window as Window & {
     NDEFReader?: unknown;
     XRAnchor?: unknown;
@@ -71,6 +73,7 @@ export async function detectNovaDeviceCapabilities(): Promise<NovaDeviceCapabili
     immersiveAr,
     immersiveVr,
     webGpu: Boolean(nav.gpu),
+    webNn: Boolean(nav.ml),
     webNfc: Boolean(win.NDEFReader),
     geolocation: "geolocation" in navigator,
     orientation: "DeviceOrientationEvent" in window,
