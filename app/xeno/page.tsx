@@ -29,6 +29,46 @@ export default function XenoPage() {
         <span>Place + Semantics + Time + Device + Consent + Accessibility → Best Reality</span>
       </section>
 
+      <section className="xeno-principle">
+        <strong>XENO CORE SYSTEMS</strong>
+        <span>Reality Aura · Spatial Neural Field · Dimensional Portal Engine</span>
+      </section>
+
+      <section className="xeno-grid" aria-label="XENO systems">
+        <article className="xeno-card">
+          <div className="xeno-card-head">
+            <h2>Reality Aura</h2>
+            <span className="xeno-readiness web-now">web-now</span>
+          </div>
+          <p>
+            Convierte estados publicados —operacionales, eventos, accesibilidad, cultura y predicción aprobada—
+            en una presencia visual/sonora sin confundir predicción con hechos.
+          </p>
+        </article>
+
+        <article className="xeno-card">
+          <div className="xeno-card-head">
+            <h2>Spatial Neural Field</h2>
+            <span className="xeno-readiness research">research</span>
+          </div>
+          <p>
+            Inferencia local con preferencia WebNN → WebGPU → Worker CPU. Nunca modifica geometría
+            autoritativa y requiere consentimiento si utiliza sensores.
+          </p>
+        </article>
+
+        <article className="xeno-card">
+          <div className="xeno-card-head">
+            <h2>Dimensional Portal Engine</h2>
+            <span className="xeno-readiness hardware-pilot">hardware-pilot</span>
+          </div>
+          <p>
+            Selecciona el renderer apropiado para panorama 360, Digital Twin o Gaussian Splat.
+            El contenido del portal nunca sustituye el grafo oficial de navegación.
+          </p>
+        </article>
+      </section>
+
       <section className="xeno-grid" aria-label="XENO concepts">
         {xenoConcepts.map((concept) => (
           <article className="xeno-card" key={concept.id}>
