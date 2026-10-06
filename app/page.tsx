@@ -11,7 +11,7 @@ export default function Home() {
           <p className="pilot">Pilot 001 · Mercado Metropolitano de Juana Díaz</p>
         </div>
         <div className="topbar-actions">
-          <Link className="studio-link" href="/nova">NOVA</Link>\n          <Link className="studio-link" href="/studio">Studio</Link>
+          <Link className="studio-link" href="/xeno">XENO</Link>\n          <Link className="studio-link" href="/nova">NOVA</Link>\n          <Link className="studio-link" href="/studio">Studio</Link>
           <button className="guide-button" type="button" aria-label="Abrir Navi, guía de NAVIBORI">
             Navi
           </button>
@@ -31,7 +31,7 @@ export default function Home() {
       <nav className="bottom-nav" aria-label="Navegación principal">
         <button className="active" type="button">Explorar</button>
         <Link href="/ar">AR</Link>
-        <Link href="/vr">VR</Link>\n        <Link href="/nova">NOVA</Link>
+        <Link href="/vr">VR</Link>\n        <Link href="/nova">NOVA</Link>\n        <Link href="/xeno">XENO</Link>
         <button type="button">Guardados</button>
         <button type="button">Perfil</button>
       </nav>
