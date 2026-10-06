@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import * as maplibregl from "maplibre-gl";
+import RealityIntensityControl from "@/components/cockpit/reality-intensity";
 
 const JUANA_DIAZ_REFERENCE: [number, number] = [-66.506, 18.052];
 
@@ -138,6 +139,8 @@ export default function NaviboriMap() {
             </span>
           </aside>
         )}
+
+        <RealityIntensityControl />
 
         <aside className="status-card" aria-live="polite">
           <strong>Juana Díaz · Pilot 001</strong>
