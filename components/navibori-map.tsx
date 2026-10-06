@@ -14,16 +14,45 @@ export default function NaviboriMap() {
   const mapRef = useRef<maplibregl.Map | null>(null);
   const [mode, setMode] = useState<RealityMode>("2d");
   const [timeOpen, setTimeOpen] = useState(false);
+  const [basemapState, setBasemapState] = useState<"loading" | "ready" | "error">("loading");
 
   useEffect(() => {
     if (!mapNode.current || mapRef.current) return;
 
     const map = new maplibregl.Map({
       container: mapNode.current,
-      style: "https://tiles.openfreemap.org/styles/liberty",
+      style: {
+        version: 8,
+        sources: {
+          carto: {
+            type: "raster",
+            tiles: [
+              "https://a.basemaps.cartocdn.com/light_all/{z}/{x}/{y}@2x.png",
+              "https://b.basemaps.cartocdn.com/light_all/{z}/{x}/{y}@2x.png",
+              "https://c.basemaps.cartocdn.com/light_all/{z}/{x}/{y}@2x.png"
+            ],
+            tileSize: 512,
+            attribution: "© OpenStreetMap contributors © CARTO"
+          }
+        },
+        layers: [
+          {
+            id: "carto-raster",
+            type: "raster",
+            source: "carto",
+            minzoom: 0,
+            maxzoom: 20
+          }
+        ]
+      },
       center: JUANA_DIAZ_REFERENCE,
       zoom: 13.5,
       canvasContextAttributes: { antialias: true }
+    });
+
+    map.on("load", () => setBasemapState("ready"));
+    map.on("error", (event) => {
+      if (event?.error) setBasemapState("error");
     });
 
     map.addControl(new maplibregl.NavigationControl({ showCompass: true }), "top-right");
@@ -98,7 +127,13 @@ export default function NaviboriMap() {
         <div className="cockpit-signal" aria-label="Estado de verdad espacial">
           <span className="cockpit-pulse" aria-hidden="true" />
           <strong>Spatial Truth</strong>
-          <span>Draft pilot · verified interior pending</span>
+          <span>
+            {basemapState === "ready"
+              ? "Basemap online · verified interior pending"
+              : basemapState === "error"
+                ? "Basemap degraded · retry/network check"
+                : "Basemap loading…"}
+          </span>
         </div>
       </div>
 
