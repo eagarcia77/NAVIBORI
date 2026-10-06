@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { novaModules } from "@/lib/innovation/nova-registry";
+import { detectContinuityCapabilities, type ContinuityCapabilities } from "@/lib/innovation/continuity-capabilities";
 import {
   detectNovaDeviceCapabilities,
   type NovaDeviceCapabilities
@@ -27,6 +28,17 @@ const emptyCapabilities: NovaDeviceCapabilities = {
 
 export default function NovaLab() {
   const [caps, setCaps] = useState<NovaDeviceCapabilities>(emptyCapabilities);
+  const [continuity, setContinuity] = useState<ContinuityCapabilities>({
+    serviceWorker: false,
+    backgroundSync: false,
+    broadcastChannel: false,
+    webRtc: false,
+    webTransport: false,
+    webCodecs: false,
+    webBluetooth: false,
+    webShare: false,
+    online: false
+  });
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
@@ -34,6 +46,7 @@ export default function NovaLab() {
     void detectNovaDeviceCapabilities().then((result) => {
       if (!active) return;
       setCaps(result);
+      setContinuity(detectContinuityCapabilities());
       setReady(true);
     });
 
@@ -94,6 +107,42 @@ export default function NovaLab() {
           <article><strong>PREDICT</strong><span>flujo, congestión, escenarios y planificación</span></article>
           <article><strong>PROJECT</strong><span>2D, Twin, AR, VR, audio y portales</span></article>
           <article><strong>REMEMBER</strong><span>revisiones, procedencia, cambios y memoria espacial</span></article>
+        </div>
+      </section>
+
+      <section className="nova-panel" aria-labelledby="continuity-title">
+        <p className="eyebrow">CONTINUITY FABRIC</p>
+        <h2 id="continuity-title">Una experiencia que sobrevive al cambio de red, dispositivo y realidad.</h2>
+        <div className="nova-cap-grid">
+          {[
+            ["Service Worker", continuity.serviceWorker],
+            ["Background Sync", continuity.backgroundSync],
+            ["Broadcast Channel", continuity.broadcastChannel],
+            ["WebRTC P2P", continuity.webRtc],
+            ["WebTransport HTTP/3", continuity.webTransport],
+            ["WebCodecs", continuity.webCodecs],
+            ["Web Bluetooth", continuity.webBluetooth],
+            ["Web Share", continuity.webShare],
+            ["Online", continuity.online]
+          ].map(([label, available]) => (
+            <article className="nova-cap" key={String(label)}>
+              <span aria-hidden="true">{available ? "●" : "○"}</span>
+              <strong>{label}</strong>
+              <small>{available ? "detectado" : "fallback requerido"}</small>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section className="nova-panel" aria-labelledby="firewall-title">
+        <p className="eyebrow">REALITY FIREWALL</p>
+        <h2 id="firewall-title">La IA propone acciones; NAVIBORI decide si pueden ejecutarse.</h2>
+        <div className="nova-os-grid">
+          <article><strong>1</strong><span>Validar tipo de comando</span></article>
+          <article><strong>2</strong><span>Validar entidad publicada</span></article>
+          <article><strong>3</strong><span>Validar permisos y consentimiento</span></article>
+          <article><strong>4</strong><span>Clasificar riesgo/safety</span></article>
+          <article><strong>5</strong><span>Confirmar y ejecutar o bloquear</span></article>
         </div>
       </section>
 
