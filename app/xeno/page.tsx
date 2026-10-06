@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { xenoConcepts } from "@/lib/innovation/xeno-registry";
+import NaviboriBrand from "@/components/brand/navibori-brand";
+import NaviGuide from "@/components/brand/navi-guide";
 
 export const metadata = {
   title: "XENO Lab | NAVIBORI",
@@ -11,6 +13,7 @@ export default function XenoPage() {
     <main className="xeno-shell">
       <header className="xeno-hero">
         <div>
+          <NaviboriBrand compact />
           <p className="eyebrow">NAVIBORI XENO RESEARCH LAB</p>
           <h1>Diseñado como si viniera del futuro. Construido con tecnología terrestre verificable.</h1>
           <p>
@@ -94,6 +97,7 @@ export default function XenoPage() {
           reemplazar geometría validada, rutas accesibles oficiales ni procedimientos de emergencia.
         </p>
       </section>
+      <NaviGuide mode="xeno" />
     </main>
   );
 }
