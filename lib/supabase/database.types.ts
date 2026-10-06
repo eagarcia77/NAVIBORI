@@ -734,6 +734,48 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      create_spatial_revision: {
+        Args: {
+          p_entity_id: string
+          p_entity_type: string
+          p_payload: Json
+          p_source_label: string
+          p_venue_id: string
+        }
+        Returns: {
+          created_at: string
+          created_by: string
+          entity_id: string
+          entity_type: string
+          id: string
+          payload: Json
+          published_at: string | null
+          published_by: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          revision_number: number
+          source_label: string
+          status: string
+          supersedes_revision_id: string | null
+          venue_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "spatial_revisions"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      my_venue_memberships: {
+        Args: never
+        Returns: {
+          role: string
+          venue_id: string
+          venue_name: string
+          venue_slug: string
+          venue_status: string
+        }[]
+      }
       publish_spatial_revision: {
         Args: { p_note?: string; p_revision_id: string }
         Returns: {
