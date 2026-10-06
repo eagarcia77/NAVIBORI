@@ -1,4 +1,5 @@
 import { createServerClient } from "@supabase/ssr";
+import type { Database } from "@/lib/supabase/database.types";
 import { cookies } from "next/headers";
 
 function requirePublicConfig() {
@@ -16,7 +17,7 @@ export async function createClient() {
   const cookieStore = await cookies();
   const { url, key } = requirePublicConfig();
 
-  return createServerClient(url, key, {
+  return createServerClient<Database>(url, key, {
     cookies: {
       getAll() {
         return cookieStore.getAll();
