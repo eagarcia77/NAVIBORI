@@ -315,3 +315,19 @@ h1 span { color: var(--teal); }
   .navibori-wordmark span,.navibori-wordmark strong{font-size:1.55rem}
   .navibori-brand-copy small{display:none}
 }
+
+.navibori-brand.wordmark-only{gap:0}
+.navibori-brand.wordmark-only .navibori-brand-symbol{display:none}
+.navibori-brand.wordmark-only .navibori-wordmark span,
+.navibori-brand.wordmark-only .navibori-wordmark strong{font-size:clamp(1.7rem,3vw,2.35rem)}
+.xeno-signal-strip{display:grid;grid-template-columns:minmax(150px,1.25fr) repeat(4,minmax(90px,1fr));gap:1px;border-bottom:1px solid var(--line);background:var(--line)}
+.xeno-signal-strip>div{min-height:46px;padding:7px 10px;background:#fbfdfe;display:grid;align-content:center}
+.xeno-signal-strip>div:not(.signal-navi) span{font-size:.58rem;letter-spacing:.08em;color:var(--muted)}
+.xeno-signal-strip>div:not(.signal-navi) strong{font-size:.78rem;color:var(--ink)}
+.signal-navi{display:grid!important;grid-template-columns:32px 1fr;column-gap:8px;align-items:center!important}
+.signal-navi img{width:32px;height:32px;border-radius:50%;object-fit:cover;object-position:center 18%;border:2px solid rgba(0,169,143,.28)}
+.signal-navi span{display:grid}.signal-navi strong{font-size:.8rem}.signal-navi small{font-size:.63rem;color:var(--muted)}
+@media(max-width:760px){
+  .xeno-signal-strip{grid-template-columns:1fr 1fr}
+  .xeno-signal-strip .signal-navi{grid-column:1/-1}
+}
