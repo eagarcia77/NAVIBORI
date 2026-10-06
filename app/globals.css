@@ -253,3 +253,20 @@ h1 span { color: var(--teal); }
  .cockpit-hud{top:12px;left:12px;width:min(220px,calc(100% - 84px))}
  .cockpit-hud>div:nth-child(n+2){display:none}
 }
+
+.reality-intensity{position:absolute;z-index:8;right:18px;top:18px;width:min(390px,calc(100% - 300px));display:grid;gap:10px;padding:14px;border:1px solid rgba(255,255,255,.42);border-radius:16px;background:rgba(9,27,40,.9);color:white;backdrop-filter:blur(14px);box-shadow:0 18px 45px rgba(0,0,0,.16)}
+.reality-intensity-head{display:flex;justify-content:space-between;gap:14px;align-items:flex-start}
+.reality-intensity-head>div:first-child{display:grid;gap:2px}
+.reality-intensity-head>div:first-child span{font-size:.62rem;letter-spacing:.1em;color:#8be4d0}
+.reality-intensity-head strong{font-size:1rem}
+.xeno-local-telemetry{display:flex;gap:5px}
+.xeno-local-telemetry span{min-width:30px;padding:4px 6px;text-align:center;border:1px solid rgba(255,255,255,.18);border-radius:999px;font-size:.62rem;color:#708491}
+.xeno-local-telemetry span.on{color:#8df2d2;border-color:rgba(141,242,210,.42);box-shadow:0 0 0 3px rgba(141,242,210,.06)}
+.reality-intensity-track{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
+.reality-intensity-track button{display:grid;gap:3px;justify-items:center;min-height:52px;padding:7px 4px;border:1px solid rgba(255,255,255,.15);border-radius:12px;background:rgba(255,255,255,.05);color:#d7e3ea;font-size:.69rem;text-transform:capitalize}
+.reality-intensity-track button span{display:grid;place-items:center;width:20px;height:20px;border-radius:50%;background:rgba(255,255,255,.08);font-size:.63rem}
+.reality-intensity-track button.active{border-color:#82e4ce;background:rgba(0,169,143,.16);color:white}
+.reality-intensity p{margin:0;font-size:.79rem;color:#f0f7fa}
+.reality-intensity small{color:#9fb2bf;font-size:.68rem;line-height:1.35}
+@media(max-width:920px){.reality-intensity{left:12px;right:12px;top:auto;bottom:92px;width:auto}.cockpit-hud{display:none}}
+@media(max-width:560px){.reality-intensity-track{grid-template-columns:repeat(2,minmax(0,1fr))}.reality-intensity{bottom:88px}}
