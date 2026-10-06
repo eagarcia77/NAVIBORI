@@ -65,7 +65,9 @@ alter table public.audit_logs enable row level security;
 
 -- Helper functions are SECURITY DEFINER so policies can check membership
 -- without recursively exposing membership rows.
-create or replace function public.has_venue_role(
+create schema if not exists navibori_private;
+
+create or replace function navibori_private.has_venue_role(
   target_venue uuid,
   accepted_roles text[]
 )
@@ -73,26 +75,28 @@ returns boolean
 language sql
 stable
 security definer
-set search_path = public
-as $$
-  select exists (
-    select 1
-    from public.venue_memberships vm
-    where vm.venue_id = target_venue
-      and vm.user_id = auth.uid()
-      and vm.role = any(accepted_roles)
-  );
-$$;
+set search_path = public, navibori_private
+as $
+  select auth.uid() is not null
+    and exists (
+      select 1
+      from public.venue_memberships vm
+      where vm.venue_id = target_venue
+        and vm.user_id = auth.uid()
+        and vm.role = any(accepted_roles)
+    );
+$;
 
-revoke all on function public.has_venue_role(uuid, text[]) from public;
-grant execute on function public.has_venue_role(uuid, text[]) to authenticated;
+revoke all on function navibori_private.has_venue_role(uuid, text[]) from public;
+grant usage on schema navibori_private to authenticated;
+grant execute on function navibori_private.has_venue_role(uuid, text[]) to authenticated;
 
 -- Editors/managers can read revisions for their venue.
 create policy "venue staff can read spatial revisions"
 on public.spatial_revisions for select
 to authenticated
 using (
-  public.has_venue_role(
+  navibori_private.has_venue_role(
     venue_id,
     array['platform_owner','municipality_admin','venue_manager','content_editor','analytics_viewer']
   )
@@ -105,7 +109,7 @@ to authenticated
 with check (
   status = 'draft'
   and created_by = auth.uid()
-  and public.has_venue_role(
+  and navibori_private.has_venue_role(
     venue_id,
     array['platform_owner','municipality_admin','venue_manager','content_editor']
   )
@@ -119,7 +123,7 @@ create policy "venue staff can read publication events"
 on public.publication_events for select
 to authenticated
 using (
-  public.has_venue_role(
+  navibori_private.has_venue_role(
     venue_id,
     array['platform_owner','municipality_admin','venue_manager','content_editor','analytics_viewer']
   )
@@ -129,7 +133,7 @@ create policy "venue staff can read audit logs"
 on public.audit_logs for select
 to authenticated
 using (
-  public.has_venue_role(
+  navibori_private.has_venue_role(
     venue_id,
     array['platform_owner','municipality_admin','venue_manager','analytics_viewer']
   )
@@ -138,3 +142,14 @@ using (
 -- Production recommendation:
 -- create RPC functions submit_revision(), approve_revision(), publish_revision()
 -- and revoke raw mutation privileges for workflow-controlled fields.
+
+
+-- Explicit Data API grants (required for new Supabase projects).
+-- RLS remains the row-level authorization layer.
+grant select, insert on public.spatial_revisions to authenticated;
+grant select on public.publication_events to authenticated;
+grant select on public.audit_logs to authenticated;
+
+revoke all on public.spatial_revisions from anon;
+revoke all on public.publication_events from anon;
+revoke all on public.audit_logs from anon;
