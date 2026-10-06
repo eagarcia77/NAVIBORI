@@ -225,3 +225,21 @@ using ((select auth.uid()) = user_id);
 -- NOTE:
 -- Production routing geometry, accessible paths, stairs, elevators and emergency
 -- information must come from validated source material. Do not seed invented data.
+
+
+-- Explicit Data API grants for new Supabase projects.
+grant select on public.venues to anon, authenticated;
+grant select on public.pois to anon, authenticated;
+grant select on public.businesses to anon, authenticated;
+grant select on public.events to anon, authenticated;
+
+grant select, update on public.profiles to authenticated;
+grant select on public.venue_memberships to authenticated;
+
+revoke all on public.organizations from anon;
+revoke all on public.municipalities from anon;
+revoke all on public.buildings from anon;
+revoke all on public.floors from anon;
+revoke all on public.spaces from anon;
+revoke all on public.route_nodes from anon;
+revoke all on public.route_edges from anon;
