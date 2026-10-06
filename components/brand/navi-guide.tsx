@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { resolveNaviIntent } from "@/lib/innovation/navi-orchestrator";
+import { resolveNaviHalo } from "@/lib/innovation/navi-halo";
 
 export type NaviGuideMode = "cockpit" | "nova" | "xeno";
 
@@ -34,6 +35,12 @@ export default function NaviGuide({ mode }: { mode: NaviGuideMode }) {
   const [open, setOpen] = useState(false);
   const [message, setMessage] = useState(copy[mode].body);
   const content = copy[mode];
+  const halo = resolveNaviHalo({
+    verifiedSpatialData: false,
+    predictionActive: false,
+    xenoMode: mode === "xeno",
+    blocked: false
+  });
 
   function explainState() {
     const decision = resolveNaviIntent({ type: "explain_state" }, pilotContext);
@@ -46,7 +53,7 @@ export default function NaviGuide({ mode }: { mode: NaviGuideMode }) {
   }
 
   return (
-    <aside className={"navi-guide " + (open ? "open" : "")} aria-label="Navi, guía oficial de NAVIBORI">
+    <aside className={"navi-guide halo-" + halo.state + " " + (open ? "open" : "")} aria-label="Navi, guía oficial de NAVIBORI">
       <button
         type="button"
         className="navi-guide-trigger"
@@ -56,7 +63,7 @@ export default function NaviGuide({ mode }: { mode: NaviGuideMode }) {
         <img src="/brand/navi-coqui.webp" alt="" aria-hidden="true" />
         <span>
           <strong>Navi</strong>
-          <small>Coquí Guide</small>
+          <small>{halo.label}</small>
         </span>
       </button>
 
@@ -67,7 +74,7 @@ export default function NaviGuide({ mode }: { mode: NaviGuideMode }) {
             alt="Navi, la mascota coquí tecnológica de NAVIBORI"
           />
           <div>
-            <p className="eyebrow">NAVIBORI COQUÍ GUIDE</p>
+            <p className="eyebrow">NAVIBORI COQUÍ GUIDE · {halo.state.toUpperCase()}</p>
             <h2>{content.title}</h2>
             <p role="status">{message}</p>
             <div className="navi-guide-actions">
