@@ -2,9 +2,14 @@
 
 import { useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import type { Json } from "@/lib/supabase/database.types";
 import { validateGeoJson, type GeoJsonValidationResult } from "@/lib/spatial/geojson";
 
 type StoredGeoJson = Record<string, unknown>;
+
+function toSupabaseJson(value: unknown): Json {
+  return JSON.parse(JSON.stringify(value)) as Json;
+}
 
 export default function BackendGeoJsonImporter({ venueId }: { venueId: string }) {
   const supabase = useMemo(() => createClient(), []);
@@ -50,7 +55,7 @@ export default function BackendGeoJsonImporter({ venueId }: { venueId: string })
         p_entity_id: entityId,
         p_entity_type: "asset",
         p_source_label: sourceLabel.trim(),
-        p_payload: {
+        p_payload: toSupabaseJson({
           kind: "geojson_import",
           file_name: fileName,
           validation: {
@@ -58,7 +63,7 @@ export default function BackendGeoJsonImporter({ venueId }: { venueId: string })
             warnings: result.warnings
           },
           geojson: geoJson
-        }
+        })
       });
 
       if (error) throw error;
