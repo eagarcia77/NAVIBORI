@@ -6,9 +6,17 @@ export default function NaviboriBrand({
   return (
     <div className={"navibori-brand " + (compact ? "compact" : "")}>
       <img
-        src="/brand/navibori-logo.webp"
-        alt="NAVIBORI XR — Puerto Rico Spatial Experience Platform"
+        className="navibori-brand-symbol"
+        src="/brand/navibori-app-icon.webp"
+        alt=""
+        aria-hidden="true"
       />
+      <div className="navibori-brand-copy">
+        <div className="navibori-wordmark" aria-label="NAVIBORI XR">
+          <span>NAVIBORI</span><strong>XR</strong>
+        </div>
+        <small>Puerto Rico Spatial Experience Platform</small>
+      </div>
     </div>
   );
 }
