@@ -10,8 +10,22 @@ export default function Home() {
           <h1>NAVIBORI <span>XR</span></h1>
           <p className="pilot">Pilot 001 · Mercado Metropolitano de Juana Díaz</p>
         </div>
+
         <div className="topbar-actions">
-          <Link className="studio-link" href="/xeno">XENO</Link>\n          <Link className="studio-link" href="/nova">NOVA</Link>\n          <Link className="studio-link" href="/studio">Studio</Link>
+          <details className="lab-menu">
+            <summary>Labs</summary>
+            <div className="lab-menu-panel">
+              <Link href="/nova">
+                <strong>NOVA</strong>
+                <span>Spatial Intelligence</span>
+              </Link>
+              <Link href="/xeno">
+                <strong>XENO</strong>
+                <span>Frontier Research</span>
+              </Link>
+            </div>
+          </details>
+          <Link className="studio-link" href="/studio">Studio</Link>
           <button className="guide-button" type="button" aria-label="Abrir Navi, guía de NAVIBORI">
             Navi
           </button>
@@ -26,12 +40,30 @@ export default function Home() {
         <button type="button">Filtros</button>
       </section>
 
+      <section className="reality-status" aria-label="Estado de experiencia espacial">
+        <div>
+          <span className="reality-dot" aria-hidden="true" />
+          <strong>Reality Core</strong>
+          <span>Mapa 2D activo</span>
+        </div>
+        <div>
+          <strong>Pilot 001</strong>
+          <span>Plano interior pendiente</span>
+        </div>
+        <div>
+          <strong>XR</strong>
+          <span>AR/VR capability-gated</span>
+        </div>
+        <Link href="/nova">Escanear dispositivo</Link>
+      </section>
+
       <NaviboriMap />
 
       <nav className="bottom-nav" aria-label="Navegación principal">
         <button className="active" type="button">Explorar</button>
         <Link href="/ar">AR</Link>
-        <Link href="/vr">VR</Link>\n        <Link href="/nova">NOVA</Link>\n        <Link href="/xeno">XENO</Link>
+        <Link href="/vr">VR</Link>
+        <Link href="/twin">Twin</Link>
         <button type="button">Guardados</button>
         <button type="button">Perfil</button>
       </nav>
