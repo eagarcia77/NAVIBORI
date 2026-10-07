@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import "maplibre-gl/dist/maplibre-gl.css";
 import "./globals.css";
 import PeripheralAdapter from "@/components/system/peripheral-adapter";
+import GamepadFocusController from "@/components/system/gamepad-focus-controller";
 
 export const metadata: Metadata = {
   title: "NAVIBORI XR",
@@ -19,7 +20,7 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
   return (
     <html lang="es-PR">
-      <body><PeripheralAdapter />{children}</body>
+      <body><PeripheralAdapter /><GamepadFocusController />{children}</body>
     </html>
   );
 }
