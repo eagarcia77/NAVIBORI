@@ -7,6 +7,7 @@ type MerchantDraft = {
   category:string;
   description:string;
   phone:string;
+  whatsapp:string;
   website:string;
 };
 
@@ -131,6 +132,7 @@ export async function saveMerchantDraftToBackend(draft:MerchantDraft){
     category:draft.category,
     description:draft.description.trim() || null,
     phone:draft.phone.trim() || null,
+    whatsapp:draft.whatsapp?.replace(/[\s()-]/g,"") || null,
     website:draft.website.trim() || null,
     status:"draft",
     verification_status:existing?.verificationStatus ?? "unverified"
