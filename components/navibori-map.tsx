@@ -168,10 +168,10 @@ export default function NaviboriMap() {
         {timeOpen && (
           <aside className="time-machine-panel" aria-live="polite">
             <p className="eyebrow">TEMPORAL TWIN</p>
-            <strong>Time Machine preparado</strong>
+            <strong>Time Machine · Navi Time Echo</strong>
             <span>
-              Se habilitará cuando existan estados espaciales publicados con historial temporal.
-              No se simulará el pasado o futuro como si fuera un hecho.
+              Preparado para narrar cambios verificados por revisión. Actualmente bloqueado porque
+              Pilot 001 todavía no tiene eventos de Spatial Memory publicados.
             </span>
           </aside>
         )}
