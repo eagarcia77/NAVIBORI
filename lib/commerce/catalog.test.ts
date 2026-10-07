@@ -12,9 +12,10 @@ const demo: CommerceProfile[] = [
     locationLabel: "Local demo A",
     verifiedLocation: false,
     hours: [],
-    offers: [{ id: "o1", title: "Café", price: 3, currency: "USD", featured: true }],
+    offers: [{ id: "o1", title: "Café", price: 3, currency: "USD", featured: true, available: true }],
     promotions: [{ id: "p1", title: "Promo", description: "Demo", active: true }],
     tags: ["cafe"],
+    verification: "unverified",
     demo: true
   },
   {
@@ -29,6 +30,7 @@ const demo: CommerceProfile[] = [
     offers: [],
     promotions: [],
     tags: ["artesania"],
+    verification: "unverified",
     demo: true
   }
 ];
