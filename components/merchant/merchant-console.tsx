@@ -1,6 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { slugifyBusinessName } from "@/lib/commerce/slug";
+import { buildBusinessDeepLink, buildBusinessQrPayload } from "@/lib/commerce/deep-link";
 
 type Draft = {
   name:string;
@@ -10,6 +12,9 @@ type Draft = {
   website:string;
   featuredOffer:string;
   promotion:string;
+  featuredPrice:string;
+  opens:string;
+  closes:string;
 };
 
 const emptyDraft:Draft = {
@@ -19,13 +24,21 @@ const emptyDraft:Draft = {
   phone:"",
   website:"",
   featuredOffer:"",
-  promotion:""
+  promotion:"",
+  featuredPrice:"",
+  opens:"10:00",
+  closes:"18:00"
 };
 
 export default function MerchantConsole() {
   const [draft,setDraft] = useState<Draft>(emptyDraft);
   const [saved,setSaved] = useState(false);
   const [error,setError] = useState("");
+  const [origin,setOrigin] = useState("");
+
+  useEffect(()=>{
+    if (typeof window !== "undefined") setOrigin(window.location.origin);
+  },[]);
 
   useEffect(()=>{
     try {
@@ -39,6 +52,10 @@ export default function MerchantConsole() {
     setError("");
     setDraft((current)=>({...current,[key]:value}));
   }
+
+  const slug=useMemo(()=>slugifyBusinessName(draft.name || "comercio-demo"),[draft.name]);
+  const deepLink=origin ? buildBusinessDeepLink(origin,slug) : "";
+  const qrPayload=origin ? buildBusinessQrPayload(origin,slug) : "";
 
   function saveDraft() {
     if (!draft.name.trim()) {
@@ -106,6 +123,25 @@ export default function MerchantConsole() {
           Promoción
           <input value={draft.promotion} onChange={(e)=>update("promotion",e.target.value)} />
         </label>
+
+        <label>
+          Precio destacado
+          <input
+            inputMode="decimal"
+            placeholder="0.00"
+            value={draft.featuredPrice}
+            onChange={(e)=>update("featuredPrice",e.target.value)}
+          />
+        </label>
+
+        <label>
+          Horario base
+          <div className="merchant-hour-row">
+            <input type="time" value={draft.opens} onChange={(e)=>update("opens",e.target.value)} />
+            <span>a</span>
+            <input type="time" value={draft.closes} onChange={(e)=>update("closes",e.target.value)} />
+          </div>
+        </label>
       </div>
 
       <div className="merchant-actions">
@@ -123,7 +159,15 @@ export default function MerchantConsole() {
           <div><dt>Categoría</dt><dd>{draft.category}</dd></div>
           <div><dt>Destacado</dt><dd>{draft.featuredOffer || "—"}</dd></div>
           <div><dt>Promoción</dt><dd>{draft.promotion || "—"}</dd></div>
+          <div><dt>Precio</dt><dd>{draft.featuredPrice ? "$" + draft.featuredPrice : "—"}</dd></div>
+          <div><dt>Horario base</dt><dd>{draft.opens} – {draft.closes}</dd></div>
         </dl>
+
+        <div className="merchant-link-box">
+          <span>DEEPLINK / QR PAYLOAD</span>
+          <code>{deepLink || "Se generará en navegador."}</code>
+          <small>{qrPayload || "Payload pendiente."}</small>
+        </div>
       </aside>
     </section>
   );
