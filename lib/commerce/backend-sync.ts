@@ -67,26 +67,60 @@ export async function resolveMerchantBackendContext():Promise<MerchantBackendCon
   };
 }
 
+export type OwnedMerchantBusiness={
+  id:string;
+  status:string;
+  verificationStatus:string;
+  name:string;
+};
+
+export async function getOwnedMerchantBusiness(
+  context?:MerchantBackendContext
+):Promise<OwnedMerchantBusiness|null>{
+  const resolved=context ?? await resolveMerchantBackendContext();
+  if(resolved.mode!=="authorized" || !resolved.userId || !resolved.venueId){
+    return null;
+  }
+
+  const supabase=createClient();
+  const {data,error}=await supabase
+    .from("businesses")
+    .select("id,status,verification_status,name")
+    .eq("created_by",resolved.userId)
+    .eq("venue_id",resolved.venueId)
+    .order("created_at",{ascending:true})
+    .limit(1)
+    .maybeSingle();
+
+  if(error) throw error;
+  if(!data) return null;
+
+  return {
+    id:data.id,
+    status:data.status,
+    verificationStatus:data.verification_status,
+    name:data.name
+  };
+}
+
 export async function saveMerchantDraftToBackend(draft:MerchantDraft){
   const supabase=createClient();
   const context=await resolveMerchantBackendContext();
 
   if(context.mode!=="authorized" || !context.userId || !context.venueId){
-    return {context,businessId:null};
+    return {context,businessId:null,businessStatus:null};
   }
 
-  const {data:existing,error:existingError}=await supabase
-    .from("businesses")
-    .select("id,status,verification_status")
-    .eq("created_by",context.userId)
-    .eq("venue_id",context.venueId)
-    .eq("status","draft")
-    .order("created_at",{ascending:true})
-    .limit(1)
-    .maybeSingle();
+  const existing=await getOwnedMerchantBusiness(context);
 
-  if(existingError){
-    throw existingError;
+  if(existing?.status==="active" || existing?.verificationStatus==="pending"){
+    localStorage.setItem("navibori:merchant-business-id",existing.id);
+    return {
+      context,
+      businessId:existing.id,
+      businessStatus:existing.status,
+      verificationStatus:existing.verificationStatus
+    };
   }
 
   const payload={
@@ -99,7 +133,7 @@ export async function saveMerchantDraftToBackend(draft:MerchantDraft){
     phone:draft.phone.trim() || null,
     website:draft.website.trim() || null,
     status:"draft",
-    verification_status:existing?.verification_status ?? "unverified"
+    verification_status:existing?.verificationStatus ?? "unverified"
   };
 
   if(existing){
@@ -107,23 +141,33 @@ export async function saveMerchantDraftToBackend(draft:MerchantDraft){
       .from("businesses")
       .update(payload)
       .eq("id",existing.id)
-      .select("id")
+      .select("id,status,verification_status")
       .single();
 
     if(error) throw error;
     localStorage.setItem("navibori:merchant-business-id",data.id);
-    return {context,businessId:data.id};
+    return {
+      context,
+      businessId:data.id,
+      businessStatus:data.status,
+      verificationStatus:data.verification_status
+    };
   }
 
   const {data,error}=await supabase
     .from("businesses")
     .insert(payload)
-    .select("id")
+    .select("id,status,verification_status")
     .single();
 
   if(error) throw error;
   localStorage.setItem("navibori:merchant-business-id",data.id);
-  return {context,businessId:data.id};
+  return {
+    context,
+    businessId:data.id,
+    businessStatus:data.status,
+    verificationStatus:data.verification_status
+  };
 }
 
 export async function syncLocalMerchantContent(businessId:string){
