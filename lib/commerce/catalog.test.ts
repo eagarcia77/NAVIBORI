@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { filterCommerce } from "./catalog";
+import { filterCommerce, isPromotionActive } from "./catalog";
 import type { CommerceProfile } from "./types";
 
 const demo: CommerceProfile[] = [
@@ -46,5 +46,18 @@ describe("Commerce catalog", () => {
 
   it("filters businesses with active promotions", () => {
     expect(filterCommerce(demo,{promotionsOnly:true})).toHaveLength(1);
+  });
+
+  it("activates promotions only inside their schedule", () => {
+    const promotion = {
+      id:"scheduled",
+      title:"Scheduled",
+      description:"Demo",
+      active:true,
+      startsAt:"2026-10-07T10:00:00Z",
+      endsAt:"2026-10-07T20:00:00Z"
+    };
+    expect(isPromotionActive(promotion,new Date("2026-10-07T12:00:00Z"))).toBe(true);
+    expect(isPromotionActive(promotion,new Date("2026-10-08T12:00:00Z"))).toBe(false);
   });
 });
