@@ -69,6 +69,7 @@ export default function MerchantConsole() {
     }
 
     localStorage.setItem("navibori:merchant-draft",JSON.stringify(draft));
+    window.dispatchEvent(new Event("navibori:merchant-draft-updated"));
     setSaved(true);
     setError("");
   }
