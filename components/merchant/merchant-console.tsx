@@ -9,6 +9,7 @@ type Draft = {
   category:string;
   description:string;
   phone:string;
+  whatsapp:string;
   website:string;
   featuredOffer:string;
   promotion:string;
@@ -22,6 +23,7 @@ const emptyDraft:Draft = {
   category:"gastronomia",
   description:"",
   phone:"",
+  whatsapp:"",
   website:"",
   featuredOffer:"",
   promotion:"",
@@ -68,6 +70,15 @@ export default function MerchantConsole() {
       return;
     }
 
+    if (draft.whatsapp && !/^\+?[1-9][0-9]{7,14}$/.test(draft.whatsapp.replace(/[\s()-]/g,""))) {
+      setError("WhatsApp debe usar un número internacional válido, por ejemplo +17875551234.");
+      return;
+    }
+
+    if (draft.whatsapp) {
+      draft.whatsapp=draft.whatsapp.replace(/[\s()-]/g,"");
+    }
+
     localStorage.setItem("navibori:merchant-draft",JSON.stringify(draft));
     window.dispatchEvent(new Event("navibori:merchant-draft-updated"));
     setSaved(true);
@@ -108,6 +119,16 @@ export default function MerchantConsole() {
         <label>
           Teléfono
           <input value={draft.phone} onChange={(e)=>update("phone",e.target.value)} />
+        </label>
+
+        <label>
+          WhatsApp
+          <input
+            inputMode="tel"
+            placeholder="+1787..."
+            value={draft.whatsapp}
+            onChange={(e)=>update("whatsapp",e.target.value)}
+          />
         </label>
 
         <label>
@@ -162,6 +183,7 @@ export default function MerchantConsole() {
           <div><dt>Promoción</dt><dd>{draft.promotion || "—"}</dd></div>
           <div><dt>Precio</dt><dd>{draft.featuredPrice ? "$" + draft.featuredPrice : "—"}</dd></div>
           <div><dt>Horario base</dt><dd>{draft.opens} – {draft.closes}</dd></div>
+          <div><dt>WhatsApp</dt><dd>{draft.whatsapp || "—"}</dd></div>
         </dl>
 
         <div className="merchant-link-box">
