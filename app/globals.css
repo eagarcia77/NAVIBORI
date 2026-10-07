@@ -331,3 +331,119 @@ h1 span { color: var(--teal); }
   .xeno-signal-strip{grid-template-columns:1fr 1fr}
   .xeno-signal-strip .signal-navi{grid-column:1/-1}
 }
+
+/* Adaptive Peripheral Fabric */
+:root[data-controls="comfortable"] button,
+:root[data-controls="comfortable"] a,
+:root[data-controls="comfortable"] summary {
+  min-height: 44px;
+}
+
+:root[data-controls="compact"] .reality-mode-switch button,
+:root[data-controls="compact"] .reality-mode-switch a,
+:root[data-controls="compact"] .map-toolbar button {
+  min-height: 34px;
+  padding-inline: 10px;
+}
+
+:root[data-input="touch"] .map-toolbar,
+:root[data-input="pen"] .map-toolbar {
+  overflow-x: auto;
+  scrollbar-width: none;
+  touch-action: pan-x;
+}
+
+:root[data-input="touch"] .map-toolbar::-webkit-scrollbar,
+:root[data-input="pen"] .map-toolbar::-webkit-scrollbar {
+  display: none;
+}
+
+:root[data-input="gamepad"] :focus-visible,
+:root[data-input="keyboard"] :focus-visible {
+  outline: 3px solid var(--coral);
+  outline-offset: 3px;
+}
+
+:root[data-hover="no"] .lab-menu-panel a:hover {
+  background: inherit;
+}
+
+:root[data-motion="reduced"] *,
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+  }
+}
+
+:root[data-density="compact"] .cockpit-hud {
+  display: none;
+}
+
+:root[data-density="compact"] .reality-intensity {
+  width: 190px;
+  padding: 10px;
+}
+
+:root[data-density="compact"] .reality-status {
+  font-size: .88rem;
+}
+
+.xeno-signal-strip {
+  grid-template-columns:minmax(138px,1.1fr) repeat(5,minmax(86px,1fr));
+}
+
+.peripheral-status {
+  display:inline-flex;
+  align-items:center;
+  gap:4px;
+  font:inherit;
+}
+
+.signal-input strong {
+  font-size:.72rem;
+}
+
+@media (max-width: 900px) {
+  .xeno-signal-strip {
+    grid-template-columns: repeat(3,minmax(0,1fr));
+  }
+  .xeno-signal-strip .signal-navi {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 600px) {
+  .xeno-signal-strip {
+    grid-template-columns: repeat(2,minmax(0,1fr));
+  }
+  .xeno-signal-strip > div {
+    min-height: 42px;
+  }
+  .topbar {
+    padding-block: 14px;
+  }
+  .navibori-wordmark span,
+  .navibori-wordmark strong {
+    font-size: 1.55rem !important;
+  }
+  .navibori-brand-copy small {
+    display: none;
+  }
+  .reality-status {
+    margin-inline: 10px;
+  }
+}
+
+@media (min-width: 1400px) and (hover:hover) {
+  .app-shell {
+    max-width: 1280px;
+  }
+  .map-canvas {
+    min-height: 68vh;
+  }
+}
