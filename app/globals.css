@@ -455,3 +455,33 @@ h1 span { color: var(--teal); }
     min-height: 68vh;
   }
 }
+
+/* Navi adaptive presentation */
+.navi-guide.navi-compact-visual .navi-guide-trigger {
+  padding-right: 9px;
+}
+.navi-guide.navi-compact-visual .navi-guide-trigger img {
+  width: 36px;
+  height: 36px;
+}
+.navi-guide.navi-haptic-ready .navi-guide-trigger::after {
+  content:"HAPTIC";
+  margin-left:4px;
+  font-size:.55rem;
+  letter-spacing:.08em;
+  color:var(--teal);
+}
+.navi-guide.navi-spatial-audio .navi-guide-trigger::after {
+  content:"AUDIO";
+  margin-left:4px;
+  font-size:.55rem;
+  letter-spacing:.08em;
+  color:var(--ocean);
+}
+.navi-guide.navi-xr-avatar .navi-guide-trigger::after {
+  content:"XR";
+  margin-left:4px;
+  font-size:.55rem;
+  letter-spacing:.08em;
+  color:var(--teal);
+}
