@@ -64,6 +64,12 @@ export default async function StudioPage() {
         roles={venueRoles}
       />
 
+      {venueRoles.some((role)=>["platform_owner","municipality_admin","venue_manager"].includes(role)) && (
+        <div className="studio-admin-links">
+          <Link href="/commerce-review">Commerce Review</Link>
+        </div>
+      )}
+
       <StudioWorkspace />
 
       <div className="studio-import-section">
