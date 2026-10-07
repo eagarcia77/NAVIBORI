@@ -99,6 +99,7 @@ export default async function BusinessProfilePage({
 
         <aside className="business-profile-side">
           <h2>Acciones</h2>
+          <Link href={"/?business="+business.slug}>Ver en mapa</Link>
           <button type="button" disabled={!business.verifiedLocation}>Cómo llegar</button>
           {business.phone ? <a href={"tel:"+business.phone}>Llamar</a> : <button type="button" disabled>Llamar</button>}
           {business.website ? <a href={business.website} target="_blank" rel="noreferrer">Sitio web</a> : <button type="button" disabled>Sitio web</button>}
