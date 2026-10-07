@@ -18,6 +18,11 @@ describe("public commerce composition",()=>{
         created_by:"u1",
         category:"gastronomia",
         verification_status:"verified",
+        ownership_verified:true,
+        location_verified:true,
+        review_notes:null,
+        reviewed_at:"2026-10-07T00:00:00Z",
+        reviewed_by:"reviewer-1",
         created_at:"2026-10-07T00:00:00Z",
         updated_at:"2026-10-07T00:00:00Z"
       }],
