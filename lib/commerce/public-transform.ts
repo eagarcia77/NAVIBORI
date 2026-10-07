@@ -77,6 +77,7 @@ export function composePublicCommerce(
       category:normalizeCategory(business.category),
       description:business.description ?? "",
       phone:business.phone ?? undefined,
+      whatsapp:business.whatsapp ?? undefined,
       website:business.website ?? undefined,
       locationLabel:verifiedLocation
         ? "Ubicación verificada"
