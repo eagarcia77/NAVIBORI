@@ -264,6 +264,7 @@ export type Database = {
           venue_id: string
           verification_status: string
           website: string | null
+          whatsapp: string | null
         }
         Insert: {
           category?: string
@@ -286,6 +287,7 @@ export type Database = {
           venue_id: string
           verification_status?: string
           website?: string | null
+          whatsapp?: string | null
         }
         Update: {
           category?: string
@@ -308,6 +310,7 @@ export type Database = {
           venue_id?: string
           verification_status?: string
           website?: string | null
+          whatsapp?: string | null
         }
         Relationships: [
           {
@@ -1054,6 +1057,7 @@ export type Database = {
           venue_id: string
           verification_status: string
           website: string | null
+          whatsapp: string | null
         }
         SetofOptions: {
           from: "*"
@@ -1085,6 +1089,7 @@ export type Database = {
           venue_id: string
           verification_status: string
           website: string | null
+          whatsapp: string | null
         }
         SetofOptions: {
           from: "*"
