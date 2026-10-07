@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useMemo, useState } from "react";
 import { activePromotions, featuredOffers, filterCommerce } from "@/lib/commerce/catalog";
 import { DEMO_COMMERCE } from "@/lib/commerce/demo";
@@ -218,6 +219,7 @@ export default function CommerceDirectory() {
               >
                 Sitio web
               </button>
+              <Link className="commerce-profile-link" href={"/comercios/"+selected.slug}>Ver perfil</Link>
               <button type="button" onClick={shareBusiness}>Copiar enlace</button>
             </div>
           </article>
