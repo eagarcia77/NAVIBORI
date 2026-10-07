@@ -249,9 +249,14 @@ export type Database = {
           created_by: string | null
           description: string | null
           id: string
+          location_verified: boolean
           metadata: Json
           name: string
+          ownership_verified: boolean
           phone: string | null
+          review_notes: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
           slug: string
           space_id: string | null
           status: string
@@ -266,9 +271,14 @@ export type Database = {
           created_by?: string | null
           description?: string | null
           id?: string
+          location_verified?: boolean
           metadata?: Json
           name: string
+          ownership_verified?: boolean
           phone?: string | null
+          review_notes?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
           slug: string
           space_id?: string | null
           status?: string
@@ -283,9 +293,14 @@ export type Database = {
           created_by?: string | null
           description?: string | null
           id?: string
+          location_verified?: boolean
           metadata?: Json
           name?: string
+          ownership_verified?: boolean
           phone?: string | null
+          review_notes?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
           slug?: string
           space_id?: string | null
           status?: string
@@ -1009,6 +1024,44 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      review_merchant_business: {
+        Args: {
+          p_action: string
+          p_business_id: string
+          p_location_verified?: boolean
+          p_note?: string
+          p_ownership_verified?: boolean
+          p_space_id?: string
+        }
+        Returns: {
+          category: string
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          location_verified: boolean
+          metadata: Json
+          name: string
+          ownership_verified: boolean
+          phone: string | null
+          review_notes: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          slug: string
+          space_id: string | null
+          status: string
+          updated_at: string
+          venue_id: string
+          verification_status: string
+          website: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "businesses"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       submit_merchant_business_for_review: {
         Args: { p_business_id: string }
         Returns: {
@@ -1017,9 +1070,14 @@ export type Database = {
           created_by: string | null
           description: string | null
           id: string
+          location_verified: boolean
           metadata: Json
           name: string
+          ownership_verified: boolean
           phone: string | null
+          review_notes: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
           slug: string
           space_id: string | null
           status: string
