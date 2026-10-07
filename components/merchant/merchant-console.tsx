@@ -89,8 +89,8 @@ export default function MerchantConsole() {
     <section className="merchant-console">
       <div className="merchant-status">
         <div><span>MODE</span><strong>Local draft</strong></div>
-        <div><span>PUBLISH</span><strong>Blocked</strong></div>
-        <div><span>BACKEND</span><strong>RLS pending</strong></div>
+        <div><span>PUBLISH</span><strong>Review required</strong></div>
+        <div><span>BACKEND</span><strong>RLS active</strong></div>
       </div>
 
       <div className="merchant-form-grid">
