@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { composePublicCommerce } from "./public-data";
+import { composePublicCommerce } from "./public-transform";
 
 describe("public commerce composition",()=>{
   it("maps active database rows to CommerceProfile",()=>{
