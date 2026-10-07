@@ -75,7 +75,7 @@ export default function NaviGuide({ mode }: { mode: NaviGuideMode }) {
 
   const presentation = resolveNaviPresentation({
     input,
-    reducedMotion: document?.documentElement?.dataset?.motion === "reduced",
+    reducedMotion: typeof document !== "undefined" && document.documentElement.dataset.motion === "reduced",
     audioAvailable: typeof window !== "undefined" && "speechSynthesis" in window,
     hapticsAvailable: typeof navigator !== "undefined" && "vibrate" in navigator,
     xrCapable: input === "xr"
