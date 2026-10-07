@@ -6,6 +6,7 @@ import CatalogEditor from "@/components/merchant/catalog-editor";
 import MerchantVerification from "@/components/merchant/merchant-verification";
 import HoursEditor from "@/components/merchant/hours-editor";
 import PromotionEditor from "@/components/merchant/promotion-editor";
+import BackendSyncPanel from "@/components/merchant/backend-sync-panel";
 import NaviGuide from "@/components/brand/navi-guide";
 
 export const metadata = {
@@ -30,10 +31,11 @@ export default function MerchantPage() {
       </header>
 
       <div className="demo-notice">
-        Fase 1: los cambios se guardan únicamente como borrador local. Publicación real bloqueada hasta habilitar permisos merchant/RLS.
+        Los editores conservan una copia local. Si la cuenta tiene rol merchant, Backend Sync guarda el borrador real en Supabase bajo RLS. Activación pública requiere revisión del venue.
       </div>
 
       <MerchantConsole />
+      <BackendSyncPanel />
       <HoursEditor />
       <CatalogEditor />
       <PromotionEditor />
