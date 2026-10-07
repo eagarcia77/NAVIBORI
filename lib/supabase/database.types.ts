@@ -104,8 +104,149 @@ export type Database = {
           },
         ]
       }
+      business_hours: {
+        Row: {
+          business_id: string
+          closed: boolean
+          closes: string | null
+          created_at: string
+          day_of_week: number
+          id: string
+          opens: string | null
+          updated_at: string
+        }
+        Insert: {
+          business_id: string
+          closed?: boolean
+          closes?: string | null
+          created_at?: string
+          day_of_week: number
+          id?: string
+          opens?: string | null
+          updated_at?: string
+        }
+        Update: {
+          business_id?: string
+          closed?: boolean
+          closes?: string | null
+          created_at?: string
+          day_of_week?: number
+          id?: string
+          opens?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "business_hours_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      business_offers: {
+        Row: {
+          available: boolean
+          business_id: string
+          created_at: string
+          currency: string
+          description: string | null
+          featured: boolean
+          id: string
+          price: number | null
+          sku: string | null
+          sort_order: number
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          available?: boolean
+          business_id: string
+          created_at?: string
+          currency?: string
+          description?: string | null
+          featured?: boolean
+          id?: string
+          price?: number | null
+          sku?: string | null
+          sort_order?: number
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          available?: boolean
+          business_id?: string
+          created_at?: string
+          currency?: string
+          description?: string | null
+          featured?: boolean
+          id?: string
+          price?: number | null
+          sku?: string | null
+          sort_order?: number
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "business_offers_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      business_promotions: {
+        Row: {
+          active: boolean
+          business_id: string
+          created_at: string
+          description: string
+          ends_at: string | null
+          id: string
+          starts_at: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          business_id: string
+          created_at?: string
+          description?: string
+          ends_at?: string | null
+          id?: string
+          starts_at?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          business_id?: string
+          created_at?: string
+          description?: string
+          ends_at?: string | null
+          id?: string
+          starts_at?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "business_promotions_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       businesses: {
         Row: {
+          category: string
+          created_at: string
+          created_by: string | null
           description: string | null
           id: string
           metadata: Json
@@ -114,10 +255,15 @@ export type Database = {
           slug: string
           space_id: string | null
           status: string
+          updated_at: string
           venue_id: string
+          verification_status: string
           website: string | null
         }
         Insert: {
+          category?: string
+          created_at?: string
+          created_by?: string | null
           description?: string | null
           id?: string
           metadata?: Json
@@ -126,10 +272,15 @@ export type Database = {
           slug: string
           space_id?: string | null
           status?: string
+          updated_at?: string
           venue_id: string
+          verification_status?: string
           website?: string | null
         }
         Update: {
+          category?: string
+          created_at?: string
+          created_by?: string | null
           description?: string | null
           id?: string
           metadata?: Json
@@ -138,7 +289,9 @@ export type Database = {
           slug?: string
           space_id?: string | null
           status?: string
+          updated_at?: string
           venue_id?: string
+          verification_status?: string
           website?: string | null
         }
         Relationships: [
