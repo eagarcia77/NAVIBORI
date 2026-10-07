@@ -1,13 +1,14 @@
 import type { CommerceProfile } from "./types";
 
-const closedWeek = [
-  "mon","tue","wed","thu","fri","sat","sun"
-].map((day) => ({
-  day: day as "mon"|"tue"|"wed"|"thu"|"fri"|"sat"|"sun",
-  opens: null,
-  closes: null,
-  closed: true
-}));
+const demoWeek = [
+  {day:"mon",opens:"10:00",closes:"18:00",closed:false},
+  {day:"tue",opens:"10:00",closes:"18:00",closed:false},
+  {day:"wed",opens:"10:00",closes:"18:00",closed:false},
+  {day:"thu",opens:"10:00",closes:"18:00",closed:false},
+  {day:"fri",opens:"10:00",closes:"19:00",closed:false},
+  {day:"sat",opens:"09:00",closes:"19:00",closed:false},
+  {day:"sun",opens:null,closes:null,closed:true}
+] as const;
 
 export const DEMO_COMMERCE: CommerceProfile[] = [
   {
@@ -18,7 +19,7 @@ export const DEMO_COMMERCE: CommerceProfile[] = [
     description: "Ficha sintética para demostrar menú, promoción y descubrimiento comercial.",
     locationLabel: "Local demo · ubicación no validada",
     verifiedLocation: false,
-    hours: closedWeek,
+    hours: demoWeek.map((item)=>({...item})),
     offers: [
       { id:"of-1", title:"Plato del día", description:"Producto demostrativo", price:12, currency:"USD", featured:true },
       { id:"of-2", title:"Café puertorriqueño", price:3, currency:"USD", featured:true }
@@ -37,7 +38,7 @@ export const DEMO_COMMERCE: CommerceProfile[] = [
     description: "Comercio sintético para probar productos y favoritos.",
     locationLabel: "Local demo · ubicación no validada",
     verifiedLocation: false,
-    hours: closedWeek,
+    hours: demoWeek.map((item)=>({...item})),
     offers: [
       { id:"of-3", title:"Pieza artesanal", description:"Artículo de demostración", price:24, currency:"USD", featured:true }
     ],
@@ -53,7 +54,7 @@ export const DEMO_COMMERCE: CommerceProfile[] = [
     description: "Ficha sintética para demostrar servicios, contacto y navegación.",
     locationLabel: "Local demo · ubicación no validada",
     verifiedLocation: false,
-    hours: closedWeek,
+    hours: demoWeek.map((item)=>({...item})),
     offers: [
       { id:"of-4", title:"Servicio principal", description:"Servicio de demostración", currency:"USD", featured:true }
     ],
