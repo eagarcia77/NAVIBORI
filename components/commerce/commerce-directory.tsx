@@ -240,7 +240,7 @@ export default function CommerceDirectory({
                 </a>
               ) : (
                 <button type="button" disabled>Sitio web</button>
-              )
+              )}
               <Link className="commerce-profile-link" href={"/comercios/"+selected.slug}>Ver perfil</Link>
               <button type="button" onClick={shareBusiness}>Copiar enlace</button>
             </div>
