@@ -61,8 +61,8 @@ export default function Home() {
 
       <nav className="bottom-nav" aria-label="Navegación principal">
         <button className="active" type="button">Explorar</button>
+        <Link href="/comercios">Comercios</Link>
         <Link href="/ar">AR</Link>
-        <Link href="/vr">VR</Link>
         <Link href="/twin">Twin</Link>
         <button type="button">Guardados</button>
         <button type="button">Perfil</button>
