@@ -13,6 +13,7 @@ describe("public commerce composition",()=>{
         status:"active",
         description:"Demo real",
         phone:"7875550000",
+        whatsapp:"+17875550000",
         website:null,
         metadata:{},
         created_by:"u1",
