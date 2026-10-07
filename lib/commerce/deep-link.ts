@@ -1,6 +1,6 @@
 export function buildBusinessDeepLink(origin:string,slug:string){
   const base=origin.replace(/\/$/,"");
-  return base + "/comercios?negocio=" + encodeURIComponent(slug);
+  return base + "/comercios/" + encodeURIComponent(slug);
 }
 
 export function buildBusinessQrPayload(origin:string,slug:string){
