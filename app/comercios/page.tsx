@@ -2,13 +2,27 @@ import Link from "next/link";
 import NaviboriBrand from "@/components/brand/navibori-brand";
 import CommerceDirectory from "@/components/commerce/commerce-directory";
 import NaviGuide from "@/components/brand/navi-guide";
+import { DEMO_COMMERCE } from "@/lib/commerce/demo";
+import { getPublicCommerce } from "@/lib/commerce/public-data";
 
 export const metadata = {
   title: "Comercios | NAVIBORI XR",
   description: "Directorio comercial espacial de NAVIBORI XR."
 };
 
-export default function CommercePage() {
+export default async function CommercePage() {
+  let liveBusinesses=[];
+  let loadError=false;
+
+  try{
+    liveBusinesses=await getPublicCommerce();
+  }catch{
+    loadError=true;
+  }
+
+  const usingLive=liveBusinesses.length>0;
+  const businesses=usingLive ? liveBusinesses : DEMO_COMMERCE;
+
   return (
     <main className="commerce-page">
       <header className="subpage-header">
@@ -24,11 +38,18 @@ export default function CommercePage() {
         </div>
       </header>
 
-      <div className="demo-notice">
-        Los comercios mostrados son sintéticos. No representan negocios reales del Mercado Metropolitano.
+      <div className={usingLive ? "live-data-notice" : "demo-notice"}>
+        {usingLive
+          ? "Directorio conectado a comercios publicados y autorizados en NAVIBORI."
+          : loadError
+            ? "No se pudo consultar el directorio publicado. Se muestra el entorno DEMO sin representar comercios reales."
+            : "Aún no hay comercios publicados. Se muestra el entorno DEMO sin representar negocios reales del Mercado Metropolitano."}
       </div>
 
-      <CommerceDirectory />
+      <CommerceDirectory
+        initialBusinesses={businesses}
+        source={usingLive ? "live" : "demo"}
+      />
       <NaviGuide mode="cockpit" />
     </main>
   );
