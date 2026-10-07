@@ -40,6 +40,7 @@ export interface CommerceProfile {
   category: CommerceCategory;
   description: string;
   phone?: string;
+  whatsapp?: string;
   website?: string;
   locationLabel: string;
   verifiedLocation: boolean;
