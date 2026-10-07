@@ -4,6 +4,7 @@ import CommerceDirectory from "@/components/commerce/commerce-directory";
 import NaviGuide from "@/components/brand/navi-guide";
 import { DEMO_COMMERCE } from "@/lib/commerce/demo";
 import { getPublicCommerce } from "@/lib/commerce/public-data";
+import type { CommerceProfile } from "@/lib/commerce/types";
 
 export const metadata = {
   title: "Comercios | NAVIBORI XR",
@@ -11,7 +12,7 @@ export const metadata = {
 };
 
 export default async function CommercePage() {
-  let liveBusinesses=[];
+  let liveBusinesses:CommerceProfile[]=[];
   let loadError=false;
 
   try{
