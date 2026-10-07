@@ -25,6 +25,7 @@ const emptyDraft:Draft = {
 export default function MerchantConsole() {
   const [draft,setDraft] = useState<Draft>(emptyDraft);
   const [saved,setSaved] = useState(false);
+  const [error,setError] = useState("");
 
   useEffect(()=>{
     try {
@@ -35,12 +36,24 @@ export default function MerchantConsole() {
 
   function update<K extends keyof Draft>(key:K,value:Draft[K]) {
     setSaved(false);
+    setError("");
     setDraft((current)=>({...current,[key]:value}));
   }
 
   function saveDraft() {
+    if (!draft.name.trim()) {
+      setError("Escribe el nombre del comercio antes de guardar.");
+      return;
+    }
+
+    if (draft.website && !/^https?:\/\//i.test(draft.website)) {
+      setError("El sitio web debe comenzar con http:// o https://.");
+      return;
+    }
+
     localStorage.setItem("navibori:merchant-draft",JSON.stringify(draft));
     setSaved(true);
+    setError("");
   }
 
   return (
@@ -99,6 +112,7 @@ export default function MerchantConsole() {
         <button type="button" onClick={saveDraft}>Guardar borrador local</button>
         <button type="button" disabled>Publicar</button>
         {saved && <span role="status">Borrador guardado en este dispositivo.</span>}
+        {error && <span role="alert" className="merchant-error">{error}</span>}
       </div>
 
       <aside className="merchant-preview">
