@@ -228,6 +228,20 @@ export default function CommerceDirectory({
                 <button type="button" disabled>Llamar</button>
               )}
 
+              {selected.whatsapp ? (
+                <a
+                  className="commerce-profile-link"
+                  href={"https://wa.me/"+selected.whatsapp.replace(/\D/g,"")}
+                  target="_blank"
+                  rel="noreferrer"
+                  onClick={()=>record("contact_click",selected.id)}
+                >
+                  WhatsApp
+                </a>
+              ) : (
+                <button type="button" disabled>WhatsApp</button>
+              )}
+
               {selected.website ? (
                 <a
                   className="commerce-profile-link"
