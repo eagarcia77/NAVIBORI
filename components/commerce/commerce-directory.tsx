@@ -3,6 +3,9 @@
 import { useMemo, useState } from "react";
 import { activePromotions, featuredOffers, filterCommerce } from "@/lib/commerce/catalog";
 import { DEMO_COMMERCE } from "@/lib/commerce/demo";
+import { getCommerceOpenState } from "@/lib/commerce/hours";
+import { appendCommerceEvent, type CommerceAnalyticsEvent } from "@/lib/commerce/analytics";
+import { buildBusinessDeepLink } from "@/lib/commerce/deep-link";
 import type { CommerceCategory } from "@/lib/commerce/types";
 
 const categories: Array<{value:"all"|CommerceCategory;label:string}> = [
@@ -35,11 +38,41 @@ export default function CommerceDirectory() {
 
   const selected = DEMO_COMMERCE.find((item) => item.id === selectedId) ?? businesses[0];
 
+  function readEvents(): CommerceAnalyticsEvent[] {
+    try {
+      return JSON.parse(localStorage.getItem("navibori:commerce-events") ?? "[]");
+    } catch {
+      return [];
+    }
+  }
+
+  function record(type: CommerceAnalyticsEvent["type"], businessId: string) {
+    const next = appendCommerceEvent(readEvents(),{
+      businessId,
+      type,
+      occurredAt:new Date().toISOString()
+    });
+    localStorage.setItem("navibori:commerce-events",JSON.stringify(next));
+  }
+
+  function selectBusiness(id:string) {
+    setSelectedId(id);
+    record("profile_view",id);
+  }
+
+  async function shareBusiness() {
+    if (!selected || typeof window === "undefined") return;
+    const link=buildBusinessDeepLink(window.location.origin,selected.slug);
+    await navigator.clipboard?.writeText(link);
+    record("share",selected.id);
+  }
+
   function toggleFavorite(id:string) {
     setFavorites((current) => {
       const next = current.includes(id)
         ? current.filter((item) => item !== id)
         : [...current,id];
+      if (!current.includes(id)) record("favorite",id);
       localStorage.setItem("navibori:favorites",JSON.stringify(next));
       return next;
     });
@@ -85,7 +118,7 @@ export default function CommerceDirectory() {
                 type="button"
                 key={business.id}
                 className={"commerce-card " + (selected?.id===business.id ? "selected" : "")}
-                onClick={()=>setSelectedId(business.id)}
+                onClick={()=>selectBusiness(business.id)}
               >
                 <div>
                   <span className="commerce-demo-badge">DEMO</span>
@@ -124,7 +157,13 @@ export default function CommerceDirectory() {
             <div className="commerce-facts">
               <div><span>Ubicación</span><strong>{selected.locationLabel}</strong></div>
               <div><span>Routing</span><strong>{selected.verifiedLocation ? "Disponible" : "Pendiente"}</strong></div>
-              <div><span>Estado</span><strong>Demo · no representa horario real</strong></div>
+              <div>
+                <span>Horario demo</span>
+                <strong>
+                  {getCommerceOpenState(selected.hours).label}
+                  {getCommerceOpenState(selected.hours).next ? " · " + getCommerceOpenState(selected.hours).next : ""}
+                </strong>
+              </div>
             </div>
 
             <section>
@@ -144,18 +183,42 @@ export default function CommerceDirectory() {
               <section>
                 <h3>Promociones</h3>
                 {activePromotions(selected).map((promotion)=>(
-                  <div className="promo-card" key={promotion.id}>
+                  <button
+                    type="button"
+                    className="promo-card"
+                    key={promotion.id}
+                    onClick={()=>record("promotion_view",selected.id)}
+                  >
                     <strong>{promotion.title}</strong>
                     <p>{promotion.description}</p>
-                  </div>
+                  </button>
                 ))}
               </section>
             )}
 
             <div className="commerce-actions">
-              <button type="button" disabled={!selected.verifiedLocation}>Cómo llegar</button>
-              <button type="button" disabled={!selected.phone}>Llamar</button>
-              <button type="button" disabled={!selected.website}>Sitio web</button>
+              <button
+                type="button"
+                disabled={!selected.verifiedLocation}
+                onClick={()=>record("route_request",selected.id)}
+              >
+                Cómo llegar
+              </button>
+              <button
+                type="button"
+                disabled={!selected.phone}
+                onClick={()=>record("contact_click",selected.id)}
+              >
+                Llamar
+              </button>
+              <button
+                type="button"
+                disabled={!selected.website}
+                onClick={()=>record("contact_click",selected.id)}
+              >
+                Sitio web
+              </button>
+              <button type="button" onClick={shareBusiness}>Copiar enlace</button>
             </div>
           </article>
         )}
