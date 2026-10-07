@@ -7,7 +7,7 @@ import { DEMO_COMMERCE } from "@/lib/commerce/demo";
 import { getCommerceOpenState } from "@/lib/commerce/hours";
 import { appendCommerceEvent, type CommerceAnalyticsEvent } from "@/lib/commerce/analytics";
 import { buildBusinessDeepLink } from "@/lib/commerce/deep-link";
-import type { CommerceCategory } from "@/lib/commerce/types";
+import type { CommerceCategory, CommerceProfile } from "@/lib/commerce/types";
 
 const categories: Array<{value:"all"|CommerceCategory;label:string}> = [
   { value:"all", label:"Todos" },
@@ -18,11 +18,17 @@ const categories: Array<{value:"all"|CommerceCategory;label:string}> = [
   { value:"bienestar", label:"Bienestar" }
 ];
 
-export default function CommerceDirectory() {
+export default function CommerceDirectory({
+  initialBusinesses=DEMO_COMMERCE,
+  source="demo"
+}:{
+  initialBusinesses?:CommerceProfile[];
+  source?:"live"|"demo";
+}) {
   const [query,setQuery] = useState("");
   const [category,setCategory] = useState<"all"|CommerceCategory>("all");
   const [promosOnly,setPromosOnly] = useState(false);
-  const [selectedId,setSelectedId] = useState(DEMO_COMMERCE[0]?.id ?? "");
+  const [selectedId,setSelectedId] = useState(initialBusinesses[0]?.id ?? "");
   const [favorites,setFavorites] = useState<string[]>(() => {
     if (typeof window === "undefined") return [];
     try {
@@ -33,11 +39,11 @@ export default function CommerceDirectory() {
   });
 
   const businesses = useMemo(
-    () => filterCommerce(DEMO_COMMERCE,{query,category,promotionsOnly:promosOnly}),
-    [query,category,promosOnly]
+    () => filterCommerce(initialBusinesses,{query,category,promotionsOnly:promosOnly}),
+    [initialBusinesses,query,category,promosOnly]
   );
 
-  const selected = DEMO_COMMERCE.find((item) => item.id === selectedId) ?? businesses[0];
+  const selected = initialBusinesses.find((item) => item.id === selectedId) ?? businesses[0];
 
   function readEvents(): CommerceAnalyticsEvent[] {
     try {
@@ -122,7 +128,7 @@ export default function CommerceDirectory() {
                 onClick={()=>selectBusiness(business.id)}
               >
                 <div>
-                  <span className="commerce-demo-badge">DEMO</span>
+                  <span className="commerce-demo-badge">{source==="live" ? "LIVE DATA" : "DEMO"}</span>
                   <strong>{business.name}</strong>
                   <small>{business.category} · {business.locationLabel}</small>
                 </div>
@@ -142,7 +148,7 @@ export default function CommerceDirectory() {
           <article className="commerce-detail">
             <div className="commerce-detail-head">
               <div>
-                <span className="commerce-demo-badge">DATOS SINTÉTICOS</span>
+                <span className="commerce-demo-badge">{source==="live" ? "DATOS PUBLICADOS" : "DATOS SINTÉTICOS"}</span>
                 <h2>{selected.name}</h2>
                 <p>{selected.description}</p>
               </div>
@@ -159,7 +165,7 @@ export default function CommerceDirectory() {
               <div><span>Ubicación</span><strong>{selected.locationLabel}</strong></div>
               <div><span>Routing</span><strong>{selected.verifiedLocation ? "Disponible" : "Pendiente"}</strong></div>
               <div>
-                <span>Horario demo</span>
+                <span>{source==="live" ? "Horario" : "Horario demo"}</span>
                 <strong>
                   {getCommerceOpenState(selected.hours).label}
                   {getCommerceOpenState(selected.hours).next ? " · " + getCommerceOpenState(selected.hours).next : ""}
@@ -198,27 +204,43 @@ export default function CommerceDirectory() {
             )}
 
             <div className="commerce-actions">
-              <button
-                type="button"
-                disabled={!selected.verifiedLocation}
-                onClick={()=>record("route_request",selected.id)}
-              >
-                Cómo llegar
-              </button>
-              <button
-                type="button"
-                disabled={!selected.phone}
-                onClick={()=>record("contact_click",selected.id)}
-              >
-                Llamar
-              </button>
-              <button
-                type="button"
-                disabled={!selected.website}
-                onClick={()=>record("contact_click",selected.id)}
-              >
-                Sitio web
-              </button>
+              {selected.verifiedLocation ? (
+                <Link
+                  className="commerce-profile-link"
+                  href={"/?business="+selected.slug}
+                  onClick={()=>record("route_request",selected.id)}
+                >
+                  Cómo llegar
+                </Link>
+              ) : (
+                <button type="button" disabled>Cómo llegar</button>
+              )}
+
+              {selected.phone ? (
+                <a
+                  className="commerce-profile-link"
+                  href={"tel:"+selected.phone}
+                  onClick={()=>record("contact_click",selected.id)}
+                >
+                  Llamar
+                </a>
+              ) : (
+                <button type="button" disabled>Llamar</button>
+              )}
+
+              {selected.website ? (
+                <a
+                  className="commerce-profile-link"
+                  href={selected.website}
+                  target="_blank"
+                  rel="noreferrer"
+                  onClick={()=>record("contact_click",selected.id)}
+                >
+                  Sitio web
+                </a>
+              ) : (
+                <button type="button" disabled>Sitio web</button>
+              )
               <Link className="commerce-profile-link" href={"/comercios/"+selected.slug}>Ver perfil</Link>
               <button type="button" onClick={shareBusiness}>Copiar enlace</button>
             </div>
