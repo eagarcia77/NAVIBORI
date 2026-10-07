@@ -20,6 +20,8 @@ export interface CommerceOffer {
   price?: number;
   currency: "USD";
   featured: boolean;
+  available: boolean;
+  sku?: string;
 }
 
 export interface CommercePromotion {
@@ -45,5 +47,6 @@ export interface CommerceProfile {
   offers: CommerceOffer[];
   promotions: CommercePromotion[];
   tags: string[];
+  verification: "unverified" | "pending" | "verified";
   demo: boolean;
 }
