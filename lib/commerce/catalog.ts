@@ -36,8 +36,26 @@ export function filterCommerce(
   });
 }
 
-export function activePromotions(business: CommerceProfile) {
-  return business.promotions.filter((promotion) => promotion.active);
+export function isPromotionActive(
+  promotion: CommerceProfile["promotions"][number],
+  at: Date = new Date()
+) {
+  if (!promotion.active) return false;
+
+  const now = at.getTime();
+  const starts = promotion.startsAt ? new Date(promotion.startsAt).getTime() : null;
+  const ends = promotion.endsAt ? new Date(promotion.endsAt).getTime() : null;
+
+  if (starts !== null && now < starts) return false;
+  if (ends !== null && now > ends) return false;
+  return true;
+}
+
+export function activePromotions(
+  business: CommerceProfile,
+  at: Date = new Date()
+) {
+  return business.promotions.filter((promotion) => isPromotionActive(promotion, at));
 }
 
 export function featuredOffers(business: CommerceProfile) {
