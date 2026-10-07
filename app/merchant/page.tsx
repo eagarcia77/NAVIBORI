@@ -2,6 +2,8 @@ import Link from "next/link";
 import NaviboriBrand from "@/components/brand/navibori-brand";
 import MerchantConsole from "@/components/merchant/merchant-console";
 import MerchantPulse from "@/components/merchant/merchant-pulse";
+import CatalogEditor from "@/components/merchant/catalog-editor";
+import MerchantVerification from "@/components/merchant/merchant-verification";
 import NaviGuide from "@/components/brand/navi-guide";
 
 export const metadata = {
@@ -30,6 +32,8 @@ export default function MerchantPage() {
       </div>
 
       <MerchantConsole />
+      <CatalogEditor />
+      <MerchantVerification />
       <MerchantPulse />
       <NaviGuide mode="cockpit" />
     </main>
