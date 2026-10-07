@@ -56,10 +56,10 @@ export default function CommerceReviewConsole({
       const {error}=await supabase.rpc("review_merchant_business",{
         p_business_id:business.id,
         p_action:action,
-        p_note:form.note || null,
+        p_note:form.note || undefined,
         p_ownership_verified:action==="approve" ? form.ownership : false,
         p_location_verified:action==="approve" ? form.location : false,
-        p_space_id:action==="approve" && form.spaceId ? form.spaceId : null
+        p_space_id:action==="approve" && form.spaceId ? form.spaceId : undefined
       });
 
       if(error) throw error;
