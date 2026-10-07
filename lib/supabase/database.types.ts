@@ -1009,6 +1009,32 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      submit_merchant_business_for_review: {
+        Args: { p_business_id: string }
+        Returns: {
+          category: string
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          metadata: Json
+          name: string
+          phone: string | null
+          slug: string
+          space_id: string | null
+          status: string
+          updated_at: string
+          venue_id: string
+          verification_status: string
+          website: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "businesses"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       submit_spatial_revision: {
         Args: { p_note?: string; p_revision_id: string }
         Returns: {
@@ -1034,6 +1060,15 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      sync_merchant_business_content: {
+        Args: {
+          p_business_id: string
+          p_hours?: Json
+          p_offers?: Json
+          p_promotions?: Json
+        }
+        Returns: boolean
       }
     }
     Enums: {
