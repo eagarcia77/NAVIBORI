@@ -7,6 +7,7 @@ type Draft={
   name?:string;
   description?:string;
   phone?:string;
+  whatsapp?:string;
   website?:string;
   opens?:string;
   closes?:string;
@@ -40,7 +41,7 @@ export default function MerchantVerification(){
   const state=assessMerchantVerification({
     name:Boolean(draft.name?.trim()),
     description:Boolean(draft.description?.trim()),
-    contact:Boolean(draft.phone?.trim() || draft.website?.trim()),
+    contact:Boolean(draft.phone?.trim() || draft.whatsapp?.trim() || draft.website?.trim()),
     hours:Boolean(draft.opens && draft.closes),
     catalog:catalogCount>0,
     locationVerified:false,
