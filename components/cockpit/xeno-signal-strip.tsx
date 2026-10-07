@@ -1,5 +1,6 @@
 import { assessSpatialTruth, PILOT_001_TRUTH } from "@/lib/spatial/truth-ledger";
 import { attestReality } from "@/lib/spatial/reality-attestation";
+import PeripheralStatus from "@/components/system/peripheral-status";
 
 export default function XenoSignalStrip() {
   const truth = assessSpatialTruth(PILOT_001_TRUTH);
@@ -39,6 +40,10 @@ export default function XenoSignalStrip() {
       <div>
         <span>ATTESTATION</span>
         <strong>{attestation.level}</strong>
+      </div>
+          <div className="signal-input">
+        <span>PERIPHERAL</span>
+        <strong><PeripheralStatus /></strong>
       </div>
     </div>
   );
