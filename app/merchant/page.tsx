@@ -4,6 +4,8 @@ import MerchantConsole from "@/components/merchant/merchant-console";
 import MerchantPulse from "@/components/merchant/merchant-pulse";
 import CatalogEditor from "@/components/merchant/catalog-editor";
 import MerchantVerification from "@/components/merchant/merchant-verification";
+import HoursEditor from "@/components/merchant/hours-editor";
+import PromotionEditor from "@/components/merchant/promotion-editor";
 import NaviGuide from "@/components/brand/navi-guide";
 
 export const metadata = {
@@ -32,7 +34,9 @@ export default function MerchantPage() {
       </div>
 
       <MerchantConsole />
+      <HoursEditor />
       <CatalogEditor />
+      <PromotionEditor />
       <MerchantVerification />
       <MerchantPulse />
       <NaviGuide mode="cockpit" />
