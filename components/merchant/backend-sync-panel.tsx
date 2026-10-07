@@ -15,6 +15,7 @@ type Draft={
   category:string;
   description:string;
   phone:string;
+  whatsapp:string;
   website:string;
 };
 
