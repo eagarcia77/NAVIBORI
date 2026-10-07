@@ -131,6 +131,18 @@ export default async function BusinessProfilePage({
             <button type="button" disabled>Llamar</button>
           )}
 
+          {business.whatsapp ? (
+            <a
+              href={"https://wa.me/"+business.whatsapp.replace(/\D/g,"")}
+              target="_blank"
+              rel="noreferrer"
+            >
+              WhatsApp
+            </a>
+          ) : (
+            <button type="button" disabled>WhatsApp</button>
+          )}
+
           {business.website ? (
             <a href={business.website} target="_blank" rel="noreferrer">Sitio web</a>
           ) : (
