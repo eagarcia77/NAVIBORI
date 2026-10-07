@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import NaviboriBrand from "@/components/brand/navibori-brand";
 import NaviGuide from "@/components/brand/navi-guide";
 import { getCommerceBySlug, getCommerceSlugs } from "@/lib/commerce/lookup";
+import { getPublicCommerceBySlug } from "@/lib/commerce/public-data";
 import { getCommerceOpenState } from "@/lib/commerce/hours";
 import { activePromotions } from "@/lib/commerce/catalog";
 
@@ -16,9 +17,18 @@ export default async function BusinessProfilePage({
   params:Promise<{slug:string}>;
 }){
   const {slug}=await params;
-  const business=getCommerceBySlug(slug);
+
+  let liveBusiness=null;
+  try{
+    liveBusiness=await getPublicCommerceBySlug(slug);
+  }catch{
+    liveBusiness=null;
+  }
+
+  const business=liveBusiness ?? getCommerceBySlug(slug);
   if(!business) notFound();
 
+  const isLive=!business.demo;
   const openState=getCommerceOpenState(business.hours);
 
   return (
@@ -26,7 +36,7 @@ export default async function BusinessProfilePage({
       <header className="subpage-header">
         <div>
           <NaviboriBrand compact />
-          <p className="eyebrow">BUSINESS PROFILE</p>
+          <p className="eyebrow">BUSINESS PROFILE · {isLive ? "LIVE" : "DEMO"}</p>
           <h1>{business.name}</h1>
           <p>{business.description}</p>
         </div>
@@ -36,14 +46,16 @@ export default async function BusinessProfilePage({
         </div>
       </header>
 
-      <div className="demo-notice">
-        Perfil sintético para demostrar la experiencia comercial. No representa un negocio real del Mercado Metropolitano.
+      <div className={isLive ? "live-data-notice" : "demo-notice"}>
+        {isLive
+          ? "Perfil publicado desde NAVIBORI Commerce. Los datos visibles fueron habilitados para consulta pública."
+          : "Perfil sintético para demostrar la experiencia comercial. No representa un negocio real del Mercado Metropolitano."}
       </div>
 
       <section className="business-profile">
         <div className="business-profile-main">
           <div className="business-profile-state">
-            <span className="commerce-demo-badge">DEMO</span>
+            <span className="commerce-demo-badge">{isLive ? "LIVE DATA" : "DEMO"}</span>
             <span className={"merchant-verification-badge " + business.verification}>
               {business.verification}
             </span>
@@ -69,6 +81,9 @@ export default async function BusinessProfilePage({
                   {typeof offer.price==="number" && <b>{"$" + offer.price.toFixed(2)}</b>}
                 </article>
               ))}
+              {business.offers.length===0 && (
+                <p className="commerce-empty">Este comercio todavía no ha publicado productos o servicios.</p>
+              )}
             </div>
           </section>
 
@@ -85,7 +100,7 @@ export default async function BusinessProfilePage({
           )}
 
           <section>
-            <h2>Horario demo</h2>
+            <h2>{isLive ? "Horario" : "Horario demo"}</h2>
             <div className="hours-grid">
               {business.hours.map((item)=>(
                 <div key={item.day}>
@@ -93,6 +108,9 @@ export default async function BusinessProfilePage({
                   <strong>{item.closed ? "Cerrado" : item.opens + " – " + item.closes}</strong>
                 </div>
               ))}
+              {business.hours.length===0 && (
+                <p className="commerce-empty">Horario no publicado.</p>
+              )}
             </div>
           </section>
         </div>
@@ -100,10 +118,30 @@ export default async function BusinessProfilePage({
         <aside className="business-profile-side">
           <h2>Acciones</h2>
           <Link href={"/?business="+business.slug}>Ver en mapa</Link>
-          <button type="button" disabled={!business.verifiedLocation}>Cómo llegar</button>
-          {business.phone ? <a href={"tel:"+business.phone}>Llamar</a> : <button type="button" disabled>Llamar</button>}
-          {business.website ? <a href={business.website} target="_blank" rel="noreferrer">Sitio web</a> : <button type="button" disabled>Sitio web</button>}
-          <p>El QR/NFC del comercio abrirá esta misma URL canónica.</p>
+
+          {business.verifiedLocation ? (
+            <Link href={"/?business="+business.slug}>Cómo llegar</Link>
+          ) : (
+            <button type="button" disabled>Cómo llegar</button>
+          )}
+
+          {business.phone ? (
+            <a href={"tel:"+business.phone}>Llamar</a>
+          ) : (
+            <button type="button" disabled>Llamar</button>
+          )}
+
+          {business.website ? (
+            <a href={business.website} target="_blank" rel="noreferrer">Sitio web</a>
+          ) : (
+            <button type="button" disabled>Sitio web</button>
+          )}
+
+          <p>
+            {business.verifiedLocation
+              ? "La ubicación publicada puede utilizarse como contexto para routing."
+              : "La ubicación exacta todavía no está validada; NAVIBORI no inventará coordenadas."}
+          </p>
         </aside>
       </section>
 
