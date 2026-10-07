@@ -16,8 +16,14 @@ export default function NaviboriMap() {
   const [mode, setMode] = useState<RealityMode>("2d");
   const [timeOpen, setTimeOpen] = useState(false);
   const [basemapState, setBasemapState] = useState<"loading" | "ready" | "error">("loading");
+  const [businessFocus, setBusinessFocus] = useState<string | null>(null);
 
   useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      setBusinessFocus(params.get("business"));
+    }
+
     if (!mapNode.current || mapRef.current) return;
 
     const map = new maplibregl.Map({
@@ -179,8 +185,12 @@ export default function NaviboriMap() {
         <RealityIntensityControl />
 
         <aside className="status-card" aria-live="polite">
-          <strong>Juana Díaz · Pilot 001</strong>
-          <span>Basemap activo · punto de referencia no equivale a coordenada oficial del Mercado</span>
+          <strong>{businessFocus ? "Commerce focus · " + businessFocus : "Juana Díaz · Pilot 001"}</strong>
+          <span>
+            {businessFocus
+              ? "Comercio seleccionado. Ubicación interior exacta pendiente de verificación; NAVIBORI no moverá el marcador a una coordenada inventada."
+              : "Basemap activo · punto de referencia no equivale a coordenada oficial del Mercado"}
+          </span>
         </aside>
       </div>
     </section>
