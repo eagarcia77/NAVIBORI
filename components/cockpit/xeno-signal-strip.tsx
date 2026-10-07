@@ -1,7 +1,18 @@
 import { assessSpatialTruth, PILOT_001_TRUTH } from "@/lib/spatial/truth-ledger";
+import { attestReality } from "@/lib/spatial/reality-attestation";
 
 export default function XenoSignalStrip() {
   const truth = assessSpatialTruth(PILOT_001_TRUTH);
+  const attestation = attestReality({
+    published: truth.published,
+    datasetVersioned: truth.hasIdentity,
+    provenanceVerified: truth.hasProvenance,
+    integrityVerified: truth.hasHash,
+    routeGraphVerified: false,
+    accessibilityVerified: false,
+    deviceCompatible: false,
+    consentGranted: false
+  });
 
   return (
     <div className="xeno-signal-strip" aria-label="XENO spatial trust signals">
@@ -26,8 +37,8 @@ export default function XenoSignalStrip() {
         <strong>{truth.hasProvenance ? "Verified" : "Pending"}</strong>
       </div>
       <div>
-        <span>IMMERSIVE</span>
-        <strong>{truth.immersiveReady ? "Ready" : "Gated"}</strong>
+        <span>ATTESTATION</span>
+        <strong>{attestation.level}</strong>
       </div>
     </div>
   );
