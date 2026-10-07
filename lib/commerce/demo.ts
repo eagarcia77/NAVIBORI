@@ -21,13 +21,14 @@ export const DEMO_COMMERCE: CommerceProfile[] = [
     verifiedLocation: false,
     hours: demoWeek.map((item)=>({...item})),
     offers: [
-      { id:"of-1", title:"Plato del día", description:"Producto demostrativo", price:12, currency:"USD", featured:true },
-      { id:"of-2", title:"Café puertorriqueño", price:3, currency:"USD", featured:true }
+      { id:"of-1", title:"Plato del día", description:"Producto demostrativo", price:12, currency:"USD", featured:true, available:true },
+      { id:"of-2", title:"Café puertorriqueño", price:3, currency:"USD", featured:true, available:true }
     ],
     promotions: [
       { id:"pr-1", title:"Promo demo", description:"Promoción sintética para probar la interfaz.", active:true }
     ],
     tags:["comida","cafe","puerto rico"],
+    verification:"unverified",
     demo:true
   },
   {
@@ -40,10 +41,11 @@ export const DEMO_COMMERCE: CommerceProfile[] = [
     verifiedLocation: false,
     hours: demoWeek.map((item)=>({...item})),
     offers: [
-      { id:"of-3", title:"Pieza artesanal", description:"Artículo de demostración", price:24, currency:"USD", featured:true }
+      { id:"of-3", title:"Pieza artesanal", description:"Artículo de demostración", price:24, currency:"USD", featured:true, available:true }
     ],
     promotions: [],
     tags:["artesania","regalos","local"],
+    verification:"unverified",
     demo:true
   },
   {
@@ -56,10 +58,11 @@ export const DEMO_COMMERCE: CommerceProfile[] = [
     verifiedLocation: false,
     hours: demoWeek.map((item)=>({...item})),
     offers: [
-      { id:"of-4", title:"Servicio principal", description:"Servicio de demostración", currency:"USD", featured:true }
+      { id:"of-4", title:"Servicio principal", description:"Servicio de demostración", currency:"USD", featured:true, available:true }
     ],
     promotions: [],
     tags:["servicios"],
+    verification:"unverified",
     demo:true
   }
 ];
