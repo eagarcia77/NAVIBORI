@@ -116,6 +116,7 @@ export default function CommerceReviewConsole({
             <div className="commerce-review-summary">
               <div><span>Descripción</span><strong>{business.description || "—"}</strong></div>
               <div><span>Teléfono</span><strong>{business.phone || "—"}</strong></div>
+              <div><span>WhatsApp</span><strong>{business.whatsapp || "—"}</strong></div>
               <div><span>Sitio web</span><strong>{business.website || "—"}</strong></div>
             </div>
 
