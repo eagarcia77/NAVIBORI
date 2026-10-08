@@ -187,7 +187,7 @@ export default function BusinessRequestForm({
         window.location.origin+
         "/solicitud/"+
         encodeURIComponent(requestId)+
-        "?token="+
+        "#token="+
         encodeURIComponent(cancelToken);
 
       setManageUrl(nextManageUrl);
