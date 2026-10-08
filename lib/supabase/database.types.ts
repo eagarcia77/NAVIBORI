@@ -1316,6 +1316,7 @@ export type Database = {
           preparation_started_at: string
           ready_at: string
           requested_for: string
+          slot_minutes: number
           status: string
           timezone: string
           updated_at: string
