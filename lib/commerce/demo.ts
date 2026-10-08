@@ -19,6 +19,7 @@ export const DEMO_COMMERCE: CommerceProfile[] = [
     description: "Ficha sintética para demostrar menú, promoción y descubrimiento comercial.",
     locationLabel: "Local demo · ubicación no validada",
     verifiedLocation: false,
+    mapLocation:{latitude:18.0524,longitude:-66.5055,address:"Punto sintético DEMO",verified:false},
     hours: demoWeek.map((item)=>({...item})),
     offers: [
       { id:"of-1", title:"Plato del día", description:"Producto demostrativo", price:12, currency:"USD", featured:true, available:true },
@@ -39,6 +40,7 @@ export const DEMO_COMMERCE: CommerceProfile[] = [
     description: "Comercio sintético para probar productos y favoritos.",
     locationLabel: "Local demo · ubicación no validada",
     verifiedLocation: false,
+    mapLocation:{latitude:18.0517,longitude:-66.5066,address:"Punto sintético DEMO",verified:false},
     hours: demoWeek.map((item)=>({...item})),
     offers: [
       { id:"of-3", title:"Pieza artesanal", description:"Artículo de demostración", price:24, currency:"USD", featured:true, available:true }
@@ -56,6 +58,7 @@ export const DEMO_COMMERCE: CommerceProfile[] = [
     description: "Ficha sintética para demostrar servicios, contacto y navegación.",
     locationLabel: "Local demo · ubicación no validada",
     verifiedLocation: false,
+    mapLocation:{latitude:18.0520,longitude:-66.5072,address:"Punto sintético DEMO",verified:false},
     hours: demoWeek.map((item)=>({...item})),
     offers: [
       { id:"of-4", title:"Servicio principal", description:"Servicio de demostración", currency:"USD", featured:true, available:true }

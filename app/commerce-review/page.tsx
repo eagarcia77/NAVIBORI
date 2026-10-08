@@ -140,7 +140,7 @@ export default async function CommerceReviewPage(){
       </header>
 
       <div className="live-data-notice">
-        La activación requiere un espacio real del venue y queda registrada en auditoría.
+        La activación requiere una dirección pública y coordenadas verificadas. El espacio interior es opcional hasta completar el levantamiento.
       </div>
 
       <CommerceReviewConsole

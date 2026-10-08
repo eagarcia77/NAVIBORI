@@ -83,9 +83,16 @@ export function composePublicCommerce(
 
     const settings=serviceSettings.find((item)=>item.business_id===business.id);
 
+    const hasCoordinates=
+      typeof business.latitude==="number" &&
+      typeof business.longitude==="number" &&
+      Number.isFinite(business.latitude) &&
+      Number.isFinite(business.longitude);
+
     const verifiedLocation=
       business.verification_status==="verified" &&
-      Boolean(business.space_id);
+      business.location_verified &&
+      hasCoordinates;
 
     return {
       id:business.id,
@@ -97,9 +104,15 @@ export function composePublicCommerce(
       whatsapp:business.whatsapp ?? undefined,
       website:business.website ?? undefined,
       locationLabel:verifiedLocation
-        ? "Ubicación verificada"
+        ? (business.address_text ?? "Ubicación verificada")
         : "Ubicación pendiente de verificación",
       verifiedLocation,
+      mapLocation:hasCoordinates ? {
+        latitude:business.latitude as number,
+        longitude:business.longitude as number,
+        address:business.address_text ?? "Destino del comercio",
+        verified:verifiedLocation
+      } : undefined,
       hours:businessHours,
       offers:businessOffers,
       promotions:businessPromotions,
