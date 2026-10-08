@@ -16,6 +16,9 @@ export default function CustomerRequestInbox(){
   const [live,setLive]=useState(false);
   const [lastRealtimeId,setLastRealtimeId]=useState<string|null>(null);
   const [filter,setFilter]=useState<"all"|"new"|"accepted">("all");
+  const [notificationPermission,setNotificationPermission]=useState<
+    NotificationPermission|"unsupported"
+  >("unsupported");
 
   async function load(id:string){
     const supabase=createClient();
@@ -67,6 +70,10 @@ export default function CustomerRequestInbox(){
   }
 
   useEffect(()=>{
+    if(typeof window!=="undefined" && "Notification" in window){
+      setNotificationPermission(Notification.permission);
+    }
+
     let active=true;
     let cleanup:undefined|(()=>void);
 
@@ -98,6 +105,17 @@ export default function CustomerRequestInbox(){
               const nextId=String((payload.new as {id?:string}).id ?? "");
               setLastRealtimeId(nextId || null);
               setStatus("Nueva solicitud recibida en tiempo real.");
+
+              if(
+                typeof window!=="undefined" &&
+                "Notification" in window &&
+                Notification.permission==="granted"
+              ){
+                new Notification("Nueva solicitud en NAVIBORI",{
+                  body:"Tienes una nueva solicitud de cliente."
+                });
+              }
+
               await load(business.id);
             }
           )
@@ -119,6 +137,22 @@ export default function CustomerRequestInbox(){
       cleanup?.();
     };
   },[]);
+
+  async function enableNotifications(){
+    if(typeof window==="undefined" || !("Notification" in window)){
+      setNotificationPermission("unsupported");
+      setStatus("Este navegador no admite notificaciones locales.");
+      return;
+    }
+
+    const permission=await Notification.requestPermission();
+    setNotificationPermission(permission);
+    setStatus(
+      permission==="granted"
+        ? "Notificaciones locales activadas mientras uses Merchant Console."
+        : "Las notificaciones no fueron autorizadas."
+    );
+  }
 
   async function updateRequest(id:string,next:"accepted"|"completed"|"cancelled"){
     if(!businessId) return;
@@ -171,7 +205,8 @@ export default function CustomerRequestInbox(){
 
       <p className="merchant-analytics-status" role="status">{status}</p>
 
-      <div className="request-filter-switch" aria-label="Filtrar solicitudes">
+      <div className="request-toolbar">
+        <div className="request-filter-switch" aria-label="Filtrar solicitudes">
         <button
           type="button"
           className={filter==="all" ? "active" : ""}
@@ -188,14 +223,29 @@ export default function CustomerRequestInbox(){
         >
           Nuevas
         </button>
-        <button
-          type="button"
-          className={filter==="accepted" ? "active" : ""}
-          onClick={()=>setFilter("accepted")}
-          aria-pressed={filter==="accepted"}
-        >
-          Aceptadas
-        </button>
+          <button
+            type="button"
+            className={filter==="accepted" ? "active" : ""}
+            onClick={()=>setFilter("accepted")}
+            aria-pressed={filter==="accepted"}
+          >
+            Aceptadas
+          </button>
+        </div>
+
+        {notificationPermission!=="unsupported" && notificationPermission!=="granted" && (
+          <button
+            type="button"
+            className="request-notification-button"
+            onClick={enableNotifications}
+          >
+            Activar notificaciones
+          </button>
+        )}
+
+        {notificationPermission==="granted" && (
+          <span className="request-notification-ready">Notificaciones activas</span>
+        )}
       </div>
 
       <div className="merchant-request-list">
