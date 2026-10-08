@@ -13,6 +13,8 @@ export default function CustomerRequestInbox(){
   const [offerTitles,setOfferTitles]=useState<Record<string,string>>({});
   const [status,setStatus]=useState("Cargando solicitudes…");
   const [busyId,setBusyId]=useState<string|null>(null);
+  const [live,setLive]=useState(false);
+  const [lastRealtimeId,setLastRealtimeId]=useState<string|null>(null);
 
   async function load(id:string){
     const supabase=createClient();
@@ -65,6 +67,7 @@ export default function CustomerRequestInbox(){
 
   useEffect(()=>{
     let active=true;
+    let cleanup:undefined|(()=>void);
 
     getOwnedMerchantBusiness()
       .then(async(business)=>{
@@ -73,14 +76,47 @@ export default function CustomerRequestInbox(){
           setStatus("Conecta primero un comercio para recibir solicitudes.");
           return;
         }
+
         setBusinessId(business.id);
         await load(business.id);
+
+        if(!active) return;
+
+        const supabase=createClient();
+        const channel=supabase
+          .channel("merchant-requests:"+business.id)
+          .on(
+            "postgres_changes",
+            {
+              event:"INSERT",
+              schema:"public",
+              table:"business_customer_requests",
+              filter:"business_id=eq."+business.id
+            },
+            async(payload)=>{
+              const nextId=String((payload.new as {id?:string}).id ?? "");
+              setLastRealtimeId(nextId || null);
+              setStatus("Nueva solicitud recibida en tiempo real.");
+              await load(business.id);
+            }
+          )
+          .subscribe((channelStatus)=>{
+            setLive(channelStatus==="SUBSCRIBED");
+          });
+
+        cleanup=()=>{
+          setLive(false);
+          supabase.removeChannel(channel);
+        };
       })
       .catch((error)=>{
         if(active) setStatus(error instanceof Error ? error.message : "No se pudo cargar la bandeja.");
       });
 
-    return ()=>{active=false};
+    return ()=>{
+      active=false;
+      cleanup?.();
+    };
   },[]);
 
   async function updateRequest(id:string,next:"accepted"|"completed"|"cancelled"){
@@ -110,14 +146,22 @@ export default function CustomerRequestInbox(){
           <p className="eyebrow">REQUEST INBOX</p>
           <h2>Solicitudes de clientes</h2>
         </div>
-        <span>{requests.filter((item)=>item.status==="new").length} nuevas</span>
+        <div className="request-inbox-status">
+          <span className={"realtime-badge "+(live?"live":"offline")}>
+            {live ? "LIVE" : "SYNC"}
+          </span>
+          <span>{requests.filter((item)=>item.status==="new").length} nuevas</span>
+        </div>
       </div>
 
       <p className="merchant-analytics-status" role="status">{status}</p>
 
       <div className="merchant-request-list">
         {requests.map((request)=>(
-          <article key={request.id}>
+          <article
+            key={request.id}
+            className={request.id===lastRealtimeId ? "request-realtime-new" : ""}
+          >
             <div className="merchant-request-top">
               <div>
                 <span className={"request-status "+request.status}>{request.status}</span>
