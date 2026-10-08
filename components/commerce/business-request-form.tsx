@@ -286,7 +286,7 @@ export default function BusinessRequestForm({
                       {" · "}
                       {slot.available
                         ? remaining+" "+(remaining===1 ? "espacio disponible" : "espacios disponibles")
-                        : "Lleno"}
+                        : "No disponible"}
                     </option>
                   );
                 })}
