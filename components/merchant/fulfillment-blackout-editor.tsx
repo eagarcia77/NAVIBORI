@@ -95,19 +95,13 @@ export default function FulfillmentBlackoutEditor(){
 
     try{
       const supabase=createClient();
-      const {data:{user}}=await supabase.auth.getUser();
-      if(!user) throw new Error("Sesión requerida.");
-
-      const {error}=await supabase
-        .from("business_fulfillment_blocks")
-        .insert({
-          business_id:businessId,
-          fulfillment_method:method,
-          starts_at:start.toISOString(),
-          ends_at:end.toISOString(),
-          reason:reason.trim() || null,
-          created_by:user.id
-        });
+      const {error}=await supabase.rpc("create_business_fulfillment_block",{
+        p_business_id:businessId,
+        p_fulfillment_method:method,
+        p_local_start:startsAt+":00",
+        p_local_end:endsAt+":00",
+        p_reason:reason.trim() || undefined
+      });
 
       if(error) throw error;
 
