@@ -84,6 +84,7 @@ export default function BusinessRequestForm({
   const [slotStatus,setSlotStatus]=useState("");
   const [note,setNote]=useState("");
   const [status,setStatus]=useState("");
+  const [manageUrl,setManageUrl]=useState("");
   const [busy,setBusy]=useState(false);
 
   useEffect(()=>{
@@ -135,6 +136,20 @@ export default function BusinessRequestForm({
     }).format(new Date(slot));
   }
 
+  function createCancelToken(){
+    const bytes=new Uint8Array(32);
+    crypto.getRandomValues(bytes);
+    return Array.from(bytes)
+      .map((value)=>value.toString(16).padStart(2,"0"))
+      .join("");
+  }
+
+  async function copyManageUrl(){
+    if(!manageUrl) return;
+    await navigator.clipboard.writeText(manageUrl);
+    setStatus("Enlace de gestión copiado.");
+  }
+
   async function submit(){
     setBusy(true);
     setStatus("Enviando solicitud…");
@@ -146,6 +161,7 @@ export default function BusinessRequestForm({
 
       const supabase=createClient();
       const selectedOffer=availableOffers.find((offer)=>offer.id===offerId);
+      const cancelToken=createCancelToken();
 
       const {data,error}=await supabase.rpc("create_business_customer_request",{
         p_business_id:businessId,
@@ -160,12 +176,22 @@ export default function BusinessRequestForm({
         p_requested_for:
           fulfillment==="contact_back"
             ? undefined
-            : requestedFor
+            : requestedFor,
+        p_cancel_token:cancelToken
       });
 
       if(error) throw error;
 
-      setStatus("Solicitud enviada. Referencia: "+String(data).slice(0,8));
+      const requestId=String(data);
+      const nextManageUrl=
+        window.location.origin+
+        "/solicitud/"+
+        encodeURIComponent(requestId)+
+        "?token="+
+        encodeURIComponent(cancelToken);
+
+      setManageUrl(nextManageUrl);
+      setStatus("Solicitud enviada. Referencia: "+requestId.slice(0,8));
       setOfferId("");
       setQuantity(1);
       setName("");
@@ -343,6 +369,14 @@ export default function BusinessRequestForm({
         </button>
         {status && <span role="status">{status}</span>}
       </div>
+
+      {manageUrl && (
+        <div className="customer-request-manage-link">
+          <strong>Guarda este enlace para cancelar tu solicitud si fuera necesario.</strong>
+          <a href={manageUrl}>Gestionar solicitud</a>
+          <button type="button" onClick={copyManageUrl}>Copiar enlace</button>
+        </div>
+      )}
 
       <small>
         Los horarios se calculan según la capacidad configurada y el horario publicado del comercio.
