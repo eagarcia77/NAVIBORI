@@ -455,7 +455,7 @@ export default function NaviboriMap({
       routeResultRef.current=data;
       setRouteResult(data);
       setRouteStatus(
-        (gpsActive ? "GPS activo · " : "")+
+        (activeNavigationModeRef.current ? "GPS activo · " : "")+
         (routeMode==="walking" ? "Caminando" : "En carro")+
         " · "+formatDistance(data.distanceMeters)+
         " · "+formatDuration(data.durationSeconds)
