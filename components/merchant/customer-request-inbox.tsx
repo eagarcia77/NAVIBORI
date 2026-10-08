@@ -15,6 +15,7 @@ export default function CustomerRequestInbox(){
   const [busyId,setBusyId]=useState<string|null>(null);
   const [live,setLive]=useState(false);
   const [lastRealtimeId,setLastRealtimeId]=useState<string|null>(null);
+  const [filter,setFilter]=useState<"all"|"new"|"accepted">("all");
 
   async function load(id:string){
     const supabase=createClient();
@@ -139,6 +140,20 @@ export default function CustomerRequestInbox(){
     }
   }
 
+  const visibleRequests=requests.filter((request)=>
+    filter==="all" ? true : request.status===filter
+  );
+
+  function contactHref(request:RequestRow){
+    if(request.contact_method==="email"){
+      return "mailto:"+request.contact_value;
+    }
+    if(request.contact_method==="whatsapp"){
+      return "https://wa.me/"+request.contact_value.replace(/\D/g,"");
+    }
+    return "tel:"+request.contact_value;
+  }
+
   return (
     <section className="merchant-request-inbox">
       <div className="merchant-section-head">
@@ -156,8 +171,35 @@ export default function CustomerRequestInbox(){
 
       <p className="merchant-analytics-status" role="status">{status}</p>
 
+      <div className="request-filter-switch" aria-label="Filtrar solicitudes">
+        <button
+          type="button"
+          className={filter==="all" ? "active" : ""}
+          onClick={()=>setFilter("all")}
+          aria-pressed={filter==="all"}
+        >
+          Todas
+        </button>
+        <button
+          type="button"
+          className={filter==="new" ? "active" : ""}
+          onClick={()=>setFilter("new")}
+          aria-pressed={filter==="new"}
+        >
+          Nuevas
+        </button>
+        <button
+          type="button"
+          className={filter==="accepted" ? "active" : ""}
+          onClick={()=>setFilter("accepted")}
+          aria-pressed={filter==="accepted"}
+        >
+          Aceptadas
+        </button>
+      </div>
+
       <div className="merchant-request-list">
-        {requests.map((request)=>(
+        {visibleRequests.map((request)=>(
           <article
             key={request.id}
             className={request.id===lastRealtimeId ? "request-realtime-new" : ""}
@@ -198,6 +240,14 @@ export default function CustomerRequestInbox(){
             </dl>
 
             <div className="commerce-review-actions">
+              <a
+                className="request-contact-action"
+                href={contactHref(request)}
+                target={request.contact_method==="whatsapp" ? "_blank" : undefined}
+                rel={request.contact_method==="whatsapp" ? "noreferrer" : undefined}
+              >
+                Contactar
+              </a>
               <button
                 type="button"
                 disabled={busyId===request.id || request.status!=="new"}
@@ -223,7 +273,11 @@ export default function CustomerRequestInbox(){
           </article>
         ))}
 
-        {requests.length===0 && <p className="merchant-empty">La bandeja está vacía.</p>}
+        {visibleRequests.length===0 && (
+          <p className="merchant-empty">
+            {requests.length===0 ? "La bandeja está vacía." : "No hay solicitudes en este filtro."}
+          </p>
+        )}
       </div>
 
       <small>Las solicitudes con más de 30 días se eliminan al abrir la bandeja. NAVIBORI no procesa pagos ni almacena tarjetas.</small>
