@@ -65,6 +65,12 @@ export interface CommerceProfile {
   website?: string;
   locationLabel: string;
   verifiedLocation: boolean;
+  mapLocation?: {
+    latitude: number;
+    longitude: number;
+    address: string;
+    verified: boolean;
+  };
   hours: CommerceHours[];
   offers: CommerceOffer[];
   promotions: CommercePromotion[];
