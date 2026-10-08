@@ -10,9 +10,10 @@ import {
   validRouteCoordinate,
   type RouteCoordinate
 } from "@/lib/commerce/directions";
-import type {
-  InMapRouteMode,
-  InMapRouteResult
+import {
+  shouldRefreshNavigationRoute,
+  type InMapRouteMode,
+  type InMapRouteResult
 } from "@/lib/commerce/in-map-routing";
 import type {CommerceCategory,CommerceProfile} from "@/lib/commerce/types";
 
@@ -37,7 +38,6 @@ function formatDistance(meters:number){
   if(meters<1000){
     return Math.max(1,Math.round(meters*3.28084))+" ft";
   }
-
   return (meters/1609.344).toFixed(1)+" mi · "+(meters/1000).toFixed(1)+" km";
 }
 
@@ -62,6 +62,12 @@ export default function NaviboriMap({
   const markersRef=useRef<maplibregl.Marker[]>([]);
   const userMarkerRef=useRef<maplibregl.Marker|null>(null);
   const routeAbortRef=useRef<AbortController|null>(null);
+  const gpsWatchRef=useRef<number|null>(null);
+  const activeNavigationModeRef=useRef<InMapRouteMode|null>(null);
+  const lastRouteOriginRef=useRef<RouteCoordinate|null>(null);
+  const lastRouteRefreshAtRef=useRef(0);
+  const routeResultRef=useRef<InMapRouteResult|null>(null);
+  const followGpsRef=useRef(true);
 
   const [mapReady,setMapReady]=useState(false);
   const [mode,setMode]=useState<RealityMode>("2d");
@@ -75,6 +81,9 @@ export default function NaviboriMap({
   const [routeStatus,setRouteStatus]=useState("");
   const [routeBusy,setRouteBusy]=useState<InMapRouteMode|null>(null);
   const [lastRouteMode,setLastRouteMode]=useState<InMapRouteMode>("driving");
+  const [gpsActive,setGpsActive]=useState(false);
+  const [gpsAccuracy,setGpsAccuracy]=useState<number|null>(null);
+  const [followGps,setFollowGps]=useState(true);
 
   const mappedBusinesses=useMemo(
     ()=>businesses.filter((business)=>
@@ -95,6 +104,14 @@ export default function NaviboriMap({
     selected.mapLocation &&
     selected.mapLocation.verified
   );
+
+  useEffect(()=>{
+    routeResultRef.current=routeResult;
+  },[routeResult]);
+
+  useEffect(()=>{
+    followGpsRef.current=followGps;
+  },[followGps]);
 
   useEffect(()=>{
     if(typeof window!=="undefined"){
@@ -145,6 +162,9 @@ export default function NaviboriMap({
     mapRef.current=map;
     return ()=>{
       routeAbortRef.current?.abort();
+      if(gpsWatchRef.current!==null && navigator.geolocation){
+        navigator.geolocation.clearWatch(gpsWatchRef.current);
+      }
       markersRef.current.forEach((marker)=>marker.remove());
       userMarkerRef.current?.remove();
       map.remove();
@@ -174,6 +194,7 @@ export default function NaviboriMap({
       element.appendChild(initial);
 
       element.addEventListener("click",()=>{
+        stopGpsNavigation();
         routeAbortRef.current?.abort();
         setRouteResult(null);
         setRouteStatus("");
@@ -283,6 +304,15 @@ export default function NaviboriMap({
       );
     }
 
+    if(gpsActive && followGps && userLocation){
+      map.easeTo({
+        center:[userLocation.longitude,userLocation.latitude],
+        zoom:Math.max(map.getZoom(),16),
+        duration:350
+      });
+      return;
+    }
+
     const bounds=new maplibregl.LngLatBounds();
     routeResult.geometry.coordinates.forEach(([longitude,latitude])=>{
       bounds.extend([longitude,latitude]);
@@ -290,12 +320,12 @@ export default function NaviboriMap({
 
     if(!bounds.isEmpty()){
       map.fitBounds(bounds,{
-        padding:{top:70,right:70,bottom:190,left:70},
+        padding:{top:70,right:70,bottom:210,left:70},
         maxZoom:17,
         duration:750
       });
     }
-  },[mapReady,routeResult]);
+  },[followGps,gpsActive,mapReady,routeResult,userLocation]);
 
   function activateMapMode(next:RealityMode){
     const map=mapRef.current;
@@ -316,8 +346,18 @@ export default function NaviboriMap({
     const map=mapRef.current;
     if(!map) return;
 
-    userMarkerRef.current?.remove();
-    userMarkerRef.current=new maplibregl.Marker({color:"#136f63"})
+    if(userMarkerRef.current){
+      userMarkerRef.current.setLngLat([next.longitude,next.latitude]);
+      return;
+    }
+
+    const element=document.createElement("div");
+    element.className="navibori-gps-marker";
+    element.setAttribute("aria-label","Tu ubicación GPS");
+    const dot=document.createElement("span");
+    element.appendChild(dot);
+
+    userMarkerRef.current=new maplibregl.Marker({element})
       .setLngLat([next.longitude,next.latitude])
       .addTo(map);
   }
@@ -337,6 +377,11 @@ export default function NaviboriMap({
         };
 
         setUserLocation(next);
+        setGpsAccuracy(
+          Number.isFinite(position.coords.accuracy)
+            ? position.coords.accuracy
+            : null
+        );
         setLocationStatus("Tu ubicación está activa solo durante esta sesión.");
         showUserLocation(next);
 
@@ -347,36 +392,43 @@ export default function NaviboriMap({
 
         mapRef.current?.easeTo({
           center:[next.longitude,next.latitude],
-          zoom:15,
+          zoom:16,
           duration:650
         });
       },
       ()=>{
         setLocationStatus(
-          "No se pudo acceder a tu ubicación. Puedes permitirla en el navegador o abrir Google Maps."
+          "No se pudo acceder a tu ubicación. Verifica el permiso de ubicación del navegador."
         );
       },
-      {enableHighAccuracy:true,timeout:10000,maximumAge:60000}
+      {enableHighAccuracy:true,timeout:12000,maximumAge:10000}
     );
   }
 
   async function calculateRoute(
     routeMode:InMapRouteMode,
-    origin:RouteCoordinate
+    origin:RouteCoordinate,
+    options:{quiet?:boolean}={}
   ){
     if(!selected?.mapLocation || !canRoute) return;
 
+    const quiet=options.quiet ?? false;
     routeAbortRef.current?.abort();
     const controller=new AbortController();
     routeAbortRef.current=controller;
 
+    lastRouteOriginRef.current=origin;
+    lastRouteRefreshAtRef.current=Date.now();
     setLastRouteMode(routeMode);
-    setRouteBusy(routeMode);
-    setRouteStatus(
-      routeMode==="walking"
-        ? "Calculando ruta caminando…"
-        : "Calculando ruta en carro…"
-    );
+
+    if(!quiet){
+      setRouteBusy(routeMode);
+      setRouteStatus(
+        routeMode==="walking"
+          ? "Calculando ruta caminando…"
+          : "Calculando ruta en carro…"
+      );
+    }
 
     try{
       const response=await fetch("/api/routing",{
@@ -400,42 +452,139 @@ export default function NaviboriMap({
         throw new Error("error" in data && data.error ? data.error : "No se encontró una ruta.");
       }
 
+      routeResultRef.current=data;
       setRouteResult(data);
       setRouteStatus(
-        (routeMode==="walking" ? "Ruta caminando" : "Ruta en carro")+
+        (activeNavigationModeRef.current ? "GPS activo · " : "")+
+        (routeMode==="walking" ? "Caminando" : "En carro")+
         " · "+formatDistance(data.distanceMeters)+
         " · "+formatDuration(data.durationSeconds)
       );
     }catch(error){
       if(error instanceof Error && error.name==="AbortError") return;
-      setRouteResult(null);
+
+      if(!quiet){
+        routeResultRef.current=null;
+        setRouteResult(null);
+      }
+
       setRouteStatus(
-        error instanceof Error ? error.message : "No se pudo calcular la ruta."
+        quiet
+          ? "GPS activo · no se pudo actualizar la ruta; se conserva la última ruta."
+          : error instanceof Error
+            ? error.message
+            : "No se pudo calcular la ruta."
       );
     }finally{
       if(routeAbortRef.current===controller){
         routeAbortRef.current=null;
-        setRouteBusy(null);
+        if(!quiet) setRouteBusy(null);
       }
     }
   }
 
-  function routeInsideNavibori(routeMode:InMapRouteMode){
+  function stopGpsNavigation(){
+    if(gpsWatchRef.current!==null && navigator.geolocation){
+      navigator.geolocation.clearWatch(gpsWatchRef.current);
+    }
+
+    gpsWatchRef.current=null;
+    activeNavigationModeRef.current=null;
+    lastRouteOriginRef.current=null;
+    lastRouteRefreshAtRef.current=0;
+    setGpsActive(false);
+    setGpsAccuracy(null);
+  }
+
+  function startGpsNavigation(routeMode:InMapRouteMode){
     if(!canRoute) return;
 
-    if(userLocation){
-      void calculateRoute(routeMode,userLocation);
+    if(!navigator.geolocation){
+      setLocationStatus("Este dispositivo no ofrece GPS/geolocalización.");
       return;
     }
 
-    locateMe((coordinate)=>{
-      void calculateRoute(routeMode,coordinate);
-    });
+    stopGpsNavigation();
+    activeNavigationModeRef.current=routeMode;
+    setLastRouteMode(routeMode);
+    setGpsActive(true);
+    setFollowGps(true);
+    followGpsRef.current=true;
+    setLocationStatus("GPS activo · esperando posición precisa…");
+
+    const handlePosition=(position:GeolocationPosition)=>{
+      const next={
+        latitude:position.coords.latitude,
+        longitude:position.coords.longitude
+      };
+
+      const accuracy=Number.isFinite(position.coords.accuracy)
+        ? position.coords.accuracy
+        : null;
+
+      setUserLocation(next);
+      setGpsAccuracy(accuracy);
+      showUserLocation(next);
+
+      if(followGpsRef.current){
+        mapRef.current?.easeTo({
+          center:[next.longitude,next.latitude],
+          zoom:Math.max(mapRef.current?.getZoom() ?? 16,16),
+          duration:350
+        });
+      }
+
+      const activeMode=activeNavigationModeRef.current;
+      if(!activeMode) return;
+
+      const now=Date.now();
+      if(
+        shouldRefreshNavigationRoute(
+          lastRouteOriginRef.current,
+          next,
+          lastRouteRefreshAtRef.current,
+          now
+        )
+      ){
+        void calculateRoute(activeMode,next,{
+          quiet:routeResultRef.current!==null
+        });
+      }
+
+      setLocationStatus(
+        "GPS activo"+
+        (accuracy!==null ? " · precisión ±"+Math.round(accuracy)+" m" : "")
+      );
+    };
+
+    const handleError=(error:GeolocationPositionError)=>{
+      const message=
+        error.code===error.PERMISSION_DENIED
+          ? "Permiso de ubicación denegado. Actívalo para usar navegación GPS."
+          : error.code===error.POSITION_UNAVAILABLE
+            ? "La ubicación GPS no está disponible en este momento."
+            : "El GPS tardó demasiado en responder.";
+
+      setLocationStatus(message);
+      stopGpsNavigation();
+    };
+
+    gpsWatchRef.current=navigator.geolocation.watchPosition(
+      handlePosition,
+      handleError,
+      {
+        enableHighAccuracy:true,
+        timeout:15000,
+        maximumAge:3000
+      }
+    );
   }
 
   function clearRoute(){
     routeAbortRef.current?.abort();
     routeAbortRef.current=null;
+    stopGpsNavigation();
+    routeResultRef.current=null;
     setRouteResult(null);
     setRouteStatus("");
     setRouteBusy(null);
@@ -463,13 +612,15 @@ export default function NaviboriMap({
 
         <div className="cockpit-signal" aria-label="Estado del mapa">
           <span className="cockpit-pulse" aria-hidden="true" />
-          <strong>{source==="live" ? "Comercios LIVE" : "Comercios DEMO"}</strong>
+          <strong>{gpsActive ? "GPS LIVE" : source==="live" ? "Comercios LIVE" : "Comercios DEMO"}</strong>
           <span>
-            {basemapState==="ready"
-              ? mappedBusinesses.length+" comercio(s) en el mapa"
-              : basemapState==="error"
-                ? "Mapa degradado · revisa la conexión"
-                : "Cargando mapa…"}
+            {gpsActive
+              ? "Seguimiento de posición activo"
+              : basemapState==="ready"
+                ? mappedBusinesses.length+" comercio(s) en el mapa"
+                : basemapState==="error"
+                  ? "Mapa degradado · revisa la conexión"
+                  : "Cargando mapa…"}
           </span>
         </div>
       </div>
@@ -491,6 +642,26 @@ export default function NaviboriMap({
           </button>
         ))}
         <button type="button" onClick={()=>locateMe()}>Mi ubicación</button>
+        {gpsActive && (
+          <button
+            type="button"
+            className={followGps ? "selected" : ""}
+            onClick={()=>{
+              const next=!followGps;
+              followGpsRef.current=next;
+              setFollowGps(next);
+              if(next && userLocation){
+                mapRef.current?.easeTo({
+                  center:[userLocation.longitude,userLocation.latitude],
+                  zoom:Math.max(mapRef.current?.getZoom() ?? 16,16),
+                  duration:350
+                });
+              }
+            }}
+          >
+            {followGps ? "Siguiendo GPS" : "Seguir GPS"}
+          </button>
+        )}
       </div>
 
       <div className="map-stage">
@@ -509,9 +680,13 @@ export default function NaviboriMap({
         <aside className="business-route-card" aria-live="polite">
           {selected ? (
             <>
-              <span className={"commerce-demo-badge "+(selected.demo ? "" : "live")}>
-                {selected.demo ? "DEMO" : "LIVE"}
-              </span>
+              <div className="business-route-title-row">
+                <span className={"commerce-demo-badge "+(selected.demo ? "" : "live")}>
+                  {selected.demo ? "DEMO" : "LIVE"}
+                </span>
+                {gpsActive && <span className="gps-live-badge">GPS LIVE</span>}
+              </div>
+
               <strong>{selected.name}</strong>
               <span>{selected.mapLocation?.address ?? selected.locationLabel}</span>
 
@@ -520,26 +695,26 @@ export default function NaviboriMap({
                   <div className="business-route-mode-actions">
                     <button
                       type="button"
-                      className={routeResult?.mode==="driving" ? "active" : ""}
+                      className={gpsActive && lastRouteMode==="driving" ? "active" : ""}
                       disabled={routeBusy!==null}
-                      onClick={()=>routeInsideNavibori("driving")}
+                      onClick={()=>startGpsNavigation("driving")}
                     >
-                      {routeBusy==="driving" ? "Calculando…" : "🚗 Ruta en carro"}
+                      {routeBusy==="driving" ? "Calculando…" : "🚗 Navegar en carro"}
                     </button>
                     <button
                       type="button"
-                      className={routeResult?.mode==="walking" ? "active" : ""}
+                      className={gpsActive && lastRouteMode==="walking" ? "active" : ""}
                       disabled={routeBusy!==null}
-                      onClick={()=>routeInsideNavibori("walking")}
+                      onClick={()=>startGpsNavigation("walking")}
                     >
-                      {routeBusy==="walking" ? "Calculando…" : "🚶 Ruta caminando"}
+                      {routeBusy==="walking" ? "Calculando…" : "🚶 Navegar caminando"}
                     </button>
                   </div>
 
                   {routeResult && (
                     <div className="navibori-route-summary">
                       <div>
-                        <span>Distancia</span>
+                        <span>Distancia restante</span>
                         <strong>{formatDistance(routeResult.distanceMeters)}</strong>
                       </div>
                       <div>
@@ -550,10 +725,31 @@ export default function NaviboriMap({
                         <span>Modo</span>
                         <strong>{routeResult.mode==="walking" ? "Caminando" : "En carro"}</strong>
                       </div>
+                      {gpsActive && (
+                        <div>
+                          <span>GPS</span>
+                          <strong>
+                            {gpsAccuracy!==null
+                              ? "±"+Math.round(gpsAccuracy)+" m"
+                              : "Activo"}
+                          </strong>
+                        </div>
+                      )}
                     </div>
                   )}
 
                   <div className="business-route-actions secondary">
+                    {gpsActive && (
+                      <button
+                        type="button"
+                        onClick={()=>{
+                          stopGpsNavigation();
+                          setLocationStatus("GPS detenido. La ruta permanece visible.");
+                        }}
+                      >
+                        Detener GPS
+                      </button>
+                    )}
                     {routeResult && (
                       <button type="button" onClick={clearRoute}>
                         Limpiar ruta
@@ -570,9 +766,9 @@ export default function NaviboriMap({
                   </div>
 
                   <small>
-                    La ruta se calcula dentro de NAVIBORI con datos de OpenStreetMap.
-                    Para calcularla, origen y destino se envían temporalmente al servidor de routing;
-                    NAVIBORI no guarda tu ubicación.
+                    NAVIBORI usa el GPS del dispositivo mientras esta navegación está activa.
+                    El marcador se mueve contigo y la ruta se recalcula al avanzar.
+                    Tu ubicación no se guarda en Supabase.
                   </small>
                   <small>
                     <a
@@ -583,7 +779,7 @@ export default function NaviboriMap({
                       Corregir el mapa
                     </a>
                     {" · "}
-                    Las rutas peatonales dependen de los caminos y aceras registrados.
+                    La precisión depende del GPS del dispositivo y de los caminos registrados en OpenStreetMap.
                   </small>
                 </>
               ) : (
@@ -593,7 +789,7 @@ export default function NaviboriMap({
                     <Link href={"/comercios/"+selected.slug}>Ver comercio</Link>
                   </div>
                   <small>
-                    Los puntos DEMO no generan rutas reales. Un comercio LIVE necesita dirección y coordenadas verificadas.
+                    Los puntos DEMO no generan rutas GPS reales. Un comercio LIVE necesita dirección y coordenadas verificadas.
                   </small>
                 </>
               )}
@@ -601,7 +797,7 @@ export default function NaviboriMap({
           ) : (
             <>
               <strong>Selecciona un comercio</strong>
-              <span>Toca un pin para ver la dirección y trazar la ruta en carro o caminando.</span>
+              <span>Toca un pin para ver la dirección y comenzar navegación GPS en carro o caminando.</span>
             </>
           )}
 

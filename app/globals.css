@@ -915,3 +915,16 @@ h1 span { color: var(--teal); }
 .business-route-card small a{color:var(--ocean);font-weight:800}
 .navibori-route-status{padding:6px 8px;border-radius:8px;background:#f2f7f8;color:var(--ink)!important;font-weight:750}
 @media(max-width:520px){.business-route-mode-actions{grid-template-columns:1fr}.navibori-route-summary{grid-template-columns:1fr 1fr}.navibori-route-summary>div:last-child{grid-column:1/-1}}
+
+
+/* NAVIBORI live GPS navigation */
+.business-route-title-row{display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+.gps-live-badge{display:inline-flex;align-items:center;gap:5px;width:max-content;padding:4px 7px;border-radius:999px;background:#e9faf5;color:#087a67;font-size:.58rem;font-weight:900;letter-spacing:.06em}
+.gps-live-badge:before{content:"";width:7px;height:7px;border-radius:50%;background:#0a9d83;box-shadow:0 0 0 0 rgba(10,157,131,.45);animation:naviboriGpsPulse 1.6s infinite}
+.navibori-gps-marker{position:relative;width:26px;height:26px;display:grid;place-items:center;border-radius:50%;background:rgba(19,111,99,.14)}
+.navibori-gps-marker:before{content:"";position:absolute;inset:1px;border:2px solid rgba(19,111,99,.28);border-radius:50%;animation:naviboriGpsRing 1.8s infinite}
+.navibori-gps-marker>span{position:relative;width:13px;height:13px;border:3px solid white;border-radius:50%;background:#136f63;box-shadow:0 2px 7px rgba(0,0,0,.28)}
+.navibori-route-summary{grid-template-columns:repeat(auto-fit,minmax(88px,1fr))}
+@keyframes naviboriGpsPulse{0%{box-shadow:0 0 0 0 rgba(10,157,131,.45)}70%{box-shadow:0 0 0 7px rgba(10,157,131,0)}100%{box-shadow:0 0 0 0 rgba(10,157,131,0)}}
+@keyframes naviboriGpsRing{0%{transform:scale(.8);opacity:.7}70%{transform:scale(1.5);opacity:0}100%{transform:scale(1.5);opacity:0}}
+@media(prefers-reduced-motion:reduce){.gps-live-badge:before,.navibori-gps-marker:before{animation:none}}
