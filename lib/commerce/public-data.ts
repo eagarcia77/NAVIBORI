@@ -18,7 +18,7 @@ export async function getPublicCommerce():Promise<CommerceProfile[]>{
 
   const ids=businesses.map((business)=>business.id);
 
-  const [hoursResult,offersResult,promotionsResult,mediaResult]=await Promise.all([
+  const [hoursResult,offersResult,promotionsResult,mediaResult,settingsResult]=await Promise.all([
     supabase
       .from("business_hours")
       .select("*")
@@ -37,13 +37,18 @@ export async function getPublicCommerce():Promise<CommerceProfile[]>{
       .from("business_media")
       .select("*")
       .in("business_id",ids)
-      .order("sort_order")
+      .order("sort_order"),
+    supabase
+      .from("business_service_settings")
+      .select("*")
+      .in("business_id",ids)
   ]);
 
   if(hoursResult.error) throw hoursResult.error;
   if(offersResult.error) throw offersResult.error;
   if(promotionsResult.error) throw promotionsResult.error;
   if(mediaResult.error) throw mediaResult.error;
+  if(settingsResult.error) throw settingsResult.error;
 
   const media=await Promise.all(
     (mediaResult.data ?? []).map(async(item)=>{
@@ -67,7 +72,8 @@ export async function getPublicCommerce():Promise<CommerceProfile[]>{
     hoursResult.data ?? [],
     offersResult.data ?? [],
     promotionsResult.data ?? [],
-    media.filter((item):item is NonNullable<typeof item>=>Boolean(item))
+    media.filter((item):item is NonNullable<typeof item>=>Boolean(item)),
+    settingsResult.data ?? []
   );
 }
 
