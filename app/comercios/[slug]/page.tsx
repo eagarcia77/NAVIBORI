@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import NaviboriBrand from "@/components/brand/navibori-brand";
 import NaviGuide from "@/components/brand/navi-guide";
 import BusinessMetricBeacon from "@/components/commerce/business-metric-beacon";
+import BusinessRequestForm from "@/components/commerce/business-request-form";
 import { getCommerceBySlug, getCommerceSlugs } from "@/lib/commerce/lookup";
 import { getPublicCommerceBySlug } from "@/lib/commerce/public-data";
 import { getCommerceOpenState } from "@/lib/commerce/hours";
@@ -147,6 +148,14 @@ export default async function BusinessProfilePage({
             </div>
           </section>
         </div>
+
+        {isLive && (
+          <BusinessRequestForm
+            businessId={business.id}
+            businessName={business.name}
+            offers={business.offers}
+          />
+        )}
 
         <aside className="business-profile-side">
           <h2>Acciones</h2>
