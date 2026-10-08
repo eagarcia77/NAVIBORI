@@ -71,6 +71,10 @@ describe("public commerce composition",()=>{
         accepts_reservations:true,
         min_lead_minutes:30,
         max_advance_days:30,
+        timezone:"America/Puerto_Rico",
+        slot_minutes:30,
+        pickup_capacity_per_slot:10,
+        reservation_capacity_per_slot:5,
         instructions:"Confirma por WhatsApp.",
         updated_at:"2026-10-07T00:00:00Z"
       }]
@@ -82,6 +86,8 @@ describe("public commerce composition",()=>{
     expect(profiles[0].offers[0].available).toBe(true);
     expect(profiles[0].logo?.altText).toBe("Logo del comercio");
     expect(profiles[0].serviceSettings?.acceptsPickup).toBe(true);
+    expect(profiles[0].serviceSettings?.slotMinutes).toBe(30);
+    expect(profiles[0].serviceSettings?.pickupCapacityPerSlot).toBe(10);
     expect(profiles[0].serviceSettings?.instructions).toBe("Confirma por WhatsApp.");
   });
 });
