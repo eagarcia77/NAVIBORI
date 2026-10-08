@@ -104,6 +104,50 @@ export type Database = {
           },
         ]
       }
+      business_daily_metrics: {
+        Row: {
+          business_id: string
+          contact_clicks: number
+          favorites: number
+          metric_date: string
+          profile_views: number
+          promotion_views: number
+          route_requests: number
+          shares: number
+          updated_at: string
+        }
+        Insert: {
+          business_id: string
+          contact_clicks?: number
+          favorites?: number
+          metric_date?: string
+          profile_views?: number
+          promotion_views?: number
+          route_requests?: number
+          shares?: number
+          updated_at?: string
+        }
+        Update: {
+          business_id?: string
+          contact_clicks?: number
+          favorites?: number
+          metric_date?: string
+          profile_views?: number
+          promotion_views?: number
+          route_requests?: number
+          shares?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "business_daily_metrics_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       business_hours: {
         Row: {
           business_id: string
@@ -1070,6 +1114,10 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      record_public_business_metric: {
+        Args: { p_business_id: string; p_event: string }
+        Returns: boolean
       }
       review_merchant_business: {
         Args: {
