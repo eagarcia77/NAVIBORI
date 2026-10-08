@@ -9,20 +9,37 @@
 - inspect featured products/services
 - view contact actions when real data exists
 - request route only when location/routing are verified
+- submit general, pickup or reservation requests when the merchant enables them
+- choose only published fulfillment slots with remaining capacity
+- respect merchant blackout periods before a request is created
 
 ## Merchant Console
-Phase 1 stores a draft in local browser storage so the workflow is functional without unsafe backend writes.
+The Merchant Console supports a local draft for resilience plus merchant-scoped Supabase synchronization under RLS for authorized accounts.
 
-Draft fields:
-- business name
-- category
-- description
-- phone
-- website
-- featured offer
-- promotion
+Operational capabilities:
+- business profile and verification workflow
+- visual identity/media
+- public QR/deep-link kit
+- weekly hours
+- catalog/products/services
+- promotions
+- request/pickup/reservation configuration
+- per-slot pickup and reservation capacity
+- merchant-defined fulfillment blackout periods
+- realtime customer request inbox
+- request acceptance/completion/cancellation
+- quick customer contact
+- CSV request export
+- historical business analytics
+- 7-day capacity dashboard with saturation alerts
+- daily fulfillment operations board with date navigation, slot utilization, scheduled-request actions and no-show handling
 
-Publication remains blocked until merchant-scoped Supabase RLS policies and a dedicated write workflow are implemented.
+Public activation remains review-controlled by the venue workflow. Merchant content does not bypass verification/publication rules.
+
+## Fulfillment truth rule
+Customer-facing slot availability and the merchant daily operations board use the same Supabase fulfillment RPC/capacity model. NAVIBORI does not maintain a second client-only inventory of capacity.
+
+A submitted request still requires merchant confirmation. NAVIBORI does not currently process payment.
 
 ## Data truth rule
 Demo businesses are always labeled synthetic.
