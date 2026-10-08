@@ -47,6 +47,10 @@ export interface CommerceServiceSettings {
   acceptsReservations: boolean;
   minLeadMinutes: number;
   maxAdvanceDays: number;
+  timezone: string;
+  slotMinutes: number;
+  pickupCapacityPerSlot: number;
+  reservationCapacityPerSlot: number;
   instructions?: string;
 }
 
