@@ -7,6 +7,7 @@ import MerchantVerification from "@/components/merchant/merchant-verification";
 import HoursEditor from "@/components/merchant/hours-editor";
 import PromotionEditor from "@/components/merchant/promotion-editor";
 import BackendSyncPanel from "@/components/merchant/backend-sync-panel";
+import BusinessMediaEditor from "@/components/merchant/business-media-editor";
 import NaviGuide from "@/components/brand/navi-guide";
 
 export const metadata = {
@@ -36,6 +37,7 @@ export default function MerchantPage() {
 
       <MerchantConsole />
       <BackendSyncPanel />
+      <BusinessMediaEditor />
       <HoursEditor />
       <CatalogEditor />
       <PromotionEditor />
