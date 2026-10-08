@@ -90,7 +90,7 @@ export default function CapacityDashboard(){
         }
 
         const today=dateInTimeZone(new Date(),settings.timezone);
-        const tasks:Array<Promise<CapacitySlot[]>>=[];
+        const tasks:Array<PromiseLike<CapacitySlot[]>>=[];
 
         for(let offset=0;offset<7;offset++){
           const date=addDays(today,offset);
