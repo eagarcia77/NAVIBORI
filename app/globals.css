@@ -761,3 +761,29 @@ h1 span { color: var(--teal); }
   .merchant-blackout-editor{margin-inline:10px;padding:12px}
   .merchant-blackout-list article{align-items:flex-start;flex-direction:column}
 }
+
+/* Merchant capacity dashboard + no-show */
+.merchant-capacity-dashboard{margin:0 22px 18px;padding:16px;border:1px solid var(--line);border-radius:16px;background:white}
+.merchant-capacity-summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px;margin-bottom:12px}
+.merchant-capacity-summary article{display:grid;gap:3px;padding:10px;border:1px solid var(--line);border-radius:11px;background:#fbfdfe}
+.merchant-capacity-summary span{font-size:.61rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+.merchant-capacity-summary strong{font-size:1.15rem}
+.merchant-capacity-list{display:grid;gap:7px}
+.capacity-slot{display:grid;grid-template-columns:minmax(130px,1fr) minmax(120px,2fr) auto;gap:12px;align-items:center;padding:10px 12px;border:1px solid var(--line);border-radius:11px;background:#fbfdfe}
+.capacity-slot>div:first-child{display:grid;gap:2px}
+.capacity-slot>div:first-child span{font-size:.58rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.capacity-slot>div:first-child strong{font-size:.78rem}
+.capacity-meter{height:8px;border-radius:999px;background:#edf2f4;overflow:hidden}
+.capacity-meter span{display:block;height:100%;background:var(--teal);border-radius:999px}
+.capacity-slot.high .capacity-meter span{background:#b47b00}
+.capacity-slot.full .capacity-meter span{background:#9f3f3f}
+.capacity-slot-count{display:grid;justify-items:end;gap:1px}
+.capacity-slot-count b{font-size:.78rem}.capacity-slot-count small{font-size:.61rem;color:var(--muted)}
+.merchant-capacity-dashboard>small{display:block;margin-top:10px;color:var(--muted);font-size:.68rem}
+.request-status.no_show{color:#8b5a2b}
+@media(max-width:760px){
+  .merchant-capacity-summary{grid-template-columns:repeat(2,1fr)}
+  .capacity-slot{grid-template-columns:1fr}
+  .capacity-slot-count{justify-items:start}
+}
+@media(max-width:620px){.merchant-capacity-dashboard{margin-inline:10px;padding:12px}}
