@@ -113,6 +113,10 @@ export function composePublicCommerce(
         acceptsReservations:settings.accepts_reservations,
         minLeadMinutes:settings.min_lead_minutes,
         maxAdvanceDays:settings.max_advance_days,
+        timezone:settings.timezone,
+        slotMinutes:settings.slot_minutes,
+        pickupCapacityPerSlot:settings.pickup_capacity_per_slot,
+        reservationCapacityPerSlot:settings.reservation_capacity_per_slot,
         instructions:settings.instructions ?? undefined
       } : undefined,
       verification:
