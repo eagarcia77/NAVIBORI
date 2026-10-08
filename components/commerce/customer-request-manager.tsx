@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { buildRequestCalendarIcs } from "@/lib/commerce/calendar";
 
 type RequestStatusRow={
   id:string;
@@ -12,6 +13,7 @@ type RequestStatusRow={
   requested_for:string|null;
   timezone:string;
   max_advance_days:number;
+  slot_minutes:number;
   estimated_ready_at:string|null;
   preparation_started_at:string|null;
   ready_at:string|null;
@@ -254,6 +256,27 @@ export default function CustomerRequestManager({
     }
   }
 
+  function addToCalendar(){
+    if(!request?.requested_for) return;
+
+    const ics=buildRequestCalendarIcs({
+      requestId:request.id,
+      businessName:request.business_name,
+      fulfillmentMethod:request.fulfillment_method,
+      startsAt:request.requested_for,
+      slotMinutes:request.slot_minutes
+    });
+
+    const blob=new Blob([ics],{type:"text/calendar;charset=utf-8"});
+    const url=URL.createObjectURL(blob);
+    const anchor=document.createElement("a");
+    anchor.href=url;
+    anchor.download="navibori-"+request.id.slice(0,8)+".ics";
+    anchor.click();
+    URL.revokeObjectURL(url);
+    setStatus("Evento de calendario preparado.");
+  }
+
   async function cancel(){
     if(!valid || !canCancel) return;
 
@@ -414,6 +437,17 @@ export default function CustomerRequestManager({
               {busy ? "Procesando…" : "Reprogramar"}
             </button>
           </div>
+        )}
+
+        {request?.requested_for && !["cancelled","no_show"].includes(request.status) && (
+          <button
+            type="button"
+            className="customer-calendar-action"
+            onClick={addToCalendar}
+            disabled={busy}
+          >
+            Añadir al calendario
+          </button>
         )}
 
         <button
