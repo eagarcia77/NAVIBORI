@@ -788,6 +788,19 @@ h1 span { color: var(--teal); }
 }
 @media(max-width:620px){.merchant-capacity-dashboard{margin-inline:10px;padding:12px}}
 
+/* Customer request self-service */
+.customer-request-manage-link{display:grid;gap:7px;margin-top:12px;padding:11px;border:1px solid var(--line);border-radius:11px;background:#f7fbfa}
+.customer-request-manage-link strong{font-size:.74rem}
+.customer-request-manage-link a{color:var(--ocean);font-size:.73rem;word-break:break-all}
+.customer-request-manage-link button{width:max-content;min-height:34px;padding:0 10px;border:1px solid var(--line);border-radius:9px;background:white;font-weight:800}
+.customer-request-manager{max-width:680px;margin:24px auto;padding:20px;border:1px solid var(--line);border-radius:18px;background:white}
+.customer-request-manager h1{margin:4px 0 8px}.customer-request-manager>p{color:var(--muted)}
+.customer-request-manager-card{display:grid;gap:12px;margin-top:16px;padding:16px;border:1px solid var(--line);border-radius:13px;background:#fbfdfe}
+.customer-request-manager-card p{margin:0}
+.customer-request-manager-card button{min-height:42px;width:max-content;padding:0 14px;border:1px solid var(--ocean);border-radius:10px;background:var(--ocean);color:white;font-weight:800}
+.customer-request-manager-card button:disabled{opacity:.45}
+.customer-request-manager>small{display:block;margin-top:12px;color:var(--muted);font-size:.68rem}
+
 
 /* Merchant daily fulfillment operations */
 .merchant-operations-board{margin:0 22px 18px;padding:16px;border:1px solid var(--line);border-radius:16px;background:white}
