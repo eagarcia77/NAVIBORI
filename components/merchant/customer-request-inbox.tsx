@@ -178,6 +178,60 @@ export default function CustomerRequestInbox(){
     filter==="all" ? true : request.status===filter
   );
 
+  function csvCell(value:unknown){
+    const raw=String(value ?? "");
+    const safe=/^[=+\-@]/.test(raw) ? "'"+raw : raw;
+    return '"'+safe.replace(/"/g,'""')+'"';
+  }
+
+  function exportCsv(){
+    if(visibleRequests.length===0){
+      setStatus("No hay solicitudes en el filtro actual para exportar.");
+      return;
+    }
+
+    const header=[
+      "Referencia",
+      "Fecha",
+      "Estado",
+      "Cliente",
+      "Contacto",
+      "Método",
+      "Oferta",
+      "Cantidad",
+      "Modalidad",
+      "Fecha solicitada",
+      "Nota"
+    ];
+
+    const rows=visibleRequests.map((request)=>[
+      request.id.slice(0,8),
+      request.created_at,
+      request.status,
+      request.customer_name,
+      request.contact_value,
+      request.contact_method,
+      request.offer_id ? (offerTitles[request.offer_id] ?? "Producto/servicio") : "Solicitud general",
+      request.quantity,
+      request.fulfillment_method,
+      request.requested_for ?? "",
+      request.note ?? ""
+    ]);
+
+    const csv=[header,...rows]
+      .map((row)=>row.map(csvCell).join(","))
+      .join("\r\n");
+
+    const blob=new Blob(["\uFEFF"+csv],{type:"text/csv;charset=utf-8"});
+    const url=URL.createObjectURL(blob);
+    const anchor=document.createElement("a");
+    anchor.href=url;
+    anchor.download="navibori-solicitudes-"+new Date().toISOString().slice(0,10)+".csv";
+    anchor.click();
+    URL.revokeObjectURL(url);
+    setStatus("CSV exportado con "+visibleRequests.length+" solicitudes.");
+  }
+
   function contactHref(request:RequestRow){
     if(request.contact_method==="email"){
       return "mailto:"+request.contact_value;
@@ -232,6 +286,15 @@ export default function CustomerRequestInbox(){
             Aceptadas
           </button>
         </div>
+
+        <button
+          type="button"
+          className="request-export-button"
+          onClick={exportCsv}
+          disabled={visibleRequests.length===0}
+        >
+          Exportar CSV
+        </button>
 
         {notificationPermission!=="unsupported" && notificationPermission!=="granted" && (
           <button
