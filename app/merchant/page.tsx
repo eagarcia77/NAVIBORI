@@ -9,6 +9,7 @@ import PromotionEditor from "@/components/merchant/promotion-editor";
 import BackendSyncPanel from "@/components/merchant/backend-sync-panel";
 import BusinessMediaEditor from "@/components/merchant/business-media-editor";
 import MerchantAnalyticsDashboard from "@/components/merchant/merchant-analytics-dashboard";
+import CustomerRequestInbox from "@/components/merchant/customer-request-inbox";
 import NaviGuide from "@/components/brand/navi-guide";
 
 export const metadata = {
@@ -43,6 +44,7 @@ export default function MerchantPage() {
       <CatalogEditor />
       <PromotionEditor />
       <MerchantVerification />
+      <CustomerRequestInbox />
       <MerchantAnalyticsDashboard />
       <MerchantPulse />
       <NaviGuide mode="cockpit" />
