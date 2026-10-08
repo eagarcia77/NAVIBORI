@@ -3,7 +3,9 @@ import {
   buildOsrmRouteUrl,
   isPuertoRicoCoordinate,
   normalizeOsrmRoute,
-  routingProviderBase
+  routingProviderBase,
+  distanceBetweenCoordinates,
+  shouldRefreshNavigationRoute
 } from "./in-map-routing";
 
 describe("in-map commerce routing",()=>{
@@ -52,6 +54,22 @@ describe("in-map commerce routing",()=>{
     expect(route?.distanceMeters).toBe(3218.6);
     expect(route?.durationSeconds).toBe(455);
     expect(route?.geometry.coordinates).toHaveLength(3);
+  });
+
+  it("measures movement and throttles live GPS rerouting",()=>{
+    const start={latitude:18.0000,longitude:-66.5000};
+    const moved={latitude:18.0004,longitude:-66.5000};
+
+    expect(distanceBetweenCoordinates(start,moved)).toBeGreaterThan(40);
+    expect(
+      shouldRefreshNavigationRoute(start,moved,1000,14000)
+    ).toBe(true);
+    expect(
+      shouldRefreshNavigationRoute(start,moved,1000,5000)
+    ).toBe(false);
+    expect(
+      shouldRefreshNavigationRoute(null,moved,0,1000)
+    ).toBe(true);
   });
 
   it("rejects malformed routing responses",()=>{
