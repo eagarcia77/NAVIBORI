@@ -45,6 +45,17 @@ function addDays(value:string,days:number){
   return date.toISOString().slice(0,10);
 }
 
+function requestStatusLabel(status:string){
+  if(status==="new") return "Recibida";
+  if(status==="accepted") return "Aceptada";
+  if(status==="preparing") return "En preparación";
+  if(status==="ready") return "Lista";
+  if(status==="completed") return "Completada";
+  if(status==="cancelled") return "Cancelada";
+  if(status==="no_show") return "No-show";
+  return status;
+}
+
 export default function CustomerRequestManager({
   requestId
 }:{
@@ -129,13 +140,21 @@ export default function CustomerRequestManager({
     if(!valid) return;
     let active=true;
 
-    loadRequest(active).catch((error)=>{
-      if(active){
-        setStatus(error instanceof Error ? error.message : "No se pudo verificar la solicitud.");
-      }
-    });
+    const refresh=()=>{
+      loadRequest(active).catch((error)=>{
+        if(active){
+          setStatus(error instanceof Error ? error.message : "No se pudo verificar la solicitud.");
+        }
+      });
+    };
 
-    return ()=>{active=false};
+    refresh();
+    const timer=window.setInterval(refresh,15000);
+
+    return ()=>{
+      active=false;
+      window.clearInterval(timer);
+    };
   },[valid]);
 
   useEffect(()=>{
@@ -278,6 +297,7 @@ export default function CustomerRequestManager({
       </p>
 
       {request && (
+        <>
         <div className="customer-request-summary">
           <div>
             <span>Comercio</span>
@@ -285,7 +305,9 @@ export default function CustomerRequestManager({
           </div>
           <div>
             <span>Estado</span>
-            <strong>{request.status.replace("_"," ")}</strong>
+            <strong className={"request-status "+request.status}>
+              {requestStatusLabel(request.status)}
+            </strong>
           </div>
           <div>
             <span>Modalidad</span>
@@ -302,6 +324,41 @@ export default function CustomerRequestManager({
             <strong>{formatDateTime(request.requested_for)}</strong>
           </div>
         </div>
+
+        {!["cancelled","no_show"].includes(request.status) && (
+          <div className="customer-request-progress" aria-label="Progreso de la solicitud">
+            {["new","accepted","preparing","ready","completed"].map((stage,index,stages)=>{
+              const currentIndex=stages.indexOf(request.status);
+              return (
+                <div
+                  key={stage}
+                  className={
+                    "customer-request-step "+
+                    (index<=currentIndex ? "done " : "")+
+                    (stage===request.status ? "current" : "")
+                  }
+                >
+                  <span>{index+1}</span>
+                  <small>{requestStatusLabel(stage)}</small>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {(request.estimated_ready_at || request.status==="preparing" || request.status==="ready") && (
+          <div className={"customer-request-notice "+(request.status==="ready" ? "ready" : "")}>
+            {request.status==="ready"
+              ? "Tu solicitud está lista para recoger o atender."
+              : request.status==="preparing"
+                ? "Tu solicitud está en preparación."
+                : "El comercio actualizó el tiempo estimado."}
+            {request.estimated_ready_at && (
+              <> Estimado: <strong>{formatDateTime(request.estimated_ready_at)}</strong>.</>
+            )}
+          </div>
+        )}
+        </>
       )}
 
       <div className="customer-request-manager-card">
