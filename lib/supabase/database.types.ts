@@ -1145,35 +1145,21 @@ export type Database = {
           isSetofReturn: false
         }
       }
-      create_business_customer_request:
-        | {
-            Args: {
-              p_business_id: string
-              p_contact_method?: string
-              p_contact_value?: string
-              p_customer_name?: string
-              p_note?: string
-              p_offer_id?: string
-              p_quantity?: number
-              p_request_type?: string
-            }
-            Returns: string
-          }
-        | {
-            Args: {
-              p_business_id: string
-              p_contact_method?: string
-              p_contact_value?: string
-              p_customer_name?: string
-              p_fulfillment_method?: string
-              p_note?: string
-              p_offer_id?: string
-              p_quantity?: number
-              p_request_type?: string
-              p_requested_for?: string
-            }
-            Returns: string
-          }
+      create_business_customer_request: {
+        Args: {
+          p_business_id: string
+          p_contact_method?: string
+          p_contact_value?: string
+          p_customer_name?: string
+          p_fulfillment_method?: string
+          p_note?: string
+          p_offer_id?: string
+          p_quantity?: number
+          p_request_type?: string
+          p_requested_for?: string
+        }
+        Returns: string
+      }
       create_spatial_revision: {
         Args: {
           p_entity_id: string
