@@ -54,6 +54,24 @@ export default async function BusinessProfilePage({
 
       <section className="business-profile">
         <div className="business-profile-main">
+          {(business.cover || business.logo) && (
+            <section className="business-visual-identity" aria-label="Identidad visual del comercio">
+              {business.cover && (
+                <img
+                  className="business-cover"
+                  src={business.cover.url}
+                  alt={business.cover.altText}
+                />
+              )}
+              {business.logo && (
+                <img
+                  className="business-logo"
+                  src={business.logo.url}
+                  alt={business.logo.altText}
+                />
+              )}
+            </section>
+          )}
           <div className="business-profile-state">
             <span className="commerce-demo-badge">{isLive ? "LIVE DATA" : "DEMO"}</span>
             <span className={"merchant-verification-badge " + business.verification}>
@@ -96,6 +114,20 @@ export default async function BusinessProfilePage({
                   <p>{promotion.description}</p>
                 </article>
               ))}
+            </section>
+          )}
+
+          {business.gallery && business.gallery.length>0 && (
+            <section>
+              <h2>Galería</h2>
+              <div className="business-gallery">
+                {business.gallery.map((image)=>(
+                  <figure key={image.id}>
+                    <img src={image.url} alt={image.altText} />
+                    <figcaption>{image.altText}</figcaption>
+                  </figure>
+                ))}
+              </div>
             </section>
           )}
 
