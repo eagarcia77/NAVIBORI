@@ -835,3 +835,19 @@ h1 span { color: var(--teal); }
 @media(max-width:900px){.merchant-operations-summary{grid-template-columns:repeat(3,1fr)}.merchant-operations-schedule>article{grid-template-columns:82px minmax(0,1fr)}.merchant-operations-actions{grid-column:1/-1;justify-content:flex-start}}
 @media(max-width:700px){.merchant-capacity-board{grid-template-columns:1fr}.merchant-operations-summary{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:620px){.merchant-operations-board{margin-inline:10px;padding:12px}.merchant-operations-schedule>article{grid-template-columns:1fr}.merchant-operations-actions{grid-column:auto}.merchant-operations-datebar input{flex:1;min-width:140px}}
+
+/* Customer secure rescheduling */
+.customer-request-summary{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:14px 0}
+.customer-request-summary>div{display:grid;gap:3px;padding:10px;border:1px solid var(--line);border-radius:10px;background:#fbfdfe}
+.customer-request-summary span{font-size:.6rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.customer-request-summary strong{font-size:.79rem}
+.customer-reschedule-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;padding:12px;border:1px solid var(--line);border-radius:11px;background:white}
+.customer-reschedule-grid label{display:grid;gap:5px;font-size:.7rem;font-weight:800}
+.customer-reschedule-grid input,.customer-reschedule-grid select{min-height:42px;width:100%;border:1px solid var(--line);border-radius:9px;background:white;padding:0 10px;color:var(--ink)}
+.customer-reschedule-grid label small{color:var(--muted);font-size:.64rem;font-weight:600}
+.customer-reschedule-grid>button{grid-column:1/-1;min-height:42px;width:max-content;padding:0 14px;border:1px solid var(--ocean);border-radius:10px;background:var(--ocean);color:white;font-weight:800}
+.customer-cancel-request{background:white!important;color:#8e3737!important;border-color:rgba(142,55,55,.32)!important}
+@media(max-width:620px){
+  .customer-request-summary,.customer-reschedule-grid{grid-template-columns:1fr}
+  .customer-reschedule-grid>button{grid-column:auto}
+}
