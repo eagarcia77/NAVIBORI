@@ -733,3 +733,12 @@ h1 span { color: var(--teal); }
 
 .request-export-button{min-height:34px;padding:0 10px;border:1px solid var(--line);border-radius:9px;background:white;color:var(--ink);font-weight:800}
 .request-export-button:disabled{opacity:.45}
+
+/* Merchant QR Share Kit */
+.merchant-qr-kit{margin:0 22px 18px;padding:16px;border:1px solid var(--line);border-radius:16px;background:white}
+.merchant-qr-layout{display:grid;grid-template-columns:minmax(190px,260px) minmax(0,1fr);gap:18px;align-items:center}
+.merchant-qr-code{display:grid;place-items:center;padding:14px;border:1px solid var(--line);border-radius:16px;background:white}
+.merchant-qr-code svg{display:block;width:100%;height:auto;max-width:240px}
+.merchant-qr-details{display:grid;gap:8px}.merchant-qr-details>strong{font-size:1.05rem}.merchant-qr-details code{display:block;padding:9px 10px;border:1px solid var(--line);border-radius:9px;background:#f8fafb;font-size:.68rem;word-break:break-all}.merchant-qr-details p{margin:0;color:var(--muted);font-size:.76rem}
+@media(max-width:720px){.merchant-qr-layout{grid-template-columns:1fr}.merchant-qr-code{max-width:300px}}
+@media(max-width:620px){.merchant-qr-kit{margin-inline:10px;padding:12px}}
