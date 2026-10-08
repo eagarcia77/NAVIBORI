@@ -58,14 +58,10 @@ export default function CustomerRequestInbox(){
 
     try{
       const supabase=createClient();
-      const {error}=await supabase
-        .from("business_customer_requests")
-        .update({
-          status:next,
-          updated_at:new Date().toISOString()
-        })
-        .eq("id",id)
-        .eq("business_id",businessId);
+      const {error}=await supabase.rpc("update_business_customer_request_status",{
+        p_request_id:id,
+        p_status:next
+      });
 
       if(error) throw error;
       await load(businessId);
