@@ -149,11 +149,12 @@ export default async function BusinessProfilePage({
           </section>
         </div>
 
-        {isLive && (
+        {isLive && business.serviceSettings?.acceptsRequests && (
           <BusinessRequestForm
             businessId={business.id}
             businessName={business.name}
             offers={business.offers}
+            settings={business.serviceSettings}
           />
         )}
 
