@@ -1213,6 +1213,31 @@ export type Database = {
         }
         Returns: string
       }
+      create_business_fulfillment_block: {
+        Args: {
+          p_business_id: string
+          p_fulfillment_method: string
+          p_local_end: string
+          p_local_start: string
+          p_reason?: string
+        }
+        Returns: {
+          business_id: string
+          created_at: string
+          created_by: string
+          ends_at: string
+          fulfillment_method: string
+          id: string
+          reason: string | null
+          starts_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "business_fulfillment_blocks"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       create_spatial_revision: {
         Args: {
           p_entity_id: string
