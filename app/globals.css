@@ -660,3 +660,28 @@ h1 span { color: var(--teal); }
   .business-cover{height:170px}
   .business-logo{width:68px;height:68px;left:12px;bottom:10px;border-radius:15px}
 }
+
+/* Merchant historical analytics */
+.merchant-analytics-dashboard{margin:0 22px 18px;padding:16px;border:1px solid var(--line);border-radius:16px;background:white}
+.merchant-section-head small{display:block;margin-top:3px;color:var(--muted)}
+.merchant-range-switch{display:flex;gap:4px;padding:3px;border:1px solid var(--line);border-radius:10px;background:#f7fafb}
+.merchant-range-switch button{min-width:42px;min-height:34px;border:0;border-radius:7px;background:transparent;font-weight:800;color:var(--muted)}
+.merchant-range-switch button.active{background:white;color:var(--ocean);box-shadow:0 1px 4px rgba(0,0,0,.08)}
+.merchant-analytics-status{margin:0 0 12px;color:var(--muted);font-size:.78rem}
+.merchant-analytics-summary{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:6px}
+.merchant-analytics-summary article{display:grid;gap:3px;padding:10px;border:1px solid var(--line);border-radius:11px;background:#fbfdfe}
+.merchant-analytics-summary span{font-size:.61rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+.merchant-analytics-summary strong{font-size:1.15rem;color:var(--ink)}
+.merchant-analytics-chart{display:flex;align-items:flex-end;gap:6px;min-height:170px;margin-top:14px;padding:12px 10px 8px;border:1px solid var(--line);border-radius:12px;background:#fbfdfe;overflow-x:auto}
+.merchant-analytics-day{display:grid;grid-template-rows:120px auto auto;gap:3px;justify-items:center;min-width:26px;flex:1}
+.merchant-analytics-bar-track{display:flex;align-items:flex-end;width:12px;height:120px;border-radius:999px;background:#edf2f4;overflow:hidden}
+.merchant-analytics-bar-track span{display:block;width:100%;border-radius:999px;background:var(--teal)}
+.merchant-analytics-day b{font-size:.67rem}.merchant-analytics-day small{font-size:.56rem;color:var(--muted);white-space:nowrap}
+.merchant-analytics-empty{align-self:center;width:100%;padding:20px;text-align:center;color:var(--muted);font-size:.8rem}
+.merchant-analytics-footer{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:10px;font-size:.7rem;color:var(--muted)}
+@media(max-width:900px){.merchant-analytics-summary{grid-template-columns:repeat(3,1fr)}}
+@media(max-width:620px){
+  .merchant-analytics-dashboard{margin-inline:10px;padding:12px}
+  .merchant-analytics-summary{grid-template-columns:repeat(2,1fr)}
+  .merchant-section-head{flex-direction:column}
+}
