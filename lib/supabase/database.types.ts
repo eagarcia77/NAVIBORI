@@ -1191,6 +1191,10 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      purge_expired_business_customer_requests: {
+        Args: { p_business_id: string }
+        Returns: number
+      }
       record_public_business_metric: {
         Args: { p_business_id: string; p_event: string }
         Returns: boolean
