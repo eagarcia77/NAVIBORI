@@ -2,8 +2,20 @@ import Link from "next/link";
 import NaviboriMap from "@/components/navibori-map";
 import NaviboriBrand from "@/components/brand/navibori-brand";
 import NaviGuide from "@/components/brand/navi-guide";
+import {DEMO_COMMERCE} from "@/lib/commerce/demo";
+import {getPublicCommerce} from "@/lib/commerce/public-data";
+import type {CommerceProfile} from "@/lib/commerce/types";
 
-export default function Home() {
+export default async function Home() {
+  let liveBusinesses:CommerceProfile[]=[];
+  try{
+    liveBusinesses=await getPublicCommerce();
+  }catch{
+    liveBusinesses=[];
+  }
+  const usingLive=liveBusinesses.length>0;
+  const businesses=usingLive ? liveBusinesses : DEMO_COMMERCE;
+
   return (
     <main className="app-shell">
       <header className="topbar">
@@ -56,7 +68,7 @@ export default function Home() {
         <Link href="/nova">Escanear dispositivo</Link>
       </section>
 
-      <NaviboriMap />
+      <NaviboriMap businesses={businesses} source={usingLive ? "live" : "demo"} />
       <NaviGuide mode="cockpit" />
 
       <nav className="bottom-nav" aria-label="Navegación principal">
