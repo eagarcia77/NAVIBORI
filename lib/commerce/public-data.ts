@@ -45,19 +45,29 @@ export async function getPublicCommerce():Promise<CommerceProfile[]>{
   if(promotionsResult.error) throw promotionsResult.error;
   if(mediaResult.error) throw mediaResult.error;
 
-  const media=(mediaResult.data ?? []).map((item)=>({
-    ...item,
-    public_url:supabase.storage
-      .from("business-media")
-      .getPublicUrl(item.storage_path).data.publicUrl
-  }));
+  const media=await Promise.all(
+    (mediaResult.data ?? []).map(async(item)=>{
+      const {data:signed,error:signedError}=await supabase.storage
+        .from("business-media")
+        .createSignedUrl(item.storage_path,3600);
+
+      if(signedError || !signed?.signedUrl){
+        return null;
+      }
+
+      return {
+        ...item,
+        public_url:signed.signedUrl
+      };
+    })
+  );
 
   return composePublicCommerce(
     businesses,
     hoursResult.data ?? [],
     offersResult.data ?? [],
     promotionsResult.data ?? [],
-    media
+    media.filter((item):item is NonNullable<typeof item>=>Boolean(item))
   );
 }
 
