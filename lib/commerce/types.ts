@@ -33,6 +33,14 @@ export interface CommercePromotion {
   active: boolean;
 }
 
+export interface CommerceMediaAsset {
+  id: string;
+  kind: "logo" | "cover" | "gallery";
+  url: string;
+  altText: string;
+  sortOrder: number;
+}
+
 export interface CommerceProfile {
   id: string;
   name: string;
@@ -48,6 +56,9 @@ export interface CommerceProfile {
   offers: CommerceOffer[];
   promotions: CommercePromotion[];
   tags: string[];
+  logo?: CommerceMediaAsset;
+  cover?: CommerceMediaAsset;
+  gallery?: CommerceMediaAsset[];
   verification: "unverified" | "pending" | "verified";
   demo: boolean;
 }
