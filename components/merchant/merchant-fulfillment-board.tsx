@@ -4,6 +4,10 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { getOwnedMerchantBusiness } from "@/lib/commerce/backend-sync";
 import type { Database } from "@/lib/supabase/database.types";
+import {
+  buildCustomerContactHref,
+  buildCustomerStatusMessage
+} from "@/lib/commerce/customer-message";
 
 type RequestRow=Database["public"]["Tables"]["business_customer_requests"]["Row"];
 type SettingsRow=Database["public"]["Tables"]["business_service_settings"]["Row"];
@@ -300,14 +304,33 @@ export default function MerchantFulfillmentBoard(){
     }
   }
 
+  function customerMessage(request:RequestRow){
+    return buildCustomerStatusMessage({
+      businessName:businessName || "Comercio",
+      reference:request.id,
+      status:request.status,
+      fulfillmentMethod:request.fulfillment_method,
+      requestedFor:request.requested_for,
+      estimatedReadyAt:request.estimated_ready_at,
+      timeZone
+    });
+  }
+
   function contactHref(request:RequestRow){
-    if(request.contact_method==="email"){
-      return "mailto:"+request.contact_value;
+    return buildCustomerContactHref(
+      request.contact_method,
+      request.contact_value,
+      customerMessage(request)
+    );
+  }
+
+  async function copyCustomerUpdate(request:RequestRow){
+    try{
+      await navigator.clipboard.writeText(customerMessage(request));
+      setStatus("Actualización copiada para la referencia "+request.id.slice(0,8)+".");
+    }catch{
+      setStatus("No se pudo copiar la actualización en este navegador.");
     }
-    if(request.contact_method==="whatsapp"){
-      return "https://wa.me/"+request.contact_value.replace(/\D/g,"");
-    }
-    return "tel:"+request.contact_value;
   }
 
   function jumpToday(){
@@ -509,8 +532,20 @@ export default function MerchantFulfillmentBoard(){
                   target={request.contact_method==="whatsapp" ? "_blank" : undefined}
                   rel={request.contact_method==="whatsapp" ? "noreferrer" : undefined}
                 >
-                  Contactar
+                  {request.contact_method==="whatsapp"
+                    ? "WhatsApp"
+                    : request.contact_method==="email"
+                      ? "Email"
+                      : "Llamar"}
                 </a>
+
+                <button
+                  type="button"
+                  disabled={busyId===request.id}
+                  onClick={()=>copyCustomerUpdate(request)}
+                >
+                  Copiar actualización
+                </button>
 
                 {request.status==="new" && (
                   <button
