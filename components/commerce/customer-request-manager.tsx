@@ -1,21 +1,27 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 
 export default function CustomerRequestManager({
-  requestId,
-  token
+  requestId
 }:{
   requestId:string;
-  token:string;
 }){
-  const [status,setStatus]=useState(
-    token
-      ? "Este enlace permite cancelar la solicitud asociada."
-      : "El enlace de gestión está incompleto."
-  );
+  const [token,setToken]=useState("");
+  const [status,setStatus]=useState("Verificando enlace de gestión…");
   const [busy,setBusy]=useState(false);
+  useEffect(()=>{
+    const params=new URLSearchParams(window.location.hash.slice(1));
+    const value=params.get("token") ?? "";
+    setToken(value);
+    setStatus(
+      value
+        ? "Este enlace permite cancelar la solicitud asociada."
+        : "El enlace de gestión está incompleto."
+    );
+  },[]);
+
   const valid=useMemo(
     ()=>/^[0-9a-f]{64}$/.test(token) && /^[0-9a-f-]{36}$/i.test(requestId),
     [requestId,token]
