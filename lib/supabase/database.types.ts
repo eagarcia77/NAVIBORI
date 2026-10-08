@@ -408,6 +408,10 @@ export type Database = {
           instructions: string | null
           max_advance_days: number
           min_lead_minutes: number
+          pickup_capacity_per_slot: number
+          reservation_capacity_per_slot: number
+          slot_minutes: number
+          timezone: string
           updated_at: string
         }
         Insert: {
@@ -418,6 +422,10 @@ export type Database = {
           instructions?: string | null
           max_advance_days?: number
           min_lead_minutes?: number
+          pickup_capacity_per_slot?: number
+          reservation_capacity_per_slot?: number
+          slot_minutes?: number
+          timezone?: string
           updated_at?: string
         }
         Update: {
@@ -428,6 +436,10 @@ export type Database = {
           instructions?: string | null
           max_advance_days?: number
           min_lead_minutes?: number
+          pickup_capacity_per_slot?: number
+          reservation_capacity_per_slot?: number
+          slot_minutes?: number
+          timezone?: string
           updated_at?: string
         }
         Relationships: [
@@ -1191,6 +1203,19 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      get_business_fulfillment_slots: {
+        Args: {
+          p_business_id: string
+          p_fulfillment_method: string
+          p_local_date: string
+        }
+        Returns: {
+          active_count: number
+          available: boolean
+          capacity: number
+          slot_start: string
+        }[]
       }
       get_published_spatial_dataset: {
         Args: { p_venue_id: string }
