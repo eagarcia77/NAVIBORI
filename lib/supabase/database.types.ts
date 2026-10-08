@@ -110,6 +110,8 @@ export type Database = {
           contact_method: string
           contact_value: string
           created_at: string
+          customer_cancel_token_hash: string | null
+          customer_cancelled_at: string | null
           customer_name: string
           expires_at: string
           fulfillment_method: string
@@ -127,6 +129,8 @@ export type Database = {
           contact_method: string
           contact_value: string
           created_at?: string
+          customer_cancel_token_hash?: string | null
+          customer_cancelled_at?: string | null
           customer_name: string
           expires_at?: string
           fulfillment_method?: string
@@ -144,6 +148,8 @@ export type Database = {
           contact_method?: string
           contact_value?: string
           created_at?: string
+          customer_cancel_token_hash?: string | null
+          customer_cancelled_at?: string | null
           customer_name?: string
           expires_at?: string
           fulfillment_method?: string
@@ -1198,9 +1204,14 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      cancel_business_customer_request: {
+        Args: { p_cancel_token: string; p_request_id: string }
+        Returns: boolean
+      }
       create_business_customer_request: {
         Args: {
           p_business_id: string
+          p_cancel_token?: string
           p_contact_method?: string
           p_contact_value?: string
           p_customer_name?: string
@@ -1452,6 +1463,8 @@ export type Database = {
           contact_method: string
           contact_value: string
           created_at: string
+          customer_cancel_token_hash: string | null
+          customer_cancelled_at: string | null
           customer_name: string
           expires_at: string
           fulfillment_method: string
