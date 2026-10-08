@@ -297,6 +297,7 @@ export default function CustomerRequestManager({
       </p>
 
       {request && (
+        <>
         <div className="customer-request-summary">
           <div>
             <span>Comercio</span>
@@ -357,6 +358,7 @@ export default function CustomerRequestManager({
             )}
           </div>
         )}
+        </>
       )}
 
       <div className="customer-request-manager-card">
