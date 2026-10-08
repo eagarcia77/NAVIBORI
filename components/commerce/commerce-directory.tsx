@@ -127,10 +127,23 @@ export default function CommerceDirectory({
                 className={"commerce-card " + (selected?.id===business.id ? "selected" : "")}
                 onClick={()=>selectBusiness(business.id)}
               >
-                <div>
-                  <span className="commerce-demo-badge">{source==="live" ? "LIVE DATA" : "DEMO"}</span>
-                  <strong>{business.name}</strong>
-                  <small>{business.category} · {business.locationLabel}</small>
+                <div className="commerce-card-identity">
+                  {business.logo ? (
+                    <img
+                      className="commerce-card-logo"
+                      src={business.logo.url}
+                      alt={business.logo.altText}
+                    />
+                  ) : (
+                    <span className="commerce-card-logo-placeholder" aria-hidden="true">
+                      {business.name.slice(0,1).toUpperCase()}
+                    </span>
+                  )}
+                  <div>
+                    <span className="commerce-demo-badge">{source==="live" ? "LIVE DATA" : "DEMO"}</span>
+                    <strong>{business.name}</strong>
+                    <small>{business.category} · {business.locationLabel}</small>
+                  </div>
                 </div>
                 <div className="commerce-card-meta">
                   {promoCount>0 && <span>{promoCount} promo</span>}
