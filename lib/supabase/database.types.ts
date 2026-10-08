@@ -112,11 +112,13 @@ export type Database = {
           created_at: string
           customer_name: string
           expires_at: string
+          fulfillment_method: string
           id: string
           note: string | null
           offer_id: string | null
           quantity: number
           request_type: string
+          requested_for: string | null
           status: string
           updated_at: string
         }
@@ -127,11 +129,13 @@ export type Database = {
           created_at?: string
           customer_name: string
           expires_at?: string
+          fulfillment_method?: string
           id?: string
           note?: string | null
           offer_id?: string | null
           quantity?: number
           request_type?: string
+          requested_for?: string | null
           status?: string
           updated_at?: string
         }
@@ -142,11 +146,13 @@ export type Database = {
           created_at?: string
           customer_name?: string
           expires_at?: string
+          fulfillment_method?: string
           id?: string
           note?: string | null
           offer_id?: string | null
           quantity?: number
           request_type?: string
+          requested_for?: string | null
           status?: string
           updated_at?: string
         }
@@ -388,6 +394,47 @@ export type Database = {
             foreignKeyName: "business_promotions_business_id_fkey"
             columns: ["business_id"]
             isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      business_service_settings: {
+        Row: {
+          accepts_pickup: boolean
+          accepts_requests: boolean
+          accepts_reservations: boolean
+          business_id: string
+          instructions: string | null
+          max_advance_days: number
+          min_lead_minutes: number
+          updated_at: string
+        }
+        Insert: {
+          accepts_pickup?: boolean
+          accepts_requests?: boolean
+          accepts_reservations?: boolean
+          business_id: string
+          instructions?: string | null
+          max_advance_days?: number
+          min_lead_minutes?: number
+          updated_at?: string
+        }
+        Update: {
+          accepts_pickup?: boolean
+          accepts_requests?: boolean
+          accepts_reservations?: boolean
+          business_id?: string
+          instructions?: string | null
+          max_advance_days?: number
+          min_lead_minutes?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "business_service_settings_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: true
             referencedRelation: "businesses"
             referencedColumns: ["id"]
           },
@@ -1098,19 +1145,35 @@ export type Database = {
           isSetofReturn: false
         }
       }
-      create_business_customer_request: {
-        Args: {
-          p_business_id: string
-          p_contact_method?: string
-          p_contact_value?: string
-          p_customer_name?: string
-          p_note?: string
-          p_offer_id?: string
-          p_quantity?: number
-          p_request_type?: string
-        }
-        Returns: string
-      }
+      create_business_customer_request:
+        | {
+            Args: {
+              p_business_id: string
+              p_contact_method?: string
+              p_contact_value?: string
+              p_customer_name?: string
+              p_note?: string
+              p_offer_id?: string
+              p_quantity?: number
+              p_request_type?: string
+            }
+            Returns: string
+          }
+        | {
+            Args: {
+              p_business_id: string
+              p_contact_method?: string
+              p_contact_value?: string
+              p_customer_name?: string
+              p_fulfillment_method?: string
+              p_note?: string
+              p_offer_id?: string
+              p_quantity?: number
+              p_request_type?: string
+              p_requested_for?: string
+            }
+            Returns: string
+          }
       create_spatial_revision: {
         Args: {
           p_entity_id: string
@@ -1314,11 +1377,13 @@ export type Database = {
           created_at: string
           customer_name: string
           expires_at: string
+          fulfillment_method: string
           id: string
           note: string | null
           offer_id: string | null
           quantity: number
           request_type: string
+          requested_for: string | null
           status: string
           updated_at: string
         }
