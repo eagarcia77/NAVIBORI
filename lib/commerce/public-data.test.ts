@@ -63,6 +63,16 @@ describe("public commerce composition",()=>{
         created_at:"2026-10-07T00:00:00Z",
         updated_at:"2026-10-07T00:00:00Z",
         public_url:"https://signed.example/logo.webp"
+      }],
+      [{
+        business_id:"b1",
+        accepts_requests:true,
+        accepts_pickup:true,
+        accepts_reservations:true,
+        min_lead_minutes:30,
+        max_advance_days:30,
+        instructions:"Confirma por WhatsApp.",
+        updated_at:"2026-10-07T00:00:00Z"
       }]
     );
 
@@ -71,5 +81,7 @@ describe("public commerce composition",()=>{
     expect(profiles[0].hours[0].day).toBe("mon");
     expect(profiles[0].offers[0].available).toBe(true);
     expect(profiles[0].logo?.altText).toBe("Logo del comercio");
+    expect(profiles[0].serviceSettings?.acceptsPickup).toBe(true);
+    expect(profiles[0].serviceSettings?.instructions).toBe("Confirma por WhatsApp.");
   });
 });
