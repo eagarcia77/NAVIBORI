@@ -510,12 +510,15 @@ export type Database = {
       }
       businesses: {
         Row: {
+          address_text: string | null
           category: string
           created_at: string
           created_by: string | null
           description: string | null
           id: string
+          latitude: number | null
           location_verified: boolean
+          longitude: number | null
           metadata: Json
           name: string
           ownership_verified: boolean
@@ -533,12 +536,15 @@ export type Database = {
           whatsapp: string | null
         }
         Insert: {
+          address_text?: string | null
           category?: string
           created_at?: string
           created_by?: string | null
           description?: string | null
           id?: string
+          latitude?: number | null
           location_verified?: boolean
+          longitude?: number | null
           metadata?: Json
           name: string
           ownership_verified?: boolean
@@ -556,12 +562,15 @@ export type Database = {
           whatsapp?: string | null
         }
         Update: {
+          address_text?: string | null
           category?: string
           created_at?: string
           created_by?: string | null
           description?: string | null
           id?: string
+          latitude?: number | null
           location_verified?: boolean
+          longitude?: number | null
           metadata?: Json
           name?: string
           ownership_verified?: boolean
@@ -1389,19 +1398,25 @@ export type Database = {
       review_merchant_business: {
         Args: {
           p_action: string
+          p_address_text?: string
           p_business_id: string
+          p_latitude?: number
           p_location_verified?: boolean
+          p_longitude?: number
           p_note?: string
           p_ownership_verified?: boolean
           p_space_id?: string
         }
         Returns: {
+          address_text: string | null
           category: string
           created_at: string
           created_by: string | null
           description: string | null
           id: string
+          latitude: number | null
           location_verified: boolean
+          longitude: number | null
           metadata: Json
           name: string
           ownership_verified: boolean
@@ -1459,12 +1474,15 @@ export type Database = {
       submit_merchant_business_for_review: {
         Args: { p_business_id: string }
         Returns: {
+          address_text: string | null
           category: string
           created_at: string
           created_by: string | null
           description: string | null
           id: string
+          latitude: number | null
           location_verified: boolean
+          longitude: number | null
           metadata: Json
           name: string
           ownership_verified: boolean
