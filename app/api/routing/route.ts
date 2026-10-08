@@ -108,20 +108,24 @@ export async function POST(request:Request){
   const url=buildOsrmRouteUrl(origin,destination,payload.mode);
 
   try{
-    const controller=new AbortController();
-    const timeout=setTimeout(()=>controller.abort(),12000);
+    const response=await withRoutingThrottle(async()=>{
+      const controller=new AbortController();
+      const timeout=setTimeout(()=>controller.abort(),12000);
 
-    const response=await withRoutingThrottle(()=>fetch(url,{
-      method:"GET",
-      headers:{
-        "Accept":"application/json",
-        "User-Agent":"NAVIBORI/0.1 (+https://navibori.onrender.com)"
-      },
-      cache:"no-store",
-      signal:controller.signal
-    }));
-
-    clearTimeout(timeout);
+      try{
+        return await fetch(url,{
+          method:"GET",
+          headers:{
+            "Accept":"application/json",
+            "User-Agent":"NAVIBORI/0.1 (+https://navibori.onrender.com)"
+          },
+          cache:"no-store",
+          signal:controller.signal
+        });
+      }finally{
+        clearTimeout(timeout);
+      }
+    });
 
     if(!response.ok){
       return NextResponse.json(
