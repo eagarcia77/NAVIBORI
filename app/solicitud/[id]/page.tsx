@@ -3,14 +3,11 @@ import NaviboriBrand from "@/components/brand/navibori-brand";
 import CustomerRequestManager from "@/components/commerce/customer-request-manager";
 
 export default async function CustomerRequestPage({
-  params,
-  searchParams
+  params
 }:{
   params:Promise<{id:string}>;
-  searchParams:Promise<{token?:string}>;
 }){
   const {id}=await params;
-  const {token=""}=await searchParams;
 
   return (
     <main className="commerce-page">
@@ -25,7 +22,7 @@ export default async function CustomerRequestPage({
         </div>
       </header>
 
-      <CustomerRequestManager requestId={id} token={token} />
+      <CustomerRequestManager requestId={id} />
     </main>
   );
 }
