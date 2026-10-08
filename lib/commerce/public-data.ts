@@ -18,7 +18,7 @@ export async function getPublicCommerce():Promise<CommerceProfile[]>{
 
   const ids=businesses.map((business)=>business.id);
 
-  const [hoursResult,offersResult,promotionsResult]=await Promise.all([
+  const [hoursResult,offersResult,promotionsResult,mediaResult]=await Promise.all([
     supabase
       .from("business_hours")
       .select("*")
@@ -32,18 +32,32 @@ export async function getPublicCommerce():Promise<CommerceProfile[]>{
     supabase
       .from("business_promotions")
       .select("*")
+      .in("business_id",ids),
+    supabase
+      .from("business_media")
+      .select("*")
       .in("business_id",ids)
+      .order("sort_order")
   ]);
 
   if(hoursResult.error) throw hoursResult.error;
   if(offersResult.error) throw offersResult.error;
   if(promotionsResult.error) throw promotionsResult.error;
+  if(mediaResult.error) throw mediaResult.error;
+
+  const media=(mediaResult.data ?? []).map((item)=>({
+    ...item,
+    public_url:supabase.storage
+      .from("business-media")
+      .getPublicUrl(item.storage_path).data.publicUrl
+  }));
 
   return composePublicCommerce(
     businesses,
     hoursResult.data ?? [],
     offersResult.data ?? [],
-    promotionsResult.data ?? []
+    promotionsResult.data ?? [],
+    media
   );
 }
 
