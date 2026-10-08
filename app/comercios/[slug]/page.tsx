@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import NaviboriBrand from "@/components/brand/navibori-brand";
 import NaviGuide from "@/components/brand/navi-guide";
+import BusinessMetricBeacon from "@/components/commerce/business-metric-beacon";
 import { getCommerceBySlug, getCommerceSlugs } from "@/lib/commerce/lookup";
 import { getPublicCommerceBySlug } from "@/lib/commerce/public-data";
 import { getCommerceOpenState } from "@/lib/commerce/hours";
@@ -189,6 +190,7 @@ export default async function BusinessProfilePage({
         </aside>
       </section>
 
+      <BusinessMetricBeacon businessId={business.id} enabled={isLive} />
       <NaviGuide mode="cockpit" />
     </main>
   );
