@@ -66,6 +66,8 @@ function methodLabel(method:string){
 function statusLabel(status:string){
   if(status==="new") return "Nueva";
   if(status==="accepted") return "Aceptada";
+  if(status==="preparing") return "En preparación";
+  if(status==="ready") return "Lista";
   if(status==="completed") return "Completada";
   if(status==="cancelled") return "Cancelada";
   if(status==="no_show") return "No-show";
@@ -220,6 +222,8 @@ export default function MerchantFulfillmentBoard(){
   const summary=useMemo(()=>{
     const newCount=requests.filter((request)=>request.status==="new").length;
     const accepted=requests.filter((request)=>request.status==="accepted").length;
+    const preparing=requests.filter((request)=>request.status==="preparing").length;
+    const ready=requests.filter((request)=>request.status==="ready").length;
     const completed=requests.filter((request)=>request.status==="completed").length;
     const noShow=requests.filter((request)=>request.status==="no_show").length;
     const activeSlots=slots.reduce((sum,slot)=>sum+slot.active_count,0);
@@ -229,6 +233,8 @@ export default function MerchantFulfillmentBoard(){
     return {
       newCount,
       accepted,
+      preparing,
+      ready,
       completed,
       noShow,
       scheduled:requests.length,
@@ -245,7 +251,7 @@ export default function MerchantFulfillmentBoard(){
 
   async function updateRequest(
     requestId:string,
-    next:"accepted"|"completed"|"cancelled"|"no_show"
+    next:"accepted"|"preparing"|"ready"|"completed"|"cancelled"|"no_show"
   ){
     setBusyId(requestId);
 
@@ -263,6 +269,31 @@ export default function MerchantFulfillmentBoard(){
         error instanceof Error
           ? error.message
           : "No se pudo actualizar la solicitud."
+      );
+    }finally{
+      setBusyId(null);
+    }
+  }
+
+  async function setEstimate(requestId:string,minutes:number){
+    setBusyId(requestId);
+
+    try{
+      const supabase=createClient();
+      const estimated=new Date(Date.now()+minutes*60_000).toISOString();
+      const {error}=await supabase.rpc("set_business_customer_request_estimate",{
+        p_request_id:requestId,
+        p_estimated_ready_at:estimated
+      });
+
+      if(error) throw error;
+      setStatus("Tiempo estimado actualizado.");
+      await loadDay();
+    }catch(error){
+      setStatus(
+        error instanceof Error
+          ? error.message
+          : "No se pudo actualizar el tiempo estimado."
       );
     }finally{
       setBusyId(null);
@@ -345,6 +376,14 @@ export default function MerchantFulfillmentBoard(){
         <article>
           <span>Aceptadas</span>
           <strong>{summary.accepted}</strong>
+        </article>
+        <article>
+          <span>Preparación</span>
+          <strong>{summary.preparing}</strong>
+        </article>
+        <article>
+          <span>Listas</span>
+          <strong>{summary.ready}</strong>
         </article>
         <article>
           <span>Completadas</span>
@@ -453,6 +492,11 @@ export default function MerchantFulfillmentBoard(){
                   </span>
                 </div>
                 {request.note && <p>{request.note}</p>}
+                {request.estimated_ready_at && (
+                  <div className="merchant-operations-eta">
+                    Estimado: {formatTime(request.estimated_ready_at,timeZone)}
+                  </div>
+                )}
               </div>
 
               <div className="merchant-operations-actions">
@@ -478,7 +522,42 @@ export default function MerchantFulfillmentBoard(){
                   </button>
                 )}
 
+                {(request.status==="accepted" || request.status==="preparing") && (
+                  <div className="merchant-estimate-actions" aria-label="Tiempo estimado">
+                    {[15,30,45,60].map((minutes)=>(
+                      <button
+                        key={minutes}
+                        type="button"
+                        disabled={busyId===request.id}
+                        onClick={()=>setEstimate(request.id,minutes)}
+                      >
+                        +{minutes}m
+                      </button>
+                    ))}
+                  </div>
+                )}
+
                 {request.status==="accepted" && (
+                  <button
+                    type="button"
+                    disabled={busyId===request.id}
+                    onClick={()=>updateRequest(request.id,"preparing")}
+                  >
+                    Iniciar preparación
+                  </button>
+                )}
+
+                {request.status==="preparing" && (
+                  <button
+                    type="button"
+                    disabled={busyId===request.id}
+                    onClick={()=>updateRequest(request.id,"ready")}
+                  >
+                    Marcar listo
+                  </button>
+                )}
+
+                {request.status==="ready" && (
                   <button
                     type="button"
                     disabled={busyId===request.id}
@@ -488,7 +567,7 @@ export default function MerchantFulfillmentBoard(){
                   </button>
                 )}
 
-                {request.status==="accepted" && request.requested_for && new Date(request.requested_for)<=new Date() && (
+                {(request.status==="accepted" || request.status==="ready") && request.requested_for && new Date(request.requested_for)<=new Date() && (
                   <button
                     type="button"
                     disabled={busyId===request.id}
@@ -498,7 +577,7 @@ export default function MerchantFulfillmentBoard(){
                   </button>
                 )}
 
-                {(request.status==="new" || request.status==="accepted") && (
+                {["new","accepted","preparing","ready"].includes(request.status) && (
                   <button
                     type="button"
                     className="danger"
