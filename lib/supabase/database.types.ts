@@ -145,6 +145,50 @@ export type Database = {
           },
         ]
       }
+      business_media: {
+        Row: {
+          alt_text: string
+          business_id: string
+          created_at: string
+          created_by: string
+          id: string
+          kind: string
+          sort_order: number
+          storage_path: string
+          updated_at: string
+        }
+        Insert: {
+          alt_text: string
+          business_id: string
+          created_at?: string
+          created_by: string
+          id?: string
+          kind: string
+          sort_order?: number
+          storage_path: string
+          updated_at?: string
+        }
+        Update: {
+          alt_text?: string
+          business_id?: string
+          created_at?: string
+          created_by?: string
+          id?: string
+          kind?: string
+          sort_order?: number
+          storage_path?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "business_media_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       business_offers: {
         Row: {
           available: boolean
