@@ -742,3 +742,7 @@ h1 span { color: var(--teal); }
 .merchant-qr-details{display:grid;gap:8px}.merchant-qr-details>strong{font-size:1.05rem}.merchant-qr-details code{display:block;padding:9px 10px;border:1px solid var(--line);border-radius:9px;background:#f8fafb;font-size:.68rem;word-break:break-all}.merchant-qr-details p{margin:0;color:var(--muted);font-size:.76rem}
 @media(max-width:720px){.merchant-qr-layout{grid-template-columns:1fr}.merchant-qr-code{max-width:300px}}
 @media(max-width:620px){.merchant-qr-kit{margin-inline:10px;padding:12px}}
+
+/* Commerce slot capacity */
+.slot-status{display:block;margin-top:4px;color:var(--muted);font-size:.66rem;font-weight:600}
+.business-request-form select option:disabled{color:#9aa8ae}
