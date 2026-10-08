@@ -800,3 +800,38 @@ h1 span { color: var(--teal); }
 .customer-request-manager-card button{min-height:42px;width:max-content;padding:0 14px;border:1px solid var(--ocean);border-radius:10px;background:var(--ocean);color:white;font-weight:800}
 .customer-request-manager-card button:disabled{opacity:.45}
 .customer-request-manager>small{display:block;margin-top:12px;color:var(--muted);font-size:.68rem}
+
+
+/* Merchant daily fulfillment operations */
+.merchant-operations-board{margin:0 22px 18px;padding:16px;border:1px solid var(--line);border-radius:16px;background:white}
+.merchant-operations-head{align-items:flex-start}
+.merchant-operations-live{display:flex;align-items:center;gap:8px;flex-wrap:wrap;color:var(--muted);font-size:.72rem}
+.merchant-operations-datebar{display:flex;gap:7px;align-items:center;flex-wrap:wrap;margin:12px 0}
+.merchant-operations-datebar button,.merchant-operations-datebar input{min-height:38px;border:1px solid var(--line);border-radius:9px;background:white;color:var(--ink);padding:0 10px}
+.merchant-operations-datebar button{font-weight:800}.merchant-operations-datebar button:disabled{opacity:.45;cursor:not-allowed}
+.merchant-operations-summary{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:7px;margin-bottom:12px}
+.merchant-operations-summary article{display:grid;gap:3px;padding:10px;border:1px solid var(--line);border-radius:11px;background:#fbfdfe}
+.merchant-operations-summary span{font-size:.59rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+.merchant-operations-summary strong{font-size:1.1rem}
+.merchant-capacity-board{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-bottom:12px}
+.merchant-capacity-board>article{padding:11px;border:1px solid var(--line);border-radius:12px;background:#fbfdfe}
+.merchant-capacity-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:9px}
+.merchant-capacity-head>div{display:grid;gap:2px}.merchant-capacity-head span{font-size:.6rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}.merchant-capacity-head strong{font-size:.9rem}.merchant-capacity-head small{color:var(--muted);font-size:.65rem}
+.merchant-capacity-slots{display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:6px}
+.merchant-capacity-slot{display:grid;gap:5px;padding:7px;border:1px solid var(--line);border-radius:9px;background:white}
+.merchant-capacity-slot.full{opacity:.58}.merchant-capacity-slot>div:first-child{display:flex;justify-content:space-between;gap:6px;font-size:.66rem}.merchant-capacity-slot>div:first-child span{color:var(--muted)}
+.merchant-capacity-track{height:5px;border-radius:999px;background:#edf2f4;overflow:hidden}.merchant-capacity-track span{display:block;height:100%;border-radius:999px;background:var(--teal)}
+.merchant-capacity-slot.full .merchant-capacity-track span{background:var(--coral)}
+.merchant-capacity-empty{grid-column:1/-1;padding:10px;color:var(--muted);font-size:.72rem}
+.merchant-operations-schedule{display:grid;gap:7px}
+.merchant-operations-schedule>article{display:grid;grid-template-columns:100px minmax(0,1fr) auto;gap:12px;align-items:center;padding:11px;border:1px solid var(--line);border-radius:12px;background:#fbfdfe}
+.merchant-operations-time{display:grid;gap:2px}.merchant-operations-time strong{font-size:.95rem}.merchant-operations-time span{font-size:.6rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.merchant-operations-request{display:grid;gap:5px;min-width:0}.merchant-operations-request>div{display:grid;gap:2px}.merchant-operations-request>div span{color:var(--muted);font-size:.66rem}.merchant-operations-request p{margin:0;color:var(--muted);font-size:.72rem;white-space:pre-wrap;overflow-wrap:anywhere}
+.merchant-operations-actions{display:flex;align-items:center;justify-content:flex-end;gap:6px;flex-wrap:wrap}
+.merchant-operations-actions a,.merchant-operations-actions button{min-height:34px;display:inline-flex;align-items:center;justify-content:center;padding:0 9px;border:1px solid var(--line);border-radius:9px;background:white;color:var(--ink);text-decoration:none;font-size:.67rem;font-weight:800}
+.merchant-operations-actions button.danger{color:#9b3d35}.merchant-operations-actions button:disabled{opacity:.45;cursor:not-allowed}
+.merchant-operations-empty{display:grid;gap:3px;padding:18px;border:1px dashed var(--line);border-radius:12px;text-align:center;color:var(--muted)}.merchant-operations-empty strong{color:var(--ink)}
+.merchant-operations-footnote{display:block;margin-top:10px;color:var(--muted);font-size:.68rem}
+@media(max-width:900px){.merchant-operations-summary{grid-template-columns:repeat(3,1fr)}.merchant-operations-schedule>article{grid-template-columns:82px minmax(0,1fr)}.merchant-operations-actions{grid-column:1/-1;justify-content:flex-start}}
+@media(max-width:700px){.merchant-capacity-board{grid-template-columns:1fr}.merchant-operations-summary{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:620px){.merchant-operations-board{margin-inline:10px;padding:12px}.merchant-operations-schedule>article{grid-template-columns:1fr}.merchant-operations-actions{grid-column:auto}.merchant-operations-datebar input{flex:1;min-width:140px}}
