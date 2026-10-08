@@ -15,6 +15,9 @@ describe("public commerce composition",()=>{
         phone:"7875550000",
         whatsapp:"+17875550000",
         website:null,
+        address_text:"123 Calle Demo, Juana Díaz, PR",
+        latitude:18.052,
+        longitude:-66.506,
         metadata:{},
         created_by:"u1",
         category:"gastronomia",
@@ -82,6 +85,13 @@ describe("public commerce composition",()=>{
 
     expect(profiles[0].demo).toBe(false);
     expect(profiles[0].verifiedLocation).toBe(true);
+    expect(profiles[0].locationLabel).toBe("123 Calle Demo, Juana Díaz, PR");
+    expect(profiles[0].mapLocation).toEqual({
+      latitude:18.052,
+      longitude:-66.506,
+      address:"123 Calle Demo, Juana Díaz, PR",
+      verified:true
+    });
     expect(profiles[0].hours[0].day).toBe("mon");
     expect(profiles[0].offers[0].available).toBe(true);
     expect(profiles[0].logo?.altText).toBe("Logo del comercio");
