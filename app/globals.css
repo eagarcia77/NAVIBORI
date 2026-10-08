@@ -746,3 +746,18 @@ h1 span { color: var(--teal); }
 /* Commerce slot capacity */
 .slot-status{display:block;margin-top:4px;color:var(--muted);font-size:.66rem;font-weight:600}
 .business-request-form select option:disabled{color:#9aa8ae}
+
+/* Fulfillment blackout controls */
+.merchant-blackout-editor{margin:0 22px 18px;padding:16px;border:1px solid var(--line);border-radius:16px;background:white}
+.merchant-blackout-list{display:grid;gap:8px;margin-top:12px}
+.merchant-blackout-list article{display:flex;justify-content:space-between;gap:12px;align-items:center;padding:10px 12px;border:1px solid var(--line);border-radius:11px;background:#fbfdfe}
+.merchant-blackout-list article>div{display:grid;gap:3px}
+.merchant-blackout-list article span{font-size:.58rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.merchant-blackout-list article strong{font-size:.78rem}
+.merchant-blackout-list article small{color:var(--muted);font-size:.68rem}
+.merchant-blackout-list article button{min-height:34px;padding:0 10px;border:1px solid var(--line);border-radius:9px;background:white;font-weight:800}
+.merchant-blackout-editor>small{display:block;margin-top:10px;color:var(--muted);font-size:.68rem}
+@media(max-width:620px){
+  .merchant-blackout-editor{margin-inline:10px;padding:12px}
+  .merchant-blackout-list article{align-items:flex-start;flex-direction:column}
+}
