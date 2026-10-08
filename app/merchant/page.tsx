@@ -11,6 +11,7 @@ import BusinessMediaEditor from "@/components/merchant/business-media-editor";
 import MerchantAnalyticsDashboard from "@/components/merchant/merchant-analytics-dashboard";
 import CustomerRequestInbox from "@/components/merchant/customer-request-inbox";
 import ServiceSettingsEditor from "@/components/merchant/service-settings-editor";
+import MerchantQrKit from "@/components/merchant/merchant-qr-kit";
 import NaviGuide from "@/components/brand/navi-guide";
 
 export const metadata = {
@@ -41,6 +42,7 @@ export default function MerchantPage() {
       <MerchantConsole />
       <BackendSyncPanel />
       <BusinessMediaEditor />
+      <MerchantQrKit />
       <ServiceSettingsEditor />
       <HoursEditor />
       <CatalogEditor />
