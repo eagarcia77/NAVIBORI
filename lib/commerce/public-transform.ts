@@ -10,6 +10,7 @@ type HourRow=Database["public"]["Tables"]["business_hours"]["Row"];
 type OfferRow=Database["public"]["Tables"]["business_offers"]["Row"];
 type PromotionRow=Database["public"]["Tables"]["business_promotions"]["Row"];
 type MediaRow=Database["public"]["Tables"]["business_media"]["Row"] & { public_url:string };
+type ServiceSettingsRow=Database["public"]["Tables"]["business_service_settings"]["Row"];
 
 const CATEGORY_SET=new Set<CommerceCategory>([
   "gastronomia","compras","servicios","artesania","bienestar","otros"
@@ -30,7 +31,8 @@ export function composePublicCommerce(
   hours:HourRow[],
   offers:OfferRow[],
   promotions:PromotionRow[],
-  media:MediaRow[]=[]
+  media:MediaRow[]=[],
+  serviceSettings:ServiceSettingsRow[]=[]
 ):CommerceProfile[]{
   return businesses.map((business)=>{
     const businessHours=hours
@@ -79,6 +81,8 @@ export function composePublicCommerce(
         sortOrder:item.sort_order
       }));
 
+    const settings=serviceSettings.find((item)=>item.business_id===business.id);
+
     const verifiedLocation=
       business.verification_status==="verified" &&
       Boolean(business.space_id);
@@ -103,6 +107,14 @@ export function composePublicCommerce(
       logo:businessMedia.find((item)=>item.kind==="logo"),
       cover:businessMedia.find((item)=>item.kind==="cover"),
       gallery:businessMedia.filter((item)=>item.kind==="gallery"),
+      serviceSettings:settings ? {
+        acceptsRequests:settings.accepts_requests,
+        acceptsPickup:settings.accepts_pickup,
+        acceptsReservations:settings.accepts_reservations,
+        minLeadMinutes:settings.min_lead_minutes,
+        maxAdvanceDays:settings.max_advance_days,
+        instructions:settings.instructions ?? undefined
+      } : undefined,
       verification:
         business.verification_status==="verified"
           ? "verified"
