@@ -27,13 +27,13 @@ export default function BusinessMediaEditor(){
   const [status,setStatus]=useState("Verificando comercio…");
   const [busy,setBusy]=useState(false);
 
-  const supabase=createClient();
   const editable=
     Boolean(businessId) &&
     verificationStatus!=="pending" &&
     (businessStatus==="draft" || businessStatus==="active");
 
   async function loadMedia(id:string){
+    const supabase=createClient();
     const {data,error}=await supabase
       .from("business_media")
       .select("*")
@@ -112,6 +112,7 @@ export default function BusinessMediaEditor(){
     setBusy(true);
     setStatus("Subiendo imagen…");
 
+    const supabase=createClient();
     const extension=MIME_EXT[file.type];
     const path=businessId+"/"+kind+"/"+crypto.randomUUID()+"."+extension;
 
@@ -181,6 +182,7 @@ export default function BusinessMediaEditor(){
     setBusy(true);
 
     try{
+      const supabase=createClient();
       const {error:rowError}=await supabase
         .from("business_media")
         .delete()
