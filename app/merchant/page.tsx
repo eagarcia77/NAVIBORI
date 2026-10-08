@@ -12,6 +12,7 @@ import MerchantAnalyticsDashboard from "@/components/merchant/merchant-analytics
 import CustomerRequestInbox from "@/components/merchant/customer-request-inbox";
 import ServiceSettingsEditor from "@/components/merchant/service-settings-editor";
 import FulfillmentBlackoutEditor from "@/components/merchant/fulfillment-blackout-editor";
+import MerchantFulfillmentBoard from "@/components/merchant/merchant-fulfillment-board";
 import MerchantQrKit from "@/components/merchant/merchant-qr-kit";
 import NaviGuide from "@/components/brand/navi-guide";
 
@@ -46,6 +47,7 @@ export default function MerchantPage() {
       <MerchantQrKit />
       <ServiceSettingsEditor />
       <FulfillmentBlackoutEditor />
+      <MerchantFulfillmentBoard />
       <HoursEditor />
       <CatalogEditor />
       <PromotionEditor />
