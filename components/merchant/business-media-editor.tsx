@@ -6,6 +6,7 @@ import { getOwnedMerchantBusiness } from "@/lib/commerce/backend-sync";
 import type { Database } from "@/lib/supabase/database.types";
 
 type MediaRow=Database["public"]["Tables"]["business_media"]["Row"];
+type MediaView=MediaRow & {previewUrl:string};
 type MediaKind="logo"|"cover"|"gallery";
 
 const MIME_EXT:Record<string,string>={
@@ -19,7 +20,7 @@ export default function BusinessMediaEditor(){
   const [businessId,setBusinessId]=useState<string|null>(null);
   const [businessStatus,setBusinessStatus]=useState<string|null>(null);
   const [verificationStatus,setVerificationStatus]=useState<string|null>(null);
-  const [media,setMedia]=useState<MediaRow[]>([]);
+  const [media,setMedia]=useState<MediaView[]>([]);
   const [kind,setKind]=useState<MediaKind>("logo");
   const [altText,setAltText]=useState("");
   const [file,setFile]=useState<File|null>(null);
@@ -41,7 +42,21 @@ export default function BusinessMediaEditor(){
       .order("sort_order");
 
     if(error) throw error;
-    setMedia(data ?? []);
+
+    const views=await Promise.all(
+      (data ?? []).map(async(item)=>{
+        const {data:signed,error:signedError}=await supabase.storage
+          .from("business-media")
+          .createSignedUrl(item.storage_path,3600);
+
+        if(signedError || !signed?.signedUrl) return null;
+        return {...item,previewUrl:signed.signedUrl};
+      })
+    );
+
+    setMedia(
+      views.filter((item):item is MediaView=>Boolean(item))
+    );
   }
 
   useEffect(()=>{
@@ -188,10 +203,6 @@ export default function BusinessMediaEditor(){
     }
   }
 
-  function publicUrl(path:string){
-    return supabase.storage.from("business-media").getPublicUrl(path).data.publicUrl;
-  }
-
   return (
     <section className="merchant-media-editor">
       <div className="merchant-section-head">
@@ -252,7 +263,7 @@ export default function BusinessMediaEditor(){
       <div className="merchant-media-grid">
         {media.map((item)=>(
           <article key={item.id}>
-            <img src={publicUrl(item.storage_path)} alt={item.alt_text} />
+            <img src={item.previewUrl} alt={item.alt_text} />
             <div>
               <span>{item.kind}</span>
               <strong>{item.alt_text}</strong>
