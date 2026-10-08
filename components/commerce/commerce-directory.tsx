@@ -7,6 +7,7 @@ import { DEMO_COMMERCE } from "@/lib/commerce/demo";
 import { getCommerceOpenState } from "@/lib/commerce/hours";
 import { appendCommerceEvent, type CommerceAnalyticsEvent } from "@/lib/commerce/analytics";
 import { buildBusinessDeepLink } from "@/lib/commerce/deep-link";
+import { recordPublicBusinessMetric } from "@/lib/commerce/public-metrics";
 import type { CommerceCategory, CommerceProfile } from "@/lib/commerce/types";
 
 const categories: Array<{value:"all"|CommerceCategory;label:string}> = [
@@ -60,6 +61,10 @@ export default function CommerceDirectory({
       occurredAt:new Date().toISOString()
     });
     localStorage.setItem("navibori:commerce-events",JSON.stringify(next));
+
+    if(source==="live"){
+      recordPublicBusinessMetric(businessId,type).catch(()=>{});
+    }
   }
 
   function selectBusiness(id:string) {
