@@ -10,6 +10,7 @@ type RequestRow=Database["public"]["Tables"]["business_customer_requests"]["Row"
 export default function CustomerRequestInbox(){
   const [businessId,setBusinessId]=useState<string|null>(null);
   const [requests,setRequests]=useState<RequestRow[]>([]);
+  const [offerTitles,setOfferTitles]=useState<Record<string,string>>({});
   const [status,setStatus]=useState("Cargando solicitudes…");
   const [busyId,setBusyId]=useState<string|null>(null);
 
@@ -32,6 +33,28 @@ export default function CustomerRequestInbox(){
       .limit(100);
 
     if(error) throw error;
+
+    const offerIds=[...new Set(
+      (data ?? [])
+        .map((item)=>item.offer_id)
+        .filter((id):id is string=>Boolean(id))
+    )];
+
+    if(offerIds.length>0){
+      const {data:offers,error:offerError}=await supabase
+        .from("business_offers")
+        .select("id,title")
+        .in("id",offerIds);
+
+      if(offerError) throw offerError;
+
+      setOfferTitles(
+        Object.fromEntries((offers ?? []).map((offer)=>[offer.id,offer.title]))
+      );
+    }else{
+      setOfferTitles({});
+    }
+
     setRequests(data ?? []);
     setStatus(
       (data ?? []).length
@@ -105,8 +128,28 @@ export default function CustomerRequestInbox(){
             </div>
 
             <dl>
-              <div><dt>Contacto</dt><dd>{request.contact_method}: {request.contact_value}</dd></div>
-              <div><dt>Oferta</dt><dd>{request.offer_id ? request.offer_id.slice(0,8) : "Solicitud general"}</dd></div>
+              <div>
+                <dt>Contacto</dt>
+                <dd>{request.contact_method}: {request.contact_value}</dd>
+              </div>
+              <div>
+                <dt>Oferta</dt>
+                <dd>{request.offer_id ? (offerTitles[request.offer_id] ?? "Producto/servicio") : "Solicitud general"}</dd>
+              </div>
+              <div>
+                <dt>Modalidad</dt>
+                <dd>
+                  {request.fulfillment_method==="pickup"
+                    ? "Pickup / recogido"
+                    : request.fulfillment_method==="reservation"
+                      ? "Reservación / cita"
+                      : "Contactar al cliente"}
+                </dd>
+              </div>
+              <div>
+                <dt>Fecha solicitada</dt>
+                <dd>{request.requested_for ? new Date(request.requested_for).toLocaleString() : "—"}</dd>
+              </div>
               <div><dt>Nota</dt><dd>{request.note || "—"}</dd></div>
             </dl>
 
