@@ -44,6 +44,13 @@ Customer-facing slot availability and the merchant daily operations board use th
 
 A submitted request still requires merchant confirmation. Requests in new, accepted, preparing and ready states continue consuming slot capacity until they are completed, cancelled or marked no-show. Customer status links expose only operational status/timing data after token verification; they do not expose stored contact details or private notes. NAVIBORI does not currently process payment.
 
+## Map and directions truth rule
+- Published LIVE businesses appear on the customer map only when coordinates are present.
+- Driving/walking actions require a verified exterior destination (address + latitude + longitude).
+- Exterior routing verification is independent from the optional interior space assignment.
+- DEMO pins remain synthetic and never enable real directions.
+- NAVIBORI opens Google Maps directions with driving or walking travel mode; device location may be used by Google Maps when available.
+
 ## Data truth rule
 Demo businesses are always labeled synthetic.
 No demo location, opening status, product, price or promotion may be represented as an actual Mercado Metropolitano business.
