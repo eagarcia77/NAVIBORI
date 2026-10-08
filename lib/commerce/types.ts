@@ -41,6 +41,15 @@ export interface CommerceMediaAsset {
   sortOrder: number;
 }
 
+export interface CommerceServiceSettings {
+  acceptsRequests: boolean;
+  acceptsPickup: boolean;
+  acceptsReservations: boolean;
+  minLeadMinutes: number;
+  maxAdvanceDays: number;
+  instructions?: string;
+}
+
 export interface CommerceProfile {
   id: string;
   name: string;
@@ -59,6 +68,7 @@ export interface CommerceProfile {
   logo?: CommerceMediaAsset;
   cover?: CommerceMediaAsset;
   gallery?: CommerceMediaAsset[];
+  serviceSettings?: CommerceServiceSettings;
   verification: "unverified" | "pending" | "verified";
   demo: boolean;
 }
