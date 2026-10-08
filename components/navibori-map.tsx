@@ -126,7 +126,9 @@ export default function NaviboriMap({
       element.className="business-map-marker "+(business.verifiedLocation ? "verified" : "demo");
       element.setAttribute("aria-label","Ver "+business.name+" en el mapa");
       element.title=business.name;
-      element.innerHTML="<span>"+business.name.slice(0,1).toUpperCase()+"</span>";
+      const initial=document.createElement("span");
+      initial.textContent=business.name.slice(0,1).toUpperCase();
+      element.appendChild(initial);
       element.addEventListener("click",()=>{
         setSelectedSlug(business.slug);
         map.easeTo({
