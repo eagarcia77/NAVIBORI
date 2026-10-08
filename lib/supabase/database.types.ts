@@ -217,6 +217,47 @@ export type Database = {
           },
         ]
       }
+      business_fulfillment_blocks: {
+        Row: {
+          business_id: string
+          created_at: string
+          created_by: string
+          ends_at: string
+          fulfillment_method: string
+          id: string
+          reason: string | null
+          starts_at: string
+        }
+        Insert: {
+          business_id: string
+          created_at?: string
+          created_by: string
+          ends_at: string
+          fulfillment_method?: string
+          id?: string
+          reason?: string | null
+          starts_at: string
+        }
+        Update: {
+          business_id?: string
+          created_at?: string
+          created_by?: string
+          ends_at?: string
+          fulfillment_method?: string
+          id?: string
+          reason?: string | null
+          starts_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "business_fulfillment_blocks_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       business_hours: {
         Row: {
           business_id: string
