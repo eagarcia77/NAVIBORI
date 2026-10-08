@@ -1301,6 +1301,30 @@ export type Database = {
         }
         Returns: boolean
       }
+      update_business_customer_request_status: {
+        Args: { p_request_id: string; p_status: string }
+        Returns: {
+          business_id: string
+          contact_method: string
+          contact_value: string
+          created_at: string
+          customer_name: string
+          expires_at: string
+          id: string
+          note: string | null
+          offer_id: string | null
+          quantity: number
+          request_type: string
+          status: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "business_customer_requests"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
     }
     Enums: {
       [_ in never]: never
