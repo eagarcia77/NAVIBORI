@@ -35,7 +35,15 @@ export default function CommerceReviewConsole({
   }>>(()=>Object.fromEntries(
     businesses.map((business)=>[
       business.id,
-      {ownership:false,location:false,spaceId:"",address:"",latitude:"",longitude:"",note:""}
+      {
+        ownership:false,
+        location:false,
+        spaceId:business.space_id ?? "",
+        address:business.address_text ?? "",
+        latitude:business.latitude?.toString() ?? "",
+        longitude:business.longitude?.toString() ?? "",
+        note:""
+      }
     ])
   ));
 
@@ -107,6 +115,8 @@ export default function CommerceReviewConsole({
           form.ownership &&
           form.location &&
           form.address.trim().length>0 &&
+          form.latitude.trim().length>0 &&
+          form.longitude.trim().length>0 &&
           Number.isFinite(Number(form.latitude)) &&
           Number.isFinite(Number(form.longitude)) &&
           Number(form.latitude)>=-90 &&
