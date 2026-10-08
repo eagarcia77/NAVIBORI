@@ -44,6 +44,14 @@ Customer-facing slot availability and the merchant daily operations board use th
 
 A submitted request still requires merchant confirmation. Requests in new, accepted, preparing and ready states continue consuming slot capacity until they are completed, cancelled or marked no-show. Customer status links expose only operational status/timing data after token verification; they do not expose stored contact details or private notes. NAVIBORI does not currently process payment.
 
+## In-map routing
+- A customer can calculate a driving or walking route directly inside NAVIBORI after granting browser geolocation permission.
+- NAVIBORI requests GeoJSON route geometry, distance and duration through its own server endpoint and draws the route in MapLibre.
+- The routing proxy accepts only Puerto Rico coordinates, does not persist customer coordinates and sends requests with a NAVIBORI user agent.
+- Public FOSSGIS/OpenStreetMap routing is throttled to at most one request start per second per application process.
+- Google Maps remains an optional external fallback, not the primary routing experience.
+- For higher production volume, NAVIBORI should migrate to a dedicated/self-hosted routing service or contracted provider.
+
 ## Map and directions truth rule
 - Published LIVE businesses appear on the customer map only when coordinates are present.
 - Driving/walking actions require a verified exterior destination (address + latitude + longitude).

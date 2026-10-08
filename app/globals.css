@@ -900,3 +900,18 @@ h1 span { color: var(--teal); }
 .review-route-location input{min-height:40px;border:1px solid var(--line);border-radius:9px;background:white;padding:0 9px;color:var(--ink)}
 @media(max-width:760px){.review-route-location{grid-template-columns:1fr 1fr}.review-route-location label:first-child{grid-column:1/-1}}
 @media(max-width:620px){.business-route-card{left:10px;bottom:10px;width:calc(100% - 20px)}.review-route-location{grid-template-columns:1fr}.review-route-location label:first-child{grid-column:auto}}
+
+
+/* NAVIBORI in-map commerce routing */
+.business-route-mode-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
+.business-route-mode-actions button{min-height:42px;border:1px solid var(--line);border-radius:10px;background:white;color:var(--ink);font-size:.72rem;font-weight:850}
+.business-route-mode-actions button.active{border-color:var(--ocean);background:var(--ocean);color:white}
+.business-route-mode-actions button:disabled{opacity:.62;cursor:wait}
+.navibori-route-summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+.navibori-route-summary>div{display:grid;gap:3px;padding:8px;border:1px solid var(--line);border-radius:10px;background:#fbfdfe}
+.navibori-route-summary span{font-size:.55rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+.navibori-route-summary strong{font-size:.75rem}
+.business-route-actions.secondary a:first-of-type{background:white;border-color:var(--line);color:var(--ink)}
+.business-route-card small a{color:var(--ocean);font-weight:800}
+.navibori-route-status{padding:6px 8px;border-radius:8px;background:#f2f7f8;color:var(--ink)!important;font-weight:750}
+@media(max-width:520px){.business-route-mode-actions{grid-template-columns:1fr}.navibori-route-summary{grid-template-columns:1fr 1fr}.navibori-route-summary>div:last-child{grid-column:1/-1}}
