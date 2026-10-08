@@ -15,7 +15,7 @@ export default function CustomerRequestInbox(){
   const [busyId,setBusyId]=useState<string|null>(null);
   const [live,setLive]=useState(false);
   const [lastRealtimeId,setLastRealtimeId]=useState<string|null>(null);
-  const [filter,setFilter]=useState<"all"|"new"|"accepted">("all");
+  const [filter,setFilter]=useState<"all"|"new"|"accepted"|"closed">("all");
   const [notificationPermission,setNotificationPermission]=useState<
     NotificationPermission|"unsupported"
   >("unsupported");
@@ -154,7 +154,10 @@ export default function CustomerRequestInbox(){
     );
   }
 
-  async function updateRequest(id:string,next:"accepted"|"completed"|"cancelled"){
+  async function updateRequest(
+    id:string,
+    next:"accepted"|"completed"|"cancelled"|"no_show"
+  ){
     if(!businessId) return;
     setBusyId(id);
 
@@ -174,9 +177,13 @@ export default function CustomerRequestInbox(){
     }
   }
 
-  const visibleRequests=requests.filter((request)=>
-    filter==="all" ? true : request.status===filter
-  );
+  const visibleRequests=requests.filter((request)=>{
+    if(filter==="all") return true;
+    if(filter==="closed"){
+      return ["completed","cancelled","no_show"].includes(request.status);
+    }
+    return request.status===filter;
+  });
 
   function csvCell(value:unknown){
     const raw=String(value ?? "");
@@ -285,6 +292,14 @@ export default function CustomerRequestInbox(){
           >
             Aceptadas
           </button>
+          <button
+            type="button"
+            className={filter==="closed" ? "active" : ""}
+            onClick={()=>setFilter("closed")}
+            aria-pressed={filter==="closed"}
+          >
+            Cerradas
+          </button>
         </div>
 
         <button
@@ -370,17 +385,34 @@ export default function CustomerRequestInbox(){
               </button>
               <button
                 type="button"
-                disabled={busyId===request.id || request.status==="completed" || request.status==="cancelled"}
+                disabled={busyId===request.id || request.status!=="accepted"}
                 onClick={()=>updateRequest(request.id,"completed")}
               >
                 Completar
               </button>
               <button
                 type="button"
-                disabled={busyId===request.id || request.status==="completed" || request.status==="cancelled"}
+                disabled={
+                  busyId===request.id ||
+                  request.status==="completed" ||
+                  request.status==="cancelled" ||
+                  request.status==="no_show"
+                }
                 onClick={()=>updateRequest(request.id,"cancelled")}
               >
                 Cancelar
+              </button>
+              <button
+                type="button"
+                disabled={
+                  busyId===request.id ||
+                  request.status!=="accepted" ||
+                  !request.requested_for ||
+                  new Date(request.requested_for)>new Date()
+                }
+                onClick={()=>updateRequest(request.id,"no_show")}
+              >
+                No-show
               </button>
             </div>
           </article>
