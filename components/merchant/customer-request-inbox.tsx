@@ -15,6 +15,14 @@ export default function CustomerRequestInbox(){
 
   async function load(id:string){
     const supabase=createClient();
+
+    const {error:purgeError}=await supabase.rpc(
+      "purge_expired_business_customer_requests",
+      {p_business_id:id}
+    );
+
+    if(purgeError) throw purgeError;
+
     const {data,error}=await supabase
       .from("business_customer_requests")
       .select("*")
@@ -131,7 +139,7 @@ export default function CustomerRequestInbox(){
         {requests.length===0 && <p className="merchant-empty">La bandeja está vacía.</p>}
       </div>
 
-      <small>Las solicitudes expiran a los 30 días. NAVIBORI no procesa pagos ni almacena tarjetas.</small>
+      <small>Las solicitudes con más de 30 días se eliminan al abrir la bandeja. NAVIBORI no procesa pagos ni almacena tarjetas.</small>
     </section>
   );
 }
