@@ -9,6 +9,7 @@ import PromotionEditor from "@/components/merchant/promotion-editor";
 import BackendSyncPanel from "@/components/merchant/backend-sync-panel";
 import BusinessMediaEditor from "@/components/merchant/business-media-editor";
 import MerchantAnalyticsDashboard from "@/components/merchant/merchant-analytics-dashboard";
+import CapacityDashboard from "@/components/merchant/capacity-dashboard";
 import CustomerRequestInbox from "@/components/merchant/customer-request-inbox";
 import ServiceSettingsEditor from "@/components/merchant/service-settings-editor";
 import FulfillmentBlackoutEditor from "@/components/merchant/fulfillment-blackout-editor";
@@ -51,6 +52,7 @@ export default function MerchantPage() {
       <PromotionEditor />
       <MerchantVerification />
       <CustomerRequestInbox />
+      <CapacityDashboard />
       <MerchantAnalyticsDashboard />
       <MerchantPulse />
       <NaviGuide mode="cockpit" />
