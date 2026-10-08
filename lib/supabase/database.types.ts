@@ -104,6 +104,69 @@ export type Database = {
           },
         ]
       }
+      business_customer_requests: {
+        Row: {
+          business_id: string
+          contact_method: string
+          contact_value: string
+          created_at: string
+          customer_name: string
+          expires_at: string
+          id: string
+          note: string | null
+          offer_id: string | null
+          quantity: number
+          request_type: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          business_id: string
+          contact_method: string
+          contact_value: string
+          created_at?: string
+          customer_name: string
+          expires_at?: string
+          id?: string
+          note?: string | null
+          offer_id?: string | null
+          quantity?: number
+          request_type?: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          business_id?: string
+          contact_method?: string
+          contact_value?: string
+          created_at?: string
+          customer_name?: string
+          expires_at?: string
+          id?: string
+          note?: string | null
+          offer_id?: string | null
+          quantity?: number
+          request_type?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "business_customer_requests_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "business_customer_requests_offer_id_fkey"
+            columns: ["offer_id"]
+            isOneToOne: false
+            referencedRelation: "business_offers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       business_daily_metrics: {
         Row: {
           business_id: string
@@ -1034,6 +1097,19 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      create_business_customer_request: {
+        Args: {
+          p_business_id: string
+          p_contact_method?: string
+          p_contact_value?: string
+          p_customer_name?: string
+          p_note?: string
+          p_offer_id?: string
+          p_quantity?: number
+          p_request_type?: string
+        }
+        Returns: string
       }
       create_spatial_revision: {
         Args: {
