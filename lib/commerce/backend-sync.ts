@@ -73,6 +73,7 @@ export type OwnedMerchantBusiness={
   status:string;
   verificationStatus:string;
   name:string;
+  slug:string;
 };
 
 export async function getOwnedMerchantBusiness(
@@ -86,7 +87,7 @@ export async function getOwnedMerchantBusiness(
   const supabase=createClient();
   const {data,error}=await supabase
     .from("businesses")
-    .select("id,status,verification_status,name")
+    .select("id,status,verification_status,name,slug")
     .eq("created_by",resolved.userId)
     .eq("venue_id",resolved.venueId)
     .order("created_at",{ascending:true})
@@ -100,7 +101,8 @@ export async function getOwnedMerchantBusiness(
     id:data.id,
     status:data.status,
     verificationStatus:data.verification_status,
-    name:data.name
+    name:data.name,
+    slug:data.slug
   };
 }
 
