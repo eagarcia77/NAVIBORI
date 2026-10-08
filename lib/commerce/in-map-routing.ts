@@ -118,3 +118,45 @@ export function normalizeOsrmRoute(
     provider:"OSRM / OpenStreetMap"
   };
 }
+
+
+const EARTH_RADIUS_METERS=6371008.8;
+
+function toRadians(value:number){
+  return value*Math.PI/180;
+}
+
+export function distanceBetweenCoordinates(
+  a:RoutingCoordinate,
+  b:RoutingCoordinate
+){
+  const lat1=toRadians(a.latitude);
+  const lat2=toRadians(b.latitude);
+  const deltaLat=lat2-lat1;
+  const deltaLon=toRadians(b.longitude-a.longitude);
+
+  const sinLat=Math.sin(deltaLat/2);
+  const sinLon=Math.sin(deltaLon/2);
+  const h=
+    sinLat*sinLat+
+    Math.cos(lat1)*Math.cos(lat2)*sinLon*sinLon;
+
+  return 2*EARTH_RADIUS_METERS*Math.asin(Math.min(1,Math.sqrt(h)));
+}
+
+export function shouldRefreshNavigationRoute(
+  previous:RoutingCoordinate|null,
+  current:RoutingCoordinate,
+  lastRefreshAt:number,
+  now:number
+){
+  if(!previous) return true;
+
+  const moved=distanceBetweenCoordinates(previous,current);
+  const elapsed=Math.max(0,now-lastRefreshAt);
+
+  return (
+    (elapsed>=12000 && moved>=25) ||
+    (elapsed>=45000 && moved>=8)
+  );
+}
