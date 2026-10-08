@@ -3,32 +3,240 @@
 import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 
+type RequestStatusRow={
+  id:string;
+  business_id:string;
+  business_name:string;
+  status:string;
+  fulfillment_method:string;
+  requested_for:string|null;
+  timezone:string;
+  max_advance_days:number;
+  estimated_ready_at:string|null;
+  preparation_started_at:string|null;
+  ready_at:string|null;
+  updated_at:string;
+  customer_cancelled_at:string|null;
+};
+
+type FulfillmentSlot={
+  slot_start:string;
+  capacity:number;
+  active_count:number;
+  available:boolean;
+};
+
+function dateInTimeZone(date:Date,timeZone:string){
+  const parts=new Intl.DateTimeFormat("en-US",{
+    timeZone,
+    year:"numeric",
+    month:"2-digit",
+    day:"2-digit"
+  }).formatToParts(date);
+
+  const get=(type:string)=>parts.find((part)=>part.type===type)?.value ?? "";
+  return get("year")+"-"+get("month")+"-"+get("day");
+}
+
+function addDays(value:string,days:number){
+  const [year,month,day]=value.split("-").map(Number);
+  const date=new Date(Date.UTC(year,month-1,day));
+  date.setUTCDate(date.getUTCDate()+days);
+  return date.toISOString().slice(0,10);
+}
+
 export default function CustomerRequestManager({
   requestId
 }:{
   requestId:string;
 }){
   const [token,setToken]=useState("");
+  const [request,setRequest]=useState<RequestStatusRow|null>(null);
   const [status,setStatus]=useState("Verificando enlace de gestión…");
+  const [requestedDate,setRequestedDate]=useState("");
+  const [requestedFor,setRequestedFor]=useState("");
+  const [slots,setSlots]=useState<FulfillmentSlot[]>([]);
+  const [slotStatus,setSlotStatus]=useState("");
   const [busy,setBusy]=useState(false);
-  useEffect(()=>{
-    const params=new URLSearchParams(window.location.hash.slice(1));
-    const value=params.get("token") ?? "";
-    setToken(value);
-    setStatus(
-      value
-        ? "Este enlace permite cancelar la solicitud asociada."
-        : "El enlace de gestión está incompleto."
-    );
-  },[]);
 
   const valid=useMemo(
     ()=>/^[0-9a-f]{64}$/.test(token) && /^[0-9a-f-]{36}$/i.test(requestId),
     [requestId,token]
   );
 
-  async function cancel(){
+  const canReschedule=Boolean(
+    request &&
+    ["new","accepted"].includes(request.status) &&
+    ["pickup","reservation"].includes(request.fulfillment_method)
+  );
+
+  const canCancel=Boolean(
+    request && ["new","accepted"].includes(request.status)
+  );
+
+  const today=useMemo(
+    ()=>request ? dateInTimeZone(new Date(),request.timezone) : "",
+    [request]
+  );
+
+  const maxDate=useMemo(
+    ()=>request && today
+      ? addDays(today,request.max_advance_days)
+      : "",
+    [request,today]
+  );
+
+  async function loadRequest(active=true){
     if(!valid) return;
+
+    const supabase=createClient();
+    const {data,error}=await supabase.rpc("get_customer_business_request_status",{
+      p_request_id:requestId,
+      p_cancel_token:token
+    });
+
+    if(error) throw error;
+    if(!active) return;
+
+    const row=(data?.[0] ?? null) as RequestStatusRow|null;
+    setRequest(row);
+
+    if(!row){
+      setStatus("No se pudo verificar esta solicitud. El enlace puede ser inválido o haber expirado.");
+      return;
+    }
+
+    setStatus(
+      ["completed","cancelled","no_show"].includes(row.status)
+        ? "Esta solicitud está cerrada."
+        : ["preparing","ready"].includes(row.status)
+          ? "La solicitud ya está en preparación y no puede reprogramarse desde este enlace."
+          : "Puedes cancelar o reprogramar esta solicitud."
+    );
+  }
+
+  useEffect(()=>{
+    const params=new URLSearchParams(window.location.hash.slice(1));
+    const value=params.get("token") ?? "";
+    setToken(value);
+
+    if(!value){
+      setStatus("El enlace de gestión está incompleto.");
+    }
+  },[]);
+
+  useEffect(()=>{
+    if(!valid) return;
+    let active=true;
+
+    loadRequest(active).catch((error)=>{
+      if(active){
+        setStatus(error instanceof Error ? error.message : "No se pudo verificar la solicitud.");
+      }
+    });
+
+    return ()=>{active=false};
+  },[valid]);
+
+  useEffect(()=>{
+    let active=true;
+
+    if(!request || !canReschedule || !requestedDate){
+      setSlots([]);
+      setRequestedFor("");
+      setSlotStatus("");
+      return ()=>{active=false};
+    }
+
+    setRequestedFor("");
+    setSlotStatus("Consultando disponibilidad…");
+
+    const supabase=createClient();
+    supabase
+      .rpc("get_business_fulfillment_slots",{
+        p_business_id:request.business_id,
+        p_fulfillment_method:request.fulfillment_method,
+        p_local_date:requestedDate
+      })
+      .then(({data,error})=>{
+        if(!active) return;
+
+        if(error){
+          setSlots([]);
+          setSlotStatus(error.message);
+          return;
+        }
+
+        const next=(data ?? []) as FulfillmentSlot[];
+        setSlots(next);
+        setSlotStatus(
+          next.some((slot)=>slot.available)
+            ? "Selecciona un horario disponible."
+            : "No hay espacios disponibles para esta fecha."
+        );
+      });
+
+    return ()=>{active=false};
+  },[request,canReschedule,requestedDate]);
+
+  function formatDateTime(value:string|null){
+    if(!value || !request) return "Sin horario";
+    return new Intl.DateTimeFormat("es-PR",{
+      timeZone:request.timezone,
+      dateStyle:"medium",
+      timeStyle:"short"
+    }).format(new Date(value));
+  }
+
+  function formatSlot(value:string){
+    if(!request) return "";
+    return new Intl.DateTimeFormat("es-PR",{
+      timeZone:request.timezone,
+      hour:"numeric",
+      minute:"2-digit"
+    }).format(new Date(value));
+  }
+
+  async function reschedule(){
+    if(!valid || !canReschedule || !requestedFor) return;
+
+    const confirmed=window.confirm(
+      "¿Deseas cambiar esta solicitud al nuevo horario? Si ya estaba aceptada, volverá a pendiente de confirmación."
+    );
+    if(!confirmed) return;
+
+    setBusy(true);
+    setStatus("Reprogramando solicitud…");
+
+    try{
+      const supabase=createClient();
+      const {data,error}=await supabase.rpc("reschedule_business_customer_request",{
+        p_request_id:requestId,
+        p_cancel_token:token,
+        p_requested_for:requestedFor
+      });
+
+      if(error) throw error;
+
+      if(!data){
+        setStatus("No se pudo reprogramar. El slot puede haberse llenado o dejado de estar disponible.");
+        return;
+      }
+
+      setRequestedDate("");
+      setRequestedFor("");
+      setSlots([]);
+      await loadRequest();
+      setStatus("Solicitud reprogramada. El comercio deberá confirmar el nuevo horario.");
+    }catch(error){
+      setStatus(error instanceof Error ? error.message : "No se pudo reprogramar la solicitud.");
+    }finally{
+      setBusy(false);
+    }
+  }
+
+  async function cancel(){
+    if(!valid || !canCancel) return;
 
     const confirmed=window.confirm(
       "¿Deseas cancelar esta solicitud? Esta acción no se puede revertir desde este enlace."
@@ -47,11 +255,13 @@ export default function CustomerRequestManager({
 
       if(error) throw error;
 
-      setStatus(
-        data
-          ? "Solicitud cancelada. El espacio reservado fue liberado."
-          : "No se pudo cancelar. El enlace puede ser inválido o la solicitud ya está cerrada."
-      );
+      if(!data){
+        setStatus("No se pudo cancelar. La solicitud puede estar cerrada o en preparación.");
+        return;
+      }
+
+      await loadRequest();
+      setStatus("Solicitud cancelada. El espacio reservado fue liberado.");
     }catch(error){
       setStatus(error instanceof Error ? error.message : "No se pudo cancelar la solicitud.");
     }finally{
@@ -67,14 +277,95 @@ export default function CustomerRequestManager({
         Referencia <strong>{requestId.slice(0,8)}</strong>. NAVIBORI no muestra aquí tus datos personales.
       </p>
 
+      {request && (
+        <div className="customer-request-summary">
+          <div>
+            <span>Comercio</span>
+            <strong>{request.business_name}</strong>
+          </div>
+          <div>
+            <span>Estado</span>
+            <strong>{request.status.replace("_"," ")}</strong>
+          </div>
+          <div>
+            <span>Modalidad</span>
+            <strong>
+              {request.fulfillment_method==="pickup"
+                ? "Pickup / recogido"
+                : request.fulfillment_method==="reservation"
+                  ? "Reservación / cita"
+                  : "Contacto"}
+            </strong>
+          </div>
+          <div>
+            <span>Horario actual</span>
+            <strong>{formatDateTime(request.requested_for)}</strong>
+          </div>
+        </div>
+      )}
+
       <div className="customer-request-manager-card">
         <p role="status">{status}</p>
+
+        {canReschedule && request && (
+          <div className="customer-reschedule-grid">
+            <label>
+              Nueva fecha
+              <input
+                type="date"
+                min={today}
+                max={maxDate}
+                value={requestedDate}
+                disabled={busy}
+                onChange={(event)=>setRequestedDate(event.target.value)}
+              />
+            </label>
+
+            <label>
+              Nuevo horario
+              <select
+                value={requestedFor}
+                disabled={busy || !requestedDate || slots.length===0}
+                onChange={(event)=>setRequestedFor(event.target.value)}
+              >
+                <option value="">Selecciona un horario</option>
+                {slots.map((slot)=>{
+                  const remaining=Math.max(0,slot.capacity-slot.active_count);
+                  return (
+                    <option
+                      key={slot.slot_start}
+                      value={slot.slot_start}
+                      disabled={!slot.available}
+                    >
+                      {formatSlot(slot.slot_start)}
+                      {" · "}
+                      {slot.available
+                        ? remaining+" "+(remaining===1 ? "espacio disponible" : "espacios disponibles")
+                        : "No disponible"}
+                    </option>
+                  );
+                })}
+              </select>
+              {slotStatus && <small>{slotStatus}</small>}
+            </label>
+
+            <button
+              type="button"
+              onClick={reschedule}
+              disabled={busy || !requestedFor}
+            >
+              {busy ? "Procesando…" : "Reprogramar"}
+            </button>
+          </div>
+        )}
+
         <button
           type="button"
+          className="customer-cancel-request"
           onClick={cancel}
-          disabled={!valid || busy}
+          disabled={!canCancel || busy}
         >
-          {busy ? "Cancelando…" : "Cancelar solicitud"}
+          {busy ? "Procesando…" : "Cancelar solicitud"}
         </button>
       </div>
 
