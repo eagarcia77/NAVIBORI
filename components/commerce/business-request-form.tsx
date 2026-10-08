@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import type {
   CommerceOffer,
@@ -9,9 +9,30 @@ import type {
 
 type FulfillmentMethod="contact_back"|"pickup"|"reservation";
 
-function toLocalInput(date:Date){
-  const offset=date.getTimezoneOffset();
-  return new Date(date.getTime()-offset*60000).toISOString().slice(0,16);
+type FulfillmentSlot={
+  slot_start:string;
+  capacity:number;
+  active_count:number;
+  available:boolean;
+};
+
+function dateInTimeZone(date:Date,timeZone:string){
+  const parts=new Intl.DateTimeFormat("en-US",{
+    timeZone,
+    year:"numeric",
+    month:"2-digit",
+    day:"2-digit"
+  }).formatToParts(date);
+
+  const value=(type:string)=>parts.find((part)=>part.type===type)?.value ?? "";
+  return value("year")+"-"+value("month")+"-"+value("day");
+}
+
+function addDaysToIsoDate(value:string,days:number){
+  const [year,month,day]=value.split("-").map(Number);
+  const date=new Date(Date.UTC(year,month-1,day));
+  date.setUTCDate(date.getUTCDate()+days);
+  return date.toISOString().slice(0,10);
 }
 
 export default function BusinessRequestForm({
@@ -30,14 +51,26 @@ export default function BusinessRequestForm({
     const next:Array<{value:FulfillmentMethod;label:string}>=[
       {value:"contact_back",label:"Contactarme"}
     ];
+
     if(settings.acceptsPickup){
       next.push({value:"pickup",label:"Pickup / recogido"});
     }
+
     if(settings.acceptsReservations){
       next.push({value:"reservation",label:"Reservación / cita"});
     }
+
     return next;
   },[settings.acceptsPickup,settings.acceptsReservations]);
+
+  const today=useMemo(
+    ()=>dateInTimeZone(new Date(),settings.timezone),
+    [settings.timezone]
+  );
+  const maxDate=useMemo(
+    ()=>addDaysToIsoDate(today,settings.maxAdvanceDays),
+    [today,settings.maxAdvanceDays]
+  );
 
   const [offerId,setOfferId]=useState("");
   const [quantity,setQuantity]=useState(1);
@@ -45,21 +78,62 @@ export default function BusinessRequestForm({
   const [contactMethod,setContactMethod]=useState<"phone"|"whatsapp"|"email">("whatsapp");
   const [contactValue,setContactValue]=useState("");
   const [fulfillment,setFulfillment]=useState<FulfillmentMethod>("contact_back");
+  const [requestedDate,setRequestedDate]=useState("");
   const [requestedFor,setRequestedFor]=useState("");
+  const [slots,setSlots]=useState<FulfillmentSlot[]>([]);
+  const [slotStatus,setSlotStatus]=useState("");
   const [note,setNote]=useState("");
   const [status,setStatus]=useState("");
   const [busy,setBusy]=useState(false);
 
-  const minDate=useMemo(()=>{
-    const date=new Date(Date.now()+settings.minLeadMinutes*60000);
-    return toLocalInput(date);
-  },[settings.minLeadMinutes]);
+  useEffect(()=>{
+    let active=true;
 
-  const maxDate=useMemo(()=>{
-    const date=new Date();
-    date.setDate(date.getDate()+settings.maxAdvanceDays);
-    return toLocalInput(date);
-  },[settings.maxAdvanceDays]);
+    if(fulfillment==="contact_back" || !requestedDate){
+      setSlots([]);
+      setRequestedFor("");
+      setSlotStatus("");
+      return ()=>{active=false};
+    }
+
+    setRequestedFor("");
+    setSlotStatus("Consultando disponibilidad…");
+
+    const supabase=createClient();
+    supabase
+      .rpc("get_business_fulfillment_slots",{
+        p_business_id:businessId,
+        p_fulfillment_method:fulfillment,
+        p_local_date:requestedDate
+      })
+      .then(({data,error})=>{
+        if(!active) return;
+
+        if(error){
+          setSlots([]);
+          setSlotStatus(error.message);
+          return;
+        }
+
+        const next=(data ?? []) as FulfillmentSlot[];
+        setSlots(next);
+        setSlotStatus(
+          next.some((slot)=>slot.available)
+            ? "Selecciona un horario disponible."
+            : "No hay espacios disponibles para esta fecha."
+        );
+      });
+
+    return ()=>{active=false};
+  },[businessId,fulfillment,requestedDate]);
+
+  function formatSlot(slot:string){
+    return new Intl.DateTimeFormat("es-PR",{
+      timeZone:settings.timezone,
+      hour:"numeric",
+      minute:"2-digit"
+    }).format(new Date(slot));
+  }
 
   async function submit(){
     setBusy(true);
@@ -67,7 +141,7 @@ export default function BusinessRequestForm({
 
     try{
       if(fulfillment!=="contact_back" && !requestedFor){
-        throw new Error("Selecciona la fecha y hora solicitada.");
+        throw new Error("Selecciona un horario disponible.");
       }
 
       const supabase=createClient();
@@ -84,9 +158,9 @@ export default function BusinessRequestForm({
         p_note:note.trim() || undefined,
         p_fulfillment_method:fulfillment,
         p_requested_for:
-          fulfillment==="contact_back" || !requestedFor
+          fulfillment==="contact_back"
             ? undefined
-            : new Date(requestedFor).toISOString()
+            : requestedFor
       });
 
       if(error) throw error;
@@ -97,10 +171,28 @@ export default function BusinessRequestForm({
       setName("");
       setContactValue("");
       setFulfillment("contact_back");
+      setRequestedDate("");
       setRequestedFor("");
+      setSlots([]);
       setNote("");
     }catch(error){
-      setStatus(error instanceof Error ? error.message : "No se pudo enviar la solicitud.");
+      const message=error instanceof Error ? error.message : "No se pudo enviar la solicitud.";
+      setStatus(
+        message.includes("slot is full")
+          ? "Ese horario acaba de llenarse. Selecciona otro slot."
+          : message
+      );
+
+      if(message.includes("slot is full") && requestedDate){
+        setRequestedFor("");
+        const supabase=createClient();
+        const {data}=await supabase.rpc("get_business_fulfillment_slots",{
+          p_business_id:businessId,
+          p_fulfillment_method:fulfillment,
+          p_local_date:requestedDate
+        });
+        setSlots((data ?? []) as FulfillmentSlot[]);
+      }
     }finally{
       setBusy(false);
     }
@@ -112,7 +204,9 @@ export default function BusinessRequestForm({
         <div>
           <p className="eyebrow">SOLICITAR</p>
           <h2 id="business-request-title">Producto o servicio</h2>
-          <p>Envía una solicitud a {businessName}. El comercio debe confirmarla; NAVIBORI no procesa pagos.</p>
+          <p>
+            Envía una solicitud a {businessName}. El comercio debe confirmarla; NAVIBORI no procesa pagos.
+          </p>
         </div>
       </div>
 
@@ -149,7 +243,8 @@ export default function BusinessRequestForm({
             onChange={(e)=>{
               const value=e.target.value as FulfillmentMethod;
               setFulfillment(value);
-              if(value==="contact_back") setRequestedFor("");
+              setRequestedDate("");
+              setRequestedFor("");
             }}
           >
             {methods.map((method)=>(
@@ -159,16 +254,46 @@ export default function BusinessRequestForm({
         </label>
 
         {fulfillment!=="contact_back" && (
-          <label>
-            Fecha y hora solicitada
-            <input
-              type="datetime-local"
-              min={minDate}
-              max={maxDate}
-              value={requestedFor}
-              onChange={(e)=>setRequestedFor(e.target.value)}
-            />
-          </label>
+          <>
+            <label>
+              Fecha
+              <input
+                type="date"
+                min={today}
+                max={maxDate}
+                value={requestedDate}
+                onChange={(e)=>setRequestedDate(e.target.value)}
+              />
+            </label>
+
+            <label className="merchant-wide">
+              Horario disponible
+              <select
+                value={requestedFor}
+                disabled={!requestedDate || slots.length===0}
+                onChange={(e)=>setRequestedFor(e.target.value)}
+              >
+                <option value="">Selecciona un horario</option>
+                {slots.map((slot)=>{
+                  const remaining=Math.max(0,slot.capacity-slot.active_count);
+                  return (
+                    <option
+                      key={slot.slot_start}
+                      value={slot.slot_start}
+                      disabled={!slot.available}
+                    >
+                      {formatSlot(slot.slot_start)}
+                      {" · "}
+                      {slot.available
+                        ? remaining+" "+(remaining===1 ? "espacio disponible" : "espacios disponibles")
+                        : "Lleno"}
+                    </option>
+                  );
+                })}
+              </select>
+              {slotStatus && <small className="slot-status">{slotStatus}</small>}
+            </label>
+          </>
         )}
 
         <label>
@@ -220,7 +345,7 @@ export default function BusinessRequestForm({
       </div>
 
       <small>
-        NAVIBORI comparte estos datos únicamente con el comercio para gestionar esta solicitud.
+        Los horarios se calculan según la capacidad configurada y el horario publicado del comercio.
       </small>
     </section>
   );
