@@ -10,6 +10,9 @@ type Settings={
   acceptsReservations:boolean;
   minLeadMinutes:number;
   maxAdvanceDays:number;
+  slotMinutes:number;
+  pickupCapacityPerSlot:number;
+  reservationCapacityPerSlot:number;
   instructions:string;
 };
 
@@ -19,6 +22,9 @@ const defaults:Settings={
   acceptsReservations:false,
   minLeadMinutes:30,
   maxAdvanceDays:30,
+  slotMinutes:30,
+  pickupCapacityPerSlot:10,
+  reservationCapacityPerSlot:5,
   instructions:""
 };
 
@@ -69,6 +75,9 @@ export default function ServiceSettingsEditor(){
             acceptsReservations:data.accepts_reservations,
             minLeadMinutes:data.min_lead_minutes,
             maxAdvanceDays:data.max_advance_days,
+            slotMinutes:data.slot_minutes,
+            pickupCapacityPerSlot:data.pickup_capacity_per_slot,
+            reservationCapacityPerSlot:data.reservation_capacity_per_slot,
             instructions:data.instructions ?? ""
           });
         }
@@ -108,6 +117,10 @@ export default function ServiceSettingsEditor(){
           accepts_reservations:settings.acceptsRequests && settings.acceptsReservations,
           min_lead_minutes:settings.minLeadMinutes,
           max_advance_days:settings.maxAdvanceDays,
+          timezone:"America/Puerto_Rico",
+          slot_minutes:settings.slotMinutes,
+          pickup_capacity_per_slot:settings.pickupCapacityPerSlot,
+          reservation_capacity_per_slot:settings.reservationCapacityPerSlot,
           instructions:settings.instructions.trim() || null,
           updated_at:new Date().toISOString()
         },{onConflict:"business_id"});
@@ -199,6 +212,50 @@ export default function ServiceSettingsEditor(){
           </select>
         </label>
 
+        <label>
+          Duración de cada slot
+          <select
+            value={settings.slotMinutes}
+            disabled={!editable || busy}
+            onChange={(e)=>update("slotMinutes",Number(e.target.value))}
+          >
+            <option value={15}>15 minutos</option>
+            <option value={30}>30 minutos</option>
+            <option value={60}>1 hora</option>
+            <option value={120}>2 horas</option>
+          </select>
+        </label>
+
+        <label>
+          Capacidad pickup por slot
+          <input
+            type="number"
+            min={1}
+            max={100}
+            value={settings.pickupCapacityPerSlot}
+            disabled={!editable || busy || !settings.acceptsPickup}
+            onChange={(e)=>update(
+              "pickupCapacityPerSlot",
+              Math.max(1,Math.min(100,Number(e.target.value)||1))
+            )}
+          />
+        </label>
+
+        <label>
+          Capacidad reservaciones por slot
+          <input
+            type="number"
+            min={1}
+            max={100}
+            value={settings.reservationCapacityPerSlot}
+            disabled={!editable || busy || !settings.acceptsReservations}
+            onChange={(e)=>update(
+              "reservationCapacityPerSlot",
+              Math.max(1,Math.min(100,Number(e.target.value)||1))
+            )}
+          />
+        </label>
+
         <label className="merchant-wide">
           Instrucciones para el cliente
           <textarea
@@ -218,7 +275,7 @@ export default function ServiceSettingsEditor(){
       </div>
 
       <small>
-        NAVIBORI no confirma disponibilidad automáticamente: el comercio debe aceptar cada solicitud.
+        NAVIBORI bloquea automáticamente slots llenos. Cada solicitud todavía requiere aceptación del comercio.
       </small>
     </section>
   );
