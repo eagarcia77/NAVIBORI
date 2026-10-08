@@ -28,17 +28,20 @@ export default function CommerceReviewConsole({
     ownership:boolean;
     location:boolean;
     spaceId:string;
+    address:string;
+    latitude:string;
+    longitude:string;
     note:string;
   }>>(()=>Object.fromEntries(
     businesses.map((business)=>[
       business.id,
-      {ownership:false,location:false,spaceId:"",note:""}
+      {ownership:false,location:false,spaceId:"",address:"",latitude:"",longitude:"",note:""}
     ])
   ));
 
   function update(
     businessId:string,
-    patch:Partial<{ownership:boolean;location:boolean;spaceId:string;note:string}>
+    patch:Partial<{ownership:boolean;location:boolean;spaceId:string;address:string;latitude:string;longitude:string;note:string}>
   ){
     setForms((current)=>({
       ...current,
@@ -59,7 +62,10 @@ export default function CommerceReviewConsole({
         p_note:form.note || undefined,
         p_ownership_verified:action==="approve" ? form.ownership : false,
         p_location_verified:action==="approve" ? form.location : false,
-        p_space_id:action==="approve" && form.spaceId ? form.spaceId : undefined
+        p_space_id:action==="approve" && form.spaceId ? form.spaceId : undefined,
+        p_address_text:action==="approve" ? form.address : undefined,
+        p_latitude:action==="approve" ? Number(form.latitude) : undefined,
+        p_longitude:action==="approve" ? Number(form.longitude) : undefined
       });
 
       if(error) throw error;
@@ -100,7 +106,13 @@ export default function CommerceReviewConsole({
           !selfCreated &&
           form.ownership &&
           form.location &&
-          Boolean(form.spaceId);
+          form.address.trim().length>0 &&
+          Number.isFinite(Number(form.latitude)) &&
+          Number.isFinite(Number(form.longitude)) &&
+          Number(form.latitude)>=-90 &&
+          Number(form.latitude)<=90 &&
+          Number(form.longitude)>=-180 &&
+          Number(form.longitude)<=180;
 
         return (
           <article className="commerce-review-card" key={business.id}>
@@ -146,13 +158,42 @@ export default function CommerceReviewConsole({
               </label>
             </div>
 
+            <div className="review-route-location">
+              <label>
+                Dirección pública verificada
+                <input
+                  value={form.address}
+                  onChange={(e)=>update(business.id,{address:e.target.value})}
+                  placeholder="Dirección que verá el cliente"
+                />
+              </label>
+              <label>
+                Latitud
+                <input
+                  inputMode="decimal"
+                  value={form.latitude}
+                  onChange={(e)=>update(business.id,{latitude:e.target.value})}
+                  placeholder="18.000000"
+                />
+              </label>
+              <label>
+                Longitud
+                <input
+                  inputMode="decimal"
+                  value={form.longitude}
+                  onChange={(e)=>update(business.id,{longitude:e.target.value})}
+                  placeholder="-66.000000"
+                />
+              </label>
+            </div>
+
             <label className="review-space-select">
-              Espacio verificado
+              Espacio interior verificado (opcional)
               <select
                 value={form.spaceId}
                 onChange={(e)=>update(business.id,{spaceId:e.target.value})}
               >
-                <option value="">Selecciona un espacio real…</option>
+                <option value="">Selecciona un espacio interior…</option>
                 {spaces.map((space)=>(
                   <option key={space.id} value={space.id}>{space.label}</option>
                 ))}
