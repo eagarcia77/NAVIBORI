@@ -113,12 +113,15 @@ export type Database = {
           customer_cancel_token_hash: string | null
           customer_cancelled_at: string | null
           customer_name: string
+          estimated_ready_at: string | null
           expires_at: string
           fulfillment_method: string
           id: string
           note: string | null
           offer_id: string | null
+          preparation_started_at: string | null
           quantity: number
+          ready_at: string | null
           request_type: string
           requested_for: string | null
           status: string
@@ -132,12 +135,15 @@ export type Database = {
           customer_cancel_token_hash?: string | null
           customer_cancelled_at?: string | null
           customer_name: string
+          estimated_ready_at?: string | null
           expires_at?: string
           fulfillment_method?: string
           id?: string
           note?: string | null
           offer_id?: string | null
+          preparation_started_at?: string | null
           quantity?: number
+          ready_at?: string | null
           request_type?: string
           requested_for?: string | null
           status?: string
@@ -151,12 +157,15 @@ export type Database = {
           customer_cancel_token_hash?: string | null
           customer_cancelled_at?: string | null
           customer_name?: string
+          estimated_ready_at?: string | null
           expires_at?: string
           fulfillment_method?: string
           id?: string
           note?: string | null
           offer_id?: string | null
+          preparation_started_at?: string | null
           quantity?: number
+          ready_at?: string | null
           request_type?: string
           requested_for?: string | null
           status?: string
@@ -1294,6 +1303,21 @@ export type Database = {
           slot_start: string
         }[]
       }
+      get_customer_business_request_status: {
+        Args: { p_cancel_token: string; p_request_id: string }
+        Returns: {
+          business_name: string
+          customer_cancelled_at: string
+          estimated_ready_at: string
+          fulfillment_method: string
+          id: string
+          preparation_started_at: string
+          ready_at: string
+          requested_for: string
+          status: string
+          updated_at: string
+        }[]
+      }
       get_published_spatial_dataset: {
         Args: { p_venue_id: string }
         Returns: {
@@ -1389,6 +1413,37 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      set_business_customer_request_estimate: {
+        Args: { p_estimated_ready_at: string; p_request_id: string }
+        Returns: {
+          business_id: string
+          contact_method: string
+          contact_value: string
+          created_at: string
+          customer_cancel_token_hash: string | null
+          customer_cancelled_at: string | null
+          customer_name: string
+          estimated_ready_at: string | null
+          expires_at: string
+          fulfillment_method: string
+          id: string
+          note: string | null
+          offer_id: string | null
+          preparation_started_at: string | null
+          quantity: number
+          ready_at: string | null
+          request_type: string
+          requested_for: string | null
+          status: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "business_customer_requests"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       submit_merchant_business_for_review: {
         Args: { p_business_id: string }
         Returns: {
@@ -1466,12 +1521,15 @@ export type Database = {
           customer_cancel_token_hash: string | null
           customer_cancelled_at: string | null
           customer_name: string
+          estimated_ready_at: string | null
           expires_at: string
           fulfillment_method: string
           id: string
           note: string | null
           offer_id: string | null
+          preparation_started_at: string | null
           quantity: number
+          ready_at: string | null
           request_type: string
           requested_for: string | null
           status: string
