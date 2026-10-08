@@ -84,6 +84,8 @@ export function composePublicCommerce(
     const settings=serviceSettings.find((item)=>item.business_id===business.id);
 
     const hasCoordinates=
+      typeof business.latitude==="number" &&
+      typeof business.longitude==="number" &&
       Number.isFinite(business.latitude) &&
       Number.isFinite(business.longitude);
 
