@@ -11,6 +11,9 @@ import {
   type RouteCoordinate
 } from "@/lib/commerce/directions";
 import {
+  getNextNavigationCue,
+  hasArrivedAtDestination,
+  isOffNavigationRoute,
   shouldRefreshNavigationRoute,
   type InMapRouteMode,
   type InMapRouteResult
@@ -50,6 +53,12 @@ function formatDuration(seconds:number){
   return hours+" h"+(remainder ? " "+remainder+" min" : "");
 }
 
+function formatManeuverDistance(meters:number){
+  if(meters<30) return "Ahora";
+  if(meters<1000) return "En "+Math.max(25,Math.round(meters*3.28084/25)*25)+" ft";
+  return "En "+(meters/1609.344).toFixed(1)+" mi";
+}
+
 export default function NaviboriMap({
   businesses,
   source
@@ -68,6 +77,8 @@ export default function NaviboriMap({
   const lastRouteRefreshAtRef=useRef(0);
   const routeResultRef=useRef<InMapRouteResult|null>(null);
   const followGpsRef=useRef(true);
+  const voiceEnabledRef=useRef(false);
+  const lastSpokenInstructionRef=useRef("");
 
   const [mapReady,setMapReady]=useState(false);
   const [mode,setMode]=useState<RealityMode>("2d");
@@ -84,6 +95,8 @@ export default function NaviboriMap({
   const [gpsActive,setGpsActive]=useState(false);
   const [gpsAccuracy,setGpsAccuracy]=useState<number|null>(null);
   const [followGps,setFollowGps]=useState(true);
+  const [voiceEnabled,setVoiceEnabled]=useState(false);
+  const [arrived,setArrived]=useState(false);
 
   const mappedBusinesses=useMemo(
     ()=>businesses.filter((business)=>
@@ -105,6 +118,11 @@ export default function NaviboriMap({
     selected.mapLocation.verified
   );
 
+  const nextCue=useMemo(
+    ()=>routeResult ? getNextNavigationCue(routeResult) : null,
+    [routeResult]
+  );
+
   useEffect(()=>{
     routeResultRef.current=routeResult;
   },[routeResult]);
@@ -112,6 +130,10 @@ export default function NaviboriMap({
   useEffect(()=>{
     followGpsRef.current=followGps;
   },[followGps]);
+
+  useEffect(()=>{
+    voiceEnabledRef.current=voiceEnabled;
+  },[voiceEnabled]);
 
   useEffect(()=>{
     if(typeof window!=="undefined"){
@@ -162,6 +184,9 @@ export default function NaviboriMap({
     mapRef.current=map;
     return ()=>{
       routeAbortRef.current?.abort();
+      if("speechSynthesis" in window){
+        window.speechSynthesis.cancel();
+      }
       if(gpsWatchRef.current!==null && navigator.geolocation){
         navigator.geolocation.clearWatch(gpsWatchRef.current);
       }
@@ -198,6 +223,8 @@ export default function NaviboriMap({
         routeAbortRef.current?.abort();
         setRouteResult(null);
         setRouteStatus("");
+        setArrived(false);
+        lastSpokenInstructionRef.current="";
         setSelectedSlug(business.slug);
         map.easeTo({
           center:[location.longitude,location.latitude],
@@ -405,6 +432,30 @@ export default function NaviboriMap({
     );
   }
 
+  function speakNavigation(
+    instruction:string,
+    distanceMeters:number,
+    force=false
+  ){
+    if(!voiceEnabledRef.current || !("speechSynthesis" in window)) return;
+
+    const key=instruction;
+    if(!force && lastSpokenInstructionRef.current===key) return;
+
+    lastSpokenInstructionRef.current=key;
+    window.speechSynthesis.cancel();
+
+    const prefix=
+      distanceMeters>=30
+        ? formatManeuverDistance(distanceMeters)+". "
+        : "";
+
+    const utterance=new SpeechSynthesisUtterance(prefix+instruction);
+    utterance.lang="es-US";
+    utterance.rate=0.96;
+    window.speechSynthesis.speak(utterance);
+  }
+
   async function calculateRoute(
     routeMode:InMapRouteMode,
     origin:RouteCoordinate,
@@ -454,6 +505,12 @@ export default function NaviboriMap({
 
       routeResultRef.current=data;
       setRouteResult(data);
+
+      const cue=getNextNavigationCue(data);
+      if(cue){
+        speakNavigation(cue.instruction,cue.distanceMeters);
+      }
+
       setRouteStatus(
         (activeNavigationModeRef.current ? "GPS activo · " : "")+
         (routeMode==="walking" ? "Caminando" : "En carro")+
@@ -505,6 +562,8 @@ export default function NaviboriMap({
     }
 
     stopGpsNavigation();
+    setArrived(false);
+    lastSpokenInstructionRef.current="";
     activeNavigationModeRef.current=routeMode;
     setLastRouteMode(routeMode);
     setGpsActive(true);
@@ -526,19 +585,72 @@ export default function NaviboriMap({
       setGpsAccuracy(accuracy);
       showUserLocation(next);
 
+      const activeMode=activeNavigationModeRef.current;
+      if(!activeMode) return;
+
+      const heading=
+        typeof position.coords.heading==="number" &&
+        Number.isFinite(position.coords.heading)
+          ? position.coords.heading
+          : null;
+      const speed=
+        typeof position.coords.speed==="number" &&
+        Number.isFinite(position.coords.speed)
+          ? position.coords.speed
+          : null;
+
       if(followGpsRef.current){
-        mapRef.current?.easeTo({
+        const map=mapRef.current;
+        map?.easeTo({
           center:[next.longitude,next.latitude],
-          zoom:Math.max(mapRef.current?.getZoom() ?? 16,16),
+          zoom:Math.max(map?.getZoom() ?? 16,16),
+          bearing:
+            heading!==null && (speed===null || speed>0.8)
+              ? heading
+              : map?.getBearing() ?? 0,
+          pitch:activeMode==="driving" ? 35 : 12,
           duration:350
         });
       }
 
-      const activeMode=activeNavigationModeRef.current;
-      if(!activeMode) return;
+      if(
+        selected?.mapLocation &&
+        hasArrivedAtDestination(
+          next,
+          {
+            latitude:selected.mapLocation.latitude,
+            longitude:selected.mapLocation.longitude
+          },
+          accuracy
+        )
+      ){
+        setArrived(true);
+        setRouteStatus("Has llegado a "+selected.name+".");
+        setLocationStatus("Destino alcanzado · GPS detenido.");
+        speakNavigation("Has llegado a tu destino.",0,true);
+        stopGpsNavigation();
+        mapRef.current?.easeTo({
+          center:[
+            selected.mapLocation.longitude,
+            selected.mapLocation.latitude
+          ],
+          zoom:18,
+          pitch:0,
+          duration:600
+        });
+        return;
+      }
 
       const now=Date.now();
-      if(
+      const currentRoute=routeResultRef.current;
+      const offRoute=
+        currentRoute!==null &&
+        isOffNavigationRoute(next,currentRoute,accuracy);
+
+      if(offRoute && now-lastRouteRefreshAtRef.current>=6000){
+        setRouteStatus("Fuera de ruta · recalculando…");
+        void calculateRoute(activeMode,next,{quiet:true});
+      }else if(
         shouldRefreshNavigationRoute(
           lastRouteOriginRef.current,
           next,
@@ -547,7 +659,7 @@ export default function NaviboriMap({
         )
       ){
         void calculateRoute(activeMode,next,{
-          quiet:routeResultRef.current!==null
+          quiet:currentRoute!==null
         });
       }
 
@@ -588,6 +700,8 @@ export default function NaviboriMap({
     setRouteResult(null);
     setRouteStatus("");
     setRouteBusy(null);
+    setArrived(false);
+    lastSpokenInstructionRef.current="";
   }
 
   function directionUrl(routeMode:InMapRouteMode){
@@ -711,6 +825,20 @@ export default function NaviboriMap({
                     </button>
                   </div>
 
+                  {arrived && (
+                    <div className="navibori-arrival-card" role="status">
+                      <span>Destino alcanzado</span>
+                      <strong>Has llegado a {selected.name}.</strong>
+                    </div>
+                  )}
+
+                  {routeResult && nextCue && !arrived && (
+                    <div className="navibori-turn-card" aria-live="polite">
+                      <span>{formatManeuverDistance(nextCue.distanceMeters)}</span>
+                      <strong>{nextCue.instruction}</strong>
+                    </div>
+                  )}
+
                   {routeResult && (
                     <div className="navibori-route-summary">
                       <div>
@@ -739,6 +867,32 @@ export default function NaviboriMap({
                   )}
 
                   <div className="business-route-actions secondary">
+                    {routeResult && (
+                      <button
+                        type="button"
+                        className={voiceEnabled ? "active" : ""}
+                        onClick={()=>{
+                          const next=!voiceEnabled;
+                          voiceEnabledRef.current=next;
+                          setVoiceEnabled(next);
+
+                          if(!next){
+                            if("speechSynthesis" in window){
+                              window.speechSynthesis.cancel();
+                            }
+                            lastSpokenInstructionRef.current="";
+                          }else if(nextCue){
+                            speakNavigation(
+                              nextCue.instruction,
+                              nextCue.distanceMeters,
+                              true
+                            );
+                          }
+                        }}
+                      >
+                        {voiceEnabled ? "🔊 Voz activada" : "🔇 Activar voz"}
+                      </button>
+                    )}
                     {gpsActive && (
                       <button
                         type="button"
@@ -767,8 +921,8 @@ export default function NaviboriMap({
 
                   <small>
                     NAVIBORI usa el GPS del dispositivo mientras esta navegación está activa.
-                    El marcador se mueve contigo y la ruta se recalcula al avanzar.
-                    Tu ubicación no se guarda en Supabase.
+                    El marcador se mueve contigo, muestra el próximo giro y recalcula si avanzas
+                    o te sales de la ruta. Tu ubicación no se guarda en Supabase.
                   </small>
                   <small>
                     <a
