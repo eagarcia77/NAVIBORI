@@ -44,6 +44,13 @@ Customer-facing slot availability and the merchant daily operations board use th
 
 A submitted request still requires merchant confirmation. Requests in new, accepted, preparing and ready states continue consuming slot capacity until they are completed, cancelled or marked no-show. Customer status links expose only operational status/timing data after token verification; they do not expose stored contact details or private notes. NAVIBORI does not currently process payment.
 
+## Nearby commerce discovery
+- The map does not request customer location automatically; the customer explicitly uses “Mi ubicación”.
+- Once a location is available, mapped businesses are ranked by straight-line proximity for discovery only.
+- NAVIBORI shows up to five nearby businesses with approximate distance and public address.
+- Verified LIVE businesses expose one-tap driving and walking actions that select the business and start the existing GPS navigation flow.
+- DEMO businesses may appear for interface testing but cannot start real navigation.
+
 ## Turn-by-turn GPS guidance
 - OSRM routing requests include `steps=true` so NAVIBORI receives maneuver-level route instructions.
 - NAVIBORI normalizes common maneuvers into Spanish guidance for turn, continue, merge, ramps, forks, roundabouts and arrival.
