@@ -939,3 +939,19 @@ h1 span { color: var(--teal); }
 .navibori-arrival-card>strong{font-size:.88rem;color:#075f52}
 .business-route-actions.secondary button.active{background:var(--ocean);border-color:var(--ocean);color:white}
 @media(max-width:520px){.navibori-turn-card>strong,.navibori-arrival-card>strong{font-size:.84rem}}
+
+
+/* NAVIBORI nearby commerce discovery */
+.nearby-businesses-panel{position:absolute;right:16px;top:16px;z-index:6;display:grid;gap:9px;width:min(330px,calc(100% - 32px));max-height:min(54vh,430px);padding:12px;border:1px solid rgba(255,255,255,.84);border-radius:15px;background:rgba(255,255,255,.96);box-shadow:0 12px 34px rgba(22,38,46,.15);backdrop-filter:blur(12px)}
+.nearby-businesses-heading{display:flex;align-items:flex-end;justify-content:space-between;gap:10px}
+.nearby-businesses-heading>div{display:grid;gap:2px}.nearby-businesses-heading span{font-size:.55rem;font-weight:900;text-transform:uppercase;letter-spacing:.08em;color:var(--ocean)}.nearby-businesses-heading strong{font-size:.84rem}.nearby-businesses-heading small{font-size:.56rem;color:var(--muted)}
+.nearby-businesses-list{display:grid;gap:6px;overflow:auto;overscroll-behavior:contain}
+.nearby-business-item{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:7px;align-items:center;padding:6px;border:1px solid var(--line);border-radius:11px;background:#fff}
+.nearby-business-item.selected{border-color:rgba(36,99,235,.42);background:#f4f7ff}
+.nearby-business-main{display:grid;gap:2px;min-width:0;padding:4px;border:0;background:transparent;text-align:left;cursor:pointer;color:var(--ink)}
+.nearby-business-main>span{font-size:.55rem;font-weight:900;color:var(--ocean);text-transform:uppercase;letter-spacing:.04em}
+.nearby-business-main>strong{font-size:.72rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.nearby-business-main>small{font-size:.56rem;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.nearby-business-route-buttons{display:flex;gap:4px}.nearby-business-route-buttons button{width:34px;height:34px;border:1px solid var(--line);border-radius:9px;background:white;cursor:pointer}.nearby-business-route-buttons button:hover{border-color:var(--ocean);background:#f2f7f8}
+.nearby-business-demo{padding:4px 6px;border-radius:999px;background:#eef1f3;color:#6d7680;font-size:.5rem;font-weight:900}
+@media(max-width:760px){.nearby-businesses-panel{left:10px;right:10px;top:10px;width:auto;max-height:34vh}.nearby-businesses-list{display:flex;overflow-x:auto;overflow-y:hidden;padding-bottom:2px}.nearby-business-item{min-width:245px}.nearby-business-main>small{max-width:160px}}
