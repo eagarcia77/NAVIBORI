@@ -44,6 +44,15 @@ Customer-facing slot availability and the merchant daily operations board use th
 
 A submitted request still requires merchant confirmation. Requests in new, accepted, preparing and ready states continue consuming slot capacity until they are completed, cancelled or marked no-show. Customer status links expose only operational status/timing data after token verification; they do not expose stored contact details or private notes. NAVIBORI does not currently process payment.
 
+## Turn-by-turn GPS guidance
+- OSRM routing requests include `steps=true` so NAVIBORI receives maneuver-level route instructions.
+- NAVIBORI normalizes common maneuvers into Spanish guidance for turn, continue, merge, ramps, forks, roundabouts and arrival.
+- The navigation card shows the next maneuver and approximate distance to it.
+- When GPS position moves outside the active route corridor, NAVIBORI recalculates the route after a short guard interval.
+- Arrival is detected from GPS-to-destination distance with an accuracy-aware threshold; GPS tracking then stops automatically.
+- When heading data is available, follow mode rotates the map toward the direction of travel.
+- Optional browser speech synthesis can read upcoming maneuvers in Spanish; the user explicitly enables or disables voice guidance.
+
 ## Live GPS navigation
 - Starting driving or walking navigation uses browser `watchPosition` with high-accuracy mode.
 - The customer marker moves continuously while GPS navigation is active.
