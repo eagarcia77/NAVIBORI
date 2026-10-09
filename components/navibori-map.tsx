@@ -11,6 +11,7 @@ import {
   type RouteCoordinate
 } from "@/lib/commerce/directions";
 import {
+  distanceBetweenCoordinates,
   getNextNavigationCue,
   hasArrivedAtDestination,
   isOffNavigationRoute,
@@ -97,6 +98,10 @@ export default function NaviboriMap({
   const [followGps,setFollowGps]=useState(true);
   const [voiceEnabled,setVoiceEnabled]=useState(false);
   const [arrived,setArrived]=useState(false);
+  const [pendingNavigation,setPendingNavigation]=useState<{
+    slug:string;
+    mode:InMapRouteMode;
+  }|null>(null);
 
   const mappedBusinesses=useMemo(
     ()=>businesses.filter((business)=>
@@ -106,6 +111,27 @@ export default function NaviboriMap({
     ),
     [businesses,category]
   );
+
+  const nearbyBusinesses=useMemo(()=>{
+    if(!userLocation) return [];
+
+    return mappedBusinesses
+      .map((business)=>{
+        const location=business.mapLocation!;
+        return {
+          business,
+          distanceMeters:distanceBetweenCoordinates(
+            userLocation,
+            {
+              latitude:location.latitude,
+              longitude:location.longitude
+            }
+          )
+        };
+      })
+      .sort((a,b)=>a.distanceMeters-b.distanceMeters)
+      .slice(0,5);
+  },[mappedBusinesses,userLocation]);
 
   const selected=useMemo(
     ()=>businesses.find((business)=>business.slug===selectedSlug) ?? null,
@@ -134,6 +160,18 @@ export default function NaviboriMap({
   useEffect(()=>{
     voiceEnabledRef.current=voiceEnabled;
   },[voiceEnabled]);
+
+  useEffect(()=>{
+    if(
+      pendingNavigation &&
+      selected?.slug===pendingNavigation.slug &&
+      canRoute
+    ){
+      const mode=pendingNavigation.mode;
+      setPendingNavigation(null);
+      startGpsNavigation(mode);
+    }
+  },[pendingNavigation,selected?.slug,canRoute]);
 
   useEffect(()=>{
     if(typeof window!=="undefined"){
@@ -219,18 +257,7 @@ export default function NaviboriMap({
       element.appendChild(initial);
 
       element.addEventListener("click",()=>{
-        stopGpsNavigation();
-        routeAbortRef.current?.abort();
-        setRouteResult(null);
-        setRouteStatus("");
-        setArrived(false);
-        lastSpokenInstructionRef.current="";
-        setSelectedSlug(business.slug);
-        map.easeTo({
-          center:[location.longitude,location.latitude],
-          zoom:17,
-          duration:650
-        });
+        focusBusiness(business);
       });
 
       const marker=new maplibregl.Marker({element,anchor:"bottom"})
@@ -367,6 +394,47 @@ export default function NaviboriMap({
 
     setMode(next);
     setTimeOpen(next==="time");
+  }
+
+  function focusBusiness(business:CommerceProfile){
+    const location=business.mapLocation;
+    if(!location) return;
+
+    stopGpsNavigation();
+    routeAbortRef.current?.abort();
+    routeResultRef.current=null;
+    setRouteResult(null);
+    setRouteStatus("");
+    setArrived(false);
+    setPendingNavigation(null);
+    lastSpokenInstructionRef.current="";
+    setSelectedSlug(business.slug);
+
+    mapRef.current?.easeTo({
+      center:[location.longitude,location.latitude],
+      zoom:17,
+      pitch:0,
+      duration:650
+    });
+  }
+
+  function navigateToNearbyBusiness(
+    business:CommerceProfile,
+    routeMode:InMapRouteMode
+  ){
+    if(
+      !business.verifiedLocation ||
+      !business.mapLocation?.verified
+    ){
+      focusBusiness(business);
+      return;
+    }
+
+    focusBusiness(business);
+    setPendingNavigation({
+      slug:business.slug,
+      mode:routeMode
+    });
   }
 
   function showUserLocation(next:RouteCoordinate){
@@ -781,6 +849,64 @@ export default function NaviboriMap({
       <div className="map-stage">
         <div ref={mapNode} className="map-canvas" />
 
+        {userLocation && nearbyBusinesses.length>0 && !gpsActive && (
+          <aside className="nearby-businesses-panel" aria-label="Comercios cerca de mí">
+            <div className="nearby-businesses-heading">
+              <div>
+                <span>Cerca de mí</span>
+                <strong>Comercios próximos</strong>
+              </div>
+              {gpsAccuracy!==null && (
+                <small>GPS ±{Math.round(gpsAccuracy)} m</small>
+              )}
+            </div>
+
+            <div className="nearby-businesses-list">
+              {nearbyBusinesses.map(({business,distanceMeters})=>(
+                <article
+                  key={business.id}
+                  className={"nearby-business-item "+(
+                    business.slug===selectedSlug ? "selected" : ""
+                  )}
+                >
+                  <button
+                    type="button"
+                    className="nearby-business-main"
+                    onClick={()=>focusBusiness(business)}
+                  >
+                    <span>{formatDistance(distanceMeters)}</span>
+                    <strong>{business.name}</strong>
+                    <small>
+                      {business.mapLocation?.address ?? business.locationLabel}
+                    </small>
+                  </button>
+
+                  {business.verifiedLocation && business.mapLocation?.verified ? (
+                    <div className="nearby-business-route-buttons">
+                      <button
+                        type="button"
+                        onClick={()=>navigateToNearbyBusiness(business,"driving")}
+                        aria-label={"Navegar en carro a "+business.name}
+                      >
+                        🚗
+                      </button>
+                      <button
+                        type="button"
+                        onClick={()=>navigateToNearbyBusiness(business,"walking")}
+                        aria-label={"Navegar caminando a "+business.name}
+                      >
+                        🚶
+                      </button>
+                    </div>
+                  ) : (
+                    <span className="nearby-business-demo">DEMO</span>
+                  )}
+                </article>
+              ))}
+            </div>
+          </aside>
+        )}
+
         {timeOpen && (
           <aside className="time-machine-panel" aria-live="polite">
             <p className="eyebrow">TEMPORAL TWIN</p>
@@ -951,7 +1077,10 @@ export default function NaviboriMap({
           ) : (
             <>
               <strong>Selecciona un comercio</strong>
-              <span>Toca un pin para ver la dirección y comenzar navegación GPS en carro o caminando.</span>
+              <span>
+                Toca un pin o usa “Mi ubicación” para ordenar los comercios cercanos
+                y comenzar navegación GPS en carro o caminando.
+              </span>
             </>
           )}
 
