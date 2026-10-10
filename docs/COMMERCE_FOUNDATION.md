@@ -44,6 +44,13 @@ Customer-facing slot availability and the merchant daily operations board use th
 
 A submitted request still requires merchant confirmation. Requests in new, accepted, preparing and ready states continue consuming slot capacity until they are completed, cancelled or marked no-show. Customer status links expose only operational status/timing data after token verification; they do not expose stored contact details or private notes. NAVIBORI does not currently process payment.
 
+## Verified exterior location picker
+- Commerce Review includes a MapLibre/OpenStreetMap picker for the public exterior destination used by customer navigation.
+- An administrator can click the map, drag the marker or explicitly use the browser/device current location when physically at the storefront.
+- The picker writes latitude and longitude into the existing verified review fields; the administrator still verifies the human-readable public address separately.
+- The exterior navigation pin should represent the customer-accessible entrance, not an arbitrary building centroid.
+- The optional interior `space_id` remains separate for future indoor routing.
+
 ## Map business search
 - Customers can search mapped commerce by business name, category or public address.
 - Search normalizes case and diacritics so terms such as “Diaz” and “Díaz” match consistently.
