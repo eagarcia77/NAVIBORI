@@ -1044,3 +1044,8 @@ h1 span { color: var(--teal); }
 .map-search-route-actions button small,.nearby-business-route-buttons button small{font-size:.48rem;font-weight:800;color:inherit}
 @media(max-width:760px){.business-route-mode-actions{grid-template-columns:repeat(2,minmax(0,1fr))}.business-route-mode-actions>button{min-height:48px}}
 @media(max-width:460px){.business-route-address-row{display:grid}.business-route-address-row>button{justify-self:start}.map-search-route-actions button small,.nearby-business-route-buttons button small{display:none}}
+
+
+/* NAVIBORI GPS demo diagnostics */
+.navibori-demo-route-warning{padding:8px 10px;border:1px solid rgba(184,95,36,.28);border-radius:10px;background:#fff7f1;color:#8a431a;font-size:.62rem;font-weight:800;line-height:1.4}
+.gps-live-badge.demo{background:#fff1e6;color:#9b4d18}
