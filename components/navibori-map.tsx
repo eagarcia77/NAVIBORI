@@ -119,6 +119,7 @@ export default function NaviboriMap({
   const [followGps,setFollowGps]=useState(true);
   const [voiceEnabled,setVoiceEnabled]=useState(false);
   const [arrived,setArrived]=useState(false);
+  const [directionsOpen,setDirectionsOpen]=useState(false);
   const [searchTerm,setSearchTerm]=useState("");
   const [pendingNavigation,setPendingNavigation]=useState<{
     slug:string;
@@ -486,6 +487,7 @@ export default function NaviboriMap({
     setRouteResult(null);
     setRouteStatus("");
     setArrived(false);
+    setDirectionsOpen(false);
     setPendingNavigation(null);
     lastSpokenInstructionRef.current="";
     setSelectedSlug(business.slug);
@@ -770,6 +772,7 @@ export default function NaviboriMap({
 
     stopGpsNavigation();
     setArrived(false);
+    setDirectionsOpen(false);
     lastSpokenInstructionRef.current="";
     activeNavigationModeRef.current=routeMode;
     setLastRouteMode(routeMode);
@@ -1220,6 +1223,45 @@ export default function NaviboriMap({
                     </div>
                   )}
 
+                  {routeResult && routeResult.steps.length>0 && (
+                    <section className="navibori-directions-panel">
+                      <button
+                        type="button"
+                        className="navibori-directions-toggle"
+                        aria-expanded={directionsOpen}
+                        onClick={()=>setDirectionsOpen((open)=>!open)}
+                      >
+                        <span>Indicaciones de la ruta</span>
+                        <strong>
+                          {directionsOpen ? "Ocultar" : routeResult.steps.length+" pasos"}
+                        </strong>
+                      </button>
+
+                      {directionsOpen && (
+                        <ol>
+                          {routeResult.steps.slice(0,12).map((step,index)=>(
+                            <li key={index+"-"+step.type+"-"+step.name}>
+                              <span className="navibori-direction-index">
+                                {step.type==="arrive" ? "◎" : index+1}
+                              </span>
+                              <div>
+                                <strong>{step.instruction}</strong>
+                                <small>
+                                  {step.distanceMeters>0
+                                    ? formatDistance(step.distanceMeters)
+                                    : step.type==="arrive"
+                                      ? "Destino"
+                                      : "Continúa"}
+                                  {step.name ? " · "+step.name : ""}
+                                </small>
+                              </div>
+                            </li>
+                          ))}
+                        </ol>
+                      )}
+                    </section>
+                  )}
+
                   <div className="business-route-actions secondary">
                     {routeResult && (
                       <button
@@ -1245,6 +1287,15 @@ export default function NaviboriMap({
                         }}
                       >
                         {voiceEnabled ? "🔊 Voz activada" : "🔇 Activar voz"}
+                      </button>
+                    )}
+                    {routeResult && routeResult.steps.length>0 && (
+                      <button
+                        type="button"
+                        className={directionsOpen ? "active" : ""}
+                        onClick={()=>setDirectionsOpen((open)=>!open)}
+                      >
+                        🧭 Indicaciones
                       </button>
                     )}
                     {routeResult && (
@@ -1280,8 +1331,9 @@ export default function NaviboriMap({
 
                   <small>
                     NAVIBORI usa el GPS del dispositivo mientras esta navegación está activa.
-                    El pin “Destino” identifica la entrada verificada del comercio y “Ver ruta completa”
-                    muestra el recorrido completo sin detener la navegación.
+                    El pin “Destino” identifica la entrada verificada del comercio, “Ver ruta completa”
+                    muestra el recorrido completo y “Indicaciones” permite revisar los próximos pasos
+                    sin detener la navegación.
                     El marcador se mueve contigo, muestra el próximo giro y recalcula si avanzas
                     o te sales de la ruta. Si exploras el mapa manualmente, el seguimiento visual
                     se pausa sin detener el GPS; “Recentrar en mi GPS” vuelve a seguir tu posición. Bicicleta y scooter usan el perfil de micromovilidad
