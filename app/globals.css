@@ -1078,3 +1078,14 @@ body{overflow:hidden}
 .full-map-stage .gps-recenter-floating{bottom:max(170px,calc(env(safe-area-inset-bottom) + 150px))}
 .full-map-stage .map-search-row,.full-map-cockpit>.map-toolbar,.full-map-cockpit>.cockpit-topline{display:none!important}
 @media(max-width:700px){.full-map-brand-pill{left:68px;max-width:calc(100vw - 136px)}.full-map-brand-pill span{display:none}.full-map-menu{top:68px;max-height:calc(100dvh - 80px)}.full-map-stage .business-route-card{bottom:max(10px,env(safe-area-inset-bottom));width:calc(100% - 16px);max-height:44dvh;border-radius:16px}.full-map-stage .nearby-businesses-panel{left:8px;right:8px;top:70px;width:auto;max-height:28dvh}.full-map-menu-links{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+
+/* NAVIBORI GPS runtime diagnostics */
+.full-map-gps-button{position:absolute;right:max(12px,env(safe-area-inset-right));top:max(12px,env(safe-area-inset-top));z-index:46;display:grid;place-items:center;min-width:48px;height:48px;padding:0 11px;border:1px solid rgba(255,255,255,.82);border-radius:15px;background:rgba(255,255,255,.96);color:var(--ocean);box-shadow:0 10px 28px rgba(22,38,46,.2);font-size:.72rem;font-weight:950;letter-spacing:.03em;backdrop-filter:blur(14px)}
+.full-map-gps-button.active{background:#e9faf5;color:#087a67;border-color:rgba(10,157,131,.35)}
+.full-map-gps-button:disabled{opacity:.65}
+.full-map-diagnostic-button{min-height:40px;padding:7px 9px;border:1px solid var(--ocean);border-radius:10px;background:#eef7fb;color:var(--ocean);font-size:.62rem;font-weight:900}
+.full-map-gps-diagnostics{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+.full-map-gps-diagnostics>span{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:7px 8px;border:1px solid var(--line);border-radius:9px;background:#fbfdfe;font-size:.56rem;color:var(--muted)}
+.full-map-gps-diagnostics strong{font-size:.58rem;color:var(--ink);text-transform:none}
+@media(max-width:700px){.full-map-gps-button{right:10px;top:max(10px,env(safe-area-inset-top))}}
