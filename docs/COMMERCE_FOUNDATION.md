@@ -44,6 +44,15 @@ Customer-facing slot availability and the merchant daily operations board use th
 
 A submitted request still requires merchant confirmation. Requests in new, accepted, preparing and ready states continue consuming slot capacity until they are completed, cancelled or marked no-show. Customer status links expose only operational status/timing data after token verification; they do not expose stored contact details or private notes. NAVIBORI does not currently process payment.
 
+## GPS dual acquisition and routing fallback
+- GPS startup now runs getCurrentPosition and watchPosition in parallel and uses the first valid fix received.
+- If high-accuracy positioning fails without a permission denial, NAVIBORI retries with lower-accuracy cached positioning before giving up.
+- A standalone “Probar GPS” action verifies whether the browser/device can supply location before any commerce route is requested.
+- GPS startup includes a bounded 25-second diagnostic timeout with actionable permission/location guidance.
+- The routing API first tries the existing OSRM/OpenStreetMap service and automatically falls back to the FOSSGIS Valhalla/OpenStreetMap service when OSRM fails, times out or returns an unusable route.
+- Valhalla fallback costing maps driving→auto, walking→pedestrian, cycling→bicycle and scooter→motor_scooter.
+- Routing responses identify which provider produced the route; customer GPS coordinates remain session-only.
+
 ## GPS bootstrap and DEMO route diagnostics
 - GPS navigation now obtains an explicit initial position with getCurrentPosition before starting continuous watchPosition tracking.
 - The first successful GPS fix immediately triggers route calculation instead of waiting for a later watch refresh.
