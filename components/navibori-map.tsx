@@ -15,6 +15,7 @@ import {
   getNextNavigationCue,
   hasArrivedAtDestination,
   isOffNavigationRoute,
+  routeModeLabel,
   shouldRefreshNavigationRoute,
   type InMapRouteMode,
   type InMapRouteResult
@@ -53,6 +54,24 @@ function formatDuration(seconds:number){
   const hours=Math.floor(minutes/60);
   const remainder=minutes%60;
   return hours+" h"+(remainder ? " "+remainder+" min" : "");
+}
+
+function routeModeIcon(mode:InMapRouteMode){
+  switch(mode){
+    case "walking": return "🚶";
+    case "cycling": return "🚲";
+    case "scooter": return "🛴";
+    default: return "🚗";
+  }
+}
+
+function routeLineColor(mode:InMapRouteMode){
+  switch(mode){
+    case "walking": return "#136f63";
+    case "cycling": return "#087a67";
+    case "scooter": return "#b85f24";
+    default: return "#2463eb";
+  }
 }
 
 function formatManeuverDistance(meters:number){
@@ -196,7 +215,12 @@ export default function NaviboriMap({
 
       if(
         businessSlug &&
-        (routeMode==="driving" || routeMode==="walking")
+        (
+          routeMode==="driving" ||
+          routeMode==="walking" ||
+          routeMode==="cycling" ||
+          routeMode==="scooter"
+        )
       ){
         setPendingNavigation({
           slug:businessSlug,
@@ -364,7 +388,7 @@ export default function NaviboriMap({
           "line-join":"round"
         },
         paint:{
-          "line-color":routeResult.mode==="walking" ? "#136f63" : "#2463eb",
+          "line-color":routeLineColor(routeResult.mode),
           "line-width":5,
           "line-opacity":0.96
         }
@@ -375,7 +399,7 @@ export default function NaviboriMap({
       map.setPaintProperty(
         ROUTE_LINE_ID,
         "line-color",
-        routeResult.mode==="walking" ? "#136f63" : "#2463eb"
+        routeLineColor(routeResult.mode)
       );
       map.setPaintProperty(
         ROUTE_LINE_ID,
@@ -568,11 +592,7 @@ export default function NaviboriMap({
 
     if(!quiet){
       setRouteBusy(routeMode);
-      setRouteStatus(
-        routeMode==="walking"
-          ? "Calculando ruta caminando…"
-          : "Calculando ruta en carro…"
-      );
+      setRouteStatus("Calculando ruta · "+routeModeLabel(routeMode)+"…");
     }
 
     try{
@@ -607,7 +627,7 @@ export default function NaviboriMap({
 
       setRouteStatus(
         (activeNavigationModeRef.current ? "GPS activo · " : "")+
-        (routeMode==="walking" ? "Caminando" : "En carro")+
+        routeModeLabel(routeMode)+
         " · "+formatDistance(data.distanceMeters)+
         " · "+formatDuration(data.durationSeconds)
       );
@@ -702,7 +722,12 @@ export default function NaviboriMap({
             heading!==null && (speed===null || speed>0.8)
               ? heading
               : map?.getBearing() ?? 0,
-          pitch:activeMode==="driving" ? 35 : 12,
+          pitch:
+            activeMode==="driving"
+              ? 35
+              : activeMode==="walking"
+                ? 12
+                : 24,
           duration:350
         });
       }
@@ -877,26 +902,24 @@ export default function NaviboriMap({
 
                 {business.verifiedLocation && business.mapLocation?.verified && (
                   <div className="map-search-route-actions">
-                    <button
-                      type="button"
-                      onClick={()=>{
-                        setSearchTerm("");
-                        navigateToNearbyBusiness(business,"driving");
-                      }}
-                      aria-label={"Navegar en carro a "+business.name}
-                    >
-                      🚗
-                    </button>
-                    <button
-                      type="button"
-                      onClick={()=>{
-                        setSearchTerm("");
-                        navigateToNearbyBusiness(business,"walking");
-                      }}
-                      aria-label={"Navegar caminando a "+business.name}
-                    >
-                      🚶
-                    </button>
+                    {([
+                      ["driving","🚗","carro"],
+                      ["walking","🚶","caminando"],
+                      ["cycling","🚲","bicicleta"],
+                      ["scooter","🛴","scooter"]
+                    ] as const).map(([routeMode,icon,label])=>(
+                      <button
+                        type="button"
+                        key={routeMode}
+                        onClick={()=>{
+                          setSearchTerm("");
+                          navigateToNearbyBusiness(business,routeMode);
+                        }}
+                        aria-label={"Navegar en "+label+" a "+business.name}
+                      >
+                        {icon}
+                      </button>
+                    ))}
                   </div>
                 )}
               </article>
@@ -985,20 +1008,21 @@ export default function NaviboriMap({
 
                   {business.verifiedLocation && business.mapLocation?.verified ? (
                     <div className="nearby-business-route-buttons">
-                      <button
-                        type="button"
-                        onClick={()=>navigateToNearbyBusiness(business,"driving")}
-                        aria-label={"Navegar en carro a "+business.name}
-                      >
-                        🚗
-                      </button>
-                      <button
-                        type="button"
-                        onClick={()=>navigateToNearbyBusiness(business,"walking")}
-                        aria-label={"Navegar caminando a "+business.name}
-                      >
-                        🚶
-                      </button>
+                      {([
+                        ["driving","🚗","carro"],
+                        ["walking","🚶","caminando"],
+                        ["cycling","🚲","bicicleta"],
+                        ["scooter","🛴","scooter"]
+                      ] as const).map(([routeMode,icon,label])=>(
+                        <button
+                          type="button"
+                          key={routeMode}
+                          onClick={()=>navigateToNearbyBusiness(business,routeMode)}
+                          aria-label={"Navegar en "+label+" a "+business.name}
+                        >
+                          {icon}
+                        </button>
+                      ))}
                     </div>
                   ) : (
                     <span className="nearby-business-demo">DEMO</span>
@@ -1035,22 +1059,22 @@ export default function NaviboriMap({
               {canRoute ? (
                 <>
                   <div className="business-route-mode-actions">
-                    <button
-                      type="button"
-                      className={gpsActive && lastRouteMode==="driving" ? "active" : ""}
-                      disabled={routeBusy!==null}
-                      onClick={()=>startGpsNavigation("driving")}
-                    >
-                      {routeBusy==="driving" ? "Calculando…" : "🚗 Navegar en carro"}
-                    </button>
-                    <button
-                      type="button"
-                      className={gpsActive && lastRouteMode==="walking" ? "active" : ""}
-                      disabled={routeBusy!==null}
-                      onClick={()=>startGpsNavigation("walking")}
-                    >
-                      {routeBusy==="walking" ? "Calculando…" : "🚶 Navegar caminando"}
-                    </button>
+                    {([
+                      ["driving","🚗","Carro"],
+                      ["walking","🚶","Caminando"],
+                      ["cycling","🚲","Bicicleta"],
+                      ["scooter","🛴","Scooter"]
+                    ] as const).map(([routeMode,icon,label])=>(
+                      <button
+                        type="button"
+                        key={routeMode}
+                        className={gpsActive && lastRouteMode===routeMode ? "active" : ""}
+                        disabled={routeBusy!==null}
+                        onClick={()=>startGpsNavigation(routeMode)}
+                      >
+                        {routeBusy===routeMode ? "Calculando…" : icon+" "+label}
+                      </button>
+                    ))}
                   </div>
 
                   {arrived && (
@@ -1079,7 +1103,7 @@ export default function NaviboriMap({
                       </div>
                       <div>
                         <span>Modo</span>
-                        <strong>{routeResult.mode==="walking" ? "Caminando" : "En carro"}</strong>
+                        <strong>{routeModeIcon(routeResult.mode)} {routeModeLabel(routeResult.mode)}</strong>
                       </div>
                       {gpsActive && (
                         <div>
@@ -1150,7 +1174,9 @@ export default function NaviboriMap({
                   <small>
                     NAVIBORI usa el GPS del dispositivo mientras esta navegación está activa.
                     El marcador se mueve contigo, muestra el próximo giro y recalcula si avanzas
-                    o te sales de la ruta. Tu ubicación no se guarda en Supabase.
+                    o te sales de la ruta. Bicicleta y scooter usan el perfil de micromovilidad
+                    basado en rutas de bicicleta; verifica señalización y condiciones locales.
+                    Tu ubicación no se guarda en Supabase.
                   </small>
                   <small>
                     <a
