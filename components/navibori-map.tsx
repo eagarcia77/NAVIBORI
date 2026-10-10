@@ -3,8 +3,6 @@
 import Link from "next/link";
 import {useEffect,useMemo,useRef,useState} from "react";
 import * as maplibregl from "maplibre-gl";
-import RealityIntensityControl from "@/components/cockpit/reality-intensity";
-import XenoSignalStrip from "@/components/cockpit/xeno-signal-strip";
 import {
   buildGoogleDirectionsUrl,
   validRouteCoordinate,
@@ -118,6 +116,7 @@ export default function NaviboriMap({
   const [mapReady,setMapReady]=useState(false);
   const [mode,setMode]=useState<RealityMode>("2d");
   const [timeOpen,setTimeOpen]=useState(false);
+  const [menuOpen,setMenuOpen]=useState(false);
   const [basemapState,setBasemapState]=useState<"loading"|"ready"|"error">("loading");
   const [selectedSlug,setSelectedSlug]=useState<string|null>(null);
   const [category,setCategory]=useState<MapCategory>("all");
@@ -1139,149 +1138,182 @@ export default function NaviboriMap({
   }
 
   return (
-    <section className="map-panel spatial-cockpit" aria-label="Mapa de comercios NAVIBORI">
-      <div className="cockpit-topline">
-        <div className="reality-mode-switch" role="group" aria-label="Modo de mapa">
-          <button type="button" className={mode==="2d" ? "active" : ""} onClick={()=>activateMapMode("2d")}>2D</button>
-          <button type="button" className={mode==="globe" ? "active" : ""} onClick={()=>activateMapMode("globe")}>Globe</button>
-          <Link href="/twin">Twin</Link>
-          <Link href="/ar">AR</Link>
-          <button type="button" className={mode==="time" ? "active" : ""} onClick={()=>activateMapMode("time")}>Time</button>
-        </div>
+    <section className="map-panel spatial-cockpit full-map-cockpit" aria-label="Mapa de comercios NAVIBORI">
+      <div className="map-stage full-map-stage">
+        <div ref={mapNode} className="map-canvas full-map-canvas" />
 
-        <div className="cockpit-signal" aria-label="Estado del mapa">
-          <span className="cockpit-pulse" aria-hidden="true" />
-          <strong>
+        <button
+          type="button"
+          className="full-map-menu-button"
+          aria-label={menuOpen ? "Cerrar menú" : "Abrir menú"}
+          aria-expanded={menuOpen}
+          onClick={()=>setMenuOpen((open)=>!open)}
+        >
+          {menuOpen ? "×" : "☰"}
+        </button>
+
+        <div className="full-map-brand-pill" aria-label="Estado de NAVIBORI">
+          <strong>NAVIBORI</strong>
+          <span>
             {gpsActive
               ? demoRoute ? "GPS DEMO" : "GPS LIVE"
               : source==="live" ? "Comercios LIVE" : "Comercios DEMO"}
-          </strong>
-          <span>
-            {gpsActive
-              ? "Seguimiento de posición activo"
-              : basemapState==="ready"
-                ? mappedBusinesses.length+" comercio(s) en el mapa"
-                : basemapState==="error"
-                  ? "Mapa degradado · revisa la conexión"
-                  : "Cargando mapa…"}
           </span>
         </div>
-      </div>
 
-      <XenoSignalStrip />
-
-      <div className="map-search-row">
-        <div className="map-commerce-search">
-          <span aria-hidden="true">⌕</span>
-          <input
-            type="search"
-            value={searchTerm}
-            onChange={(event)=>setSearchTerm(event.target.value)}
-            placeholder="Buscar comercio, categoría o dirección"
-            aria-label="Buscar comercios en el mapa"
-          />
-          {searchTerm && (
-            <button
-              type="button"
-              onClick={()=>setSearchTerm("")}
-              aria-label="Limpiar búsqueda"
-            >
-              ×
-            </button>
-          )}
-        </div>
-
-        {searchResults.length>0 && (
-          <div className="map-search-results" aria-label="Resultados de comercios">
-            {searchResults.map((business)=>(
-              <article
-                key={business.id}
-                className={business.slug===selectedSlug ? "selected" : ""}
+        {menuOpen && (
+          <aside className="full-map-menu" aria-label="Menú principal NAVIBORI">
+            <div className="full-map-menu-head">
+              <div>
+                <span>MENÚ</span>
+                <strong>Explorar y navegar</strong>
+              </div>
+              <button
+                type="button"
+                onClick={()=>setMenuOpen(false)}
+                aria-label="Cerrar menú"
               >
+                ×
+              </button>
+            </div>
+
+            <div className="full-map-menu-search">
+              <input
+                type="search"
+                value={searchTerm}
+                onChange={(event)=>setSearchTerm(event.target.value)}
+                placeholder="Buscar comercio o dirección"
+                aria-label="Buscar comercio o dirección"
+              />
+              {searchTerm && (
                 <button
                   type="button"
-                  className="map-search-result-main"
+                  onClick={()=>setSearchTerm("")}
+                  aria-label="Limpiar búsqueda"
+                >
+                  ×
+                </button>
+              )}
+            </div>
+
+            {searchResults.length>0 && (
+              <div className="full-map-menu-results">
+                {searchResults.map((business)=>(
+                  <button
+                    type="button"
+                    key={business.id}
+                    onClick={()=>{
+                      focusBusiness(business);
+                      setSearchTerm("");
+                      setMenuOpen(false);
+                    }}
+                  >
+                    <strong>{business.name}</strong>
+                    <small>{business.mapLocation?.address ?? business.locationLabel}</small>
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {searchTerm.trim() && searchResults.length===0 && (
+              <small className="full-map-menu-empty">
+                No se encontraron comercios con esa búsqueda.
+              </small>
+            )}
+
+            <section className="full-map-menu-section">
+              <span>GPS</span>
+              <div className="full-map-menu-grid">
+                <button
+                  type="button"
                   onClick={()=>{
-                    focusBusiness(business);
-                    setSearchTerm("");
+                    testGps();
+                    setMenuOpen(false);
+                  }}
+                  disabled={gpsTestBusy}
+                >
+                  {gpsTestBusy ? "Probando…" : "◎ Probar GPS"}
+                </button>
+                <button
+                  type="button"
+                  onClick={()=>{
+                    locateMe();
+                    setMenuOpen(false);
                   }}
                 >
-                  <span>{business.name}</span>
-                  <small>{business.mapLocation?.address ?? business.locationLabel}</small>
+                  ⦿ Mi ubicación
                 </button>
-
-                {business.verifiedLocation && business.mapLocation?.verified && (
-                  <div className="map-search-route-actions">
-                    {travelModes.map((travel)=>(
-                      <button
-                        type="button"
-                        key={travel.value}
-                        onClick={()=>{
-                          setSearchTerm("");
-                          navigateToNearbyBusiness(business,travel.value);
-                        }}
-                        aria-label={"Navegar en "+travel.ariaLabel+" a "+business.name}
-                        title={travel.label}
-                      >
-                        <span aria-hidden="true">{travel.icon}</span>
-                        <small>{travel.label}</small>
-                      </button>
-                    ))}
-                  </div>
+                {gpsActive && (
+                  <button
+                    type="button"
+                    onClick={()=>{
+                      recenterGpsCamera();
+                      setMenuOpen(false);
+                    }}
+                  >
+                    ◎ Recentrar GPS
+                  </button>
                 )}
-              </article>
-            ))}
-          </div>
+              </div>
+              {locationStatus && <small className="full-map-menu-status">{locationStatus}</small>}
+            </section>
+
+            <section className="full-map-menu-section">
+              <span>Categorías</span>
+              <div className="full-map-category-grid">
+                {categories.map((item)=>(
+                  <button
+                    type="button"
+                    key={item.value}
+                    className={category===item.value ? "active" : ""}
+                    onClick={()=>{
+                      clearRoute();
+                      setCategory(item.value);
+                      setMenuOpen(false);
+                    }}
+                  >
+                    {item.label}
+                  </button>
+                ))}
+              </div>
+            </section>
+
+            <section className="full-map-menu-section">
+              <span>Vista</span>
+              <div className="full-map-menu-grid">
+                <button
+                  type="button"
+                  className={mode==="2d" ? "active" : ""}
+                  onClick={()=>activateMapMode("2d")}
+                >
+                  2D
+                </button>
+                <button
+                  type="button"
+                  className={mode==="globe" ? "active" : ""}
+                  onClick={()=>activateMapMode("globe")}
+                >
+                  Globo
+                </button>
+              </div>
+            </section>
+
+            <nav className="full-map-menu-links" aria-label="Opciones NAVIBORI">
+              <Link href="/comercios">Comercios</Link>
+              <Link href="/ar">AR</Link>
+              <Link href="/twin">Twin</Link>
+              <Link href="/studio">Studio</Link>
+              <Link href="/nova">NOVA</Link>
+              <Link href="/xeno">XENO</Link>
+            </nav>
+
+            <small className="full-map-menu-foot">
+              Activa “Recibir especiales” para recibir promociones LIVE en la aplicación instalada.
+            </small>
+          </aside>
         )}
 
-        {searchTerm.trim() && searchResults.length===0 && (
-          <div className="map-search-empty" role="status">
-            No se encontraron comercios en el mapa con esa búsqueda.
-          </div>
-        )}
-      </div>
 
-      <div className="map-toolbar" aria-label="Categorías de comercios">
-        {categories.map((item)=>(
-          <button
-            type="button"
-            key={item.value}
-            className={category===item.value ? "selected" : ""}
-            onClick={()=>{
-              clearRoute();
-              setCategory(item.value);
-            }}
-          >
-            {item.label}
-          </button>
-        ))}
-        <button type="button" onClick={()=>locateMe()}>Mi ubicación</button>
-        <button type="button" onClick={testGps} disabled={gpsTestBusy}>
-          {gpsTestBusy ? "Probando GPS…" : "Probar GPS"}
-        </button>
-        {gpsActive && (
-          <button
-            type="button"
-            className={followGps ? "selected" : ""}
-            onClick={()=>{
-              if(followGps){
-                followGpsRef.current=false;
-                setFollowGps(false);
-                setLocationStatus(
-                  "Vista libre · el GPS sigue activo y la ruta continúa recalculándose."
-                );
-              }else{
-                recenterGpsCamera();
-              }
-            }}
-          >
-            {followGps ? "Siguiendo GPS" : "Recentrar en mi GPS"}
-          </button>
-        )}
-      </div>
-
-      <div className="map-stage">
-        <div ref={mapNode} className="map-canvas" />
 
         {gpsActive && !followGps && userLocation && (
           <button
@@ -1293,7 +1325,7 @@ export default function NaviboriMap({
           </button>
         )}
 
-        {userLocation && nearbyBusinesses.length>0 && !gpsActive && (
+        {userLocation && nearbyBusinesses.length>0 && !gpsActive && !menuOpen && (
           <aside className="nearby-businesses-panel" aria-label="Comercios cerca de mí">
             <div className="nearby-businesses-heading">
               <div>
@@ -1349,15 +1381,6 @@ export default function NaviboriMap({
           </aside>
         )}
 
-        {timeOpen && (
-          <aside className="time-machine-panel" aria-live="polite">
-            <p className="eyebrow">TEMPORAL TWIN</p>
-            <strong>Time Machine · Navi Time Echo</strong>
-            <span>Las rutas comerciales usan únicamente ubicaciones publicadas y verificadas.</span>
-          </aside>
-        )}
-
-        <RealityIntensityControl />
 
         <aside className="business-route-card" aria-live="polite">
           {selected ? (
@@ -1395,7 +1418,10 @@ export default function NaviboriMap({
                           key={travel.value}
                           className={gpsActive && lastRouteMode===travel.value ? "active" : ""}
                           disabled={routeBusy!==null}
-                          onClick={()=>startGpsNavigation(travel.value)}
+                          onClick={()=>{
+                            setMenuOpen(false);
+                            startGpsNavigation(travel.value);
+                          }}
                           aria-label={"Iniciar GPS en "+travel.ariaLabel+" hacia "+selected.name}
                         >
                           <span aria-hidden="true">{travel.icon}</span>

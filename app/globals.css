@@ -1049,3 +1049,32 @@ h1 span { color: var(--teal); }
 /* NAVIBORI GPS demo diagnostics */
 .navibori-demo-route-warning{padding:8px 10px;border:1px solid rgba(184,95,36,.28);border-radius:10px;background:#fff7f1;color:#8a431a;font-size:.62rem;font-weight:800;line-height:1.4}
 .gps-live-badge.demo{background:#fff1e6;color:#9b4d18}
+
+
+/* NAVIBORI full-map primary experience */
+html,body{min-height:100%;margin:0}
+body{overflow:hidden}
+.navibori-full-map-page{position:fixed;inset:0;width:100vw;height:100dvh;overflow:hidden;background:#e8eef1}
+.navibori-full-map-page .map-panel{margin:0!important;padding:0!important;border:0!important;border-radius:0!important;box-shadow:none!important;background:transparent!important}
+.full-map-cockpit{position:fixed!important;inset:0!important;width:100vw!important;height:100dvh!important;min-height:100dvh!important;overflow:hidden!important}
+.full-map-stage{position:absolute!important;inset:0!important;width:100%!important;height:100%!important;min-height:100%!important;border:0!important;border-radius:0!important;overflow:hidden!important;background:#e7edf0}
+.full-map-canvas{position:absolute!important;inset:0!important;width:100%!important;height:100%!important;min-height:100%!important}
+.full-map-cockpit .maplibregl-map{width:100%!important;height:100%!important}
+.full-map-cockpit .maplibregl-control-container .maplibregl-ctrl-top-right{top:72px;right:10px}
+.full-map-menu-button{position:absolute;left:max(12px,env(safe-area-inset-left));top:max(12px,env(safe-area-inset-top));z-index:45;display:grid;place-items:center;width:48px;height:48px;border:1px solid rgba(255,255,255,.82);border-radius:15px;background:rgba(255,255,255,.96);color:var(--ink);box-shadow:0 10px 28px rgba(22,38,46,.2);font-size:1.35rem;font-weight:900;backdrop-filter:blur(14px)}
+.full-map-brand-pill{position:absolute;left:72px;top:max(13px,env(safe-area-inset-top));z-index:30;display:flex;align-items:center;gap:7px;min-height:44px;padding:0 11px;border:1px solid rgba(255,255,255,.78);border-radius:14px;background:rgba(255,255,255,.92);box-shadow:0 8px 22px rgba(22,38,46,.13);backdrop-filter:blur(12px)}
+.full-map-brand-pill strong{font-size:.72rem;letter-spacing:.08em}.full-map-brand-pill span{padding:4px 6px;border-radius:999px;background:#eef6f9;color:var(--ocean);font-size:.52rem;font-weight:900}
+.full-map-menu{position:absolute;left:max(12px,env(safe-area-inset-left));top:72px;z-index:44;display:grid;gap:13px;width:min(360px,calc(100vw - 24px));max-height:calc(100dvh - 92px);overflow:auto;padding:13px;border:1px solid rgba(255,255,255,.86);border-radius:18px;background:rgba(255,255,255,.97);box-shadow:0 18px 48px rgba(22,38,46,.24);backdrop-filter:blur(16px);overscroll-behavior:contain}
+.full-map-menu-head{display:flex;align-items:center;justify-content:space-between;gap:10px}.full-map-menu-head>div{display:grid;gap:2px}.full-map-menu-head span,.full-map-menu-section>span{font-size:.53rem;font-weight:900;letter-spacing:.09em;color:var(--ocean)}.full-map-menu-head strong{font-size:.9rem}.full-map-menu-head>button{display:grid;place-items:center;width:34px;height:34px;border:1px solid var(--line);border-radius:10px;background:white;font-size:1.1rem}
+.full-map-menu-search{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px;padding:0 8px;border:1px solid var(--line);border-radius:11px;background:white}.full-map-menu-search input{min-width:0;height:42px;border:0;outline:0;background:transparent;font:inherit;font-size:.72rem}.full-map-menu-search button{border:0;background:transparent;font-size:1rem;color:var(--muted)}
+.full-map-menu-results{display:grid;gap:5px}.full-map-menu-results>button{display:grid;gap:2px;padding:8px;border:1px solid var(--line);border-radius:10px;background:#fbfdfe;text-align:left}.full-map-menu-results strong{font-size:.69rem}.full-map-menu-results small,.full-map-menu-empty{font-size:.55rem;color:var(--muted)}
+.full-map-menu-section{display:grid;gap:7px}.full-map-menu-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}.full-map-menu-grid button,.full-map-category-grid button{min-height:40px;padding:7px 8px;border:1px solid var(--line);border-radius:10px;background:white;color:var(--ink);font-size:.62rem;font-weight:850}.full-map-menu-grid button.active,.full-map-category-grid button.active{border-color:var(--ocean);background:#eef7fb;color:var(--ocean)}
+.full-map-category-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:5px}
+.full-map-menu-status{padding:7px 8px;border-radius:9px;background:#f3f7f8;color:var(--ink);font-size:.56rem;line-height:1.35}
+.full-map-menu-links{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}.full-map-menu-links a{display:grid;place-items:center;min-height:38px;padding:6px;border:1px solid var(--line);border-radius:10px;background:white;color:var(--ink);font-size:.61rem;font-weight:850;text-decoration:none}
+.full-map-menu-foot{font-size:.55rem;line-height:1.4;color:var(--muted)}
+.full-map-stage .business-route-card{position:absolute;left:50%;bottom:max(14px,env(safe-area-inset-bottom));z-index:22;transform:translateX(-50%);width:min(700px,calc(100% - 24px));max-height:min(52dvh,500px);overflow:auto;margin:0;padding:12px;border:1px solid rgba(255,255,255,.86);border-radius:17px;background:rgba(255,255,255,.96);box-shadow:0 14px 38px rgba(22,38,46,.2);backdrop-filter:blur(14px);overscroll-behavior:contain}
+.full-map-stage .nearby-businesses-panel{top:74px;right:12px}
+.full-map-stage .gps-recenter-floating{bottom:max(170px,calc(env(safe-area-inset-bottom) + 150px))}
+.full-map-stage .map-search-row,.full-map-cockpit>.map-toolbar,.full-map-cockpit>.cockpit-topline{display:none!important}
+@media(max-width:700px){.full-map-brand-pill{left:68px;max-width:calc(100vw - 136px)}.full-map-brand-pill span{display:none}.full-map-menu{top:68px;max-height:calc(100dvh - 80px)}.full-map-stage .business-route-card{bottom:max(10px,env(safe-area-inset-bottom));width:calc(100% - 16px);max-height:44dvh;border-radius:16px}.full-map-stage .nearby-businesses-panel{left:8px;right:8px;top:70px;width:auto;max-height:28dvh}.full-map-menu-links{grid-template-columns:repeat(2,minmax(0,1fr))}}
