@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import VerifiedLocationPicker from "@/components/commerce/verified-location-picker";
 import { createClient } from "@/lib/supabase/client";
 import type { Database } from "@/lib/supabase/database.types";
 
@@ -167,6 +168,12 @@ export default function CommerceReviewConsole({
                 Ubicación verificada
               </label>
             </div>
+
+            <VerifiedLocationPicker
+              latitude={form.latitude}
+              longitude={form.longitude}
+              onChange={(next)=>update(business.id,next)}
+            />
 
             <div className="review-route-location">
               <label>
