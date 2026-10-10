@@ -8,7 +8,7 @@ export function buildBusinessQrPayload(origin:string,slug:string){
 }
 
 
-export type CommerceNavigationMode="driving"|"walking";
+export type CommerceNavigationMode="driving"|"walking"|"cycling"|"scooter";
 
 export function buildCommerceMapLink(
   slug:string,
