@@ -44,6 +44,14 @@ Customer-facing slot availability and the merchant daily operations board use th
 
 A submitted request still requires merchant confirmation. Requests in new, accepted, preparing and ready states continue consuming slot capacity until they are completed, cancelled or marked no-show. Customer status links expose only operational status/timing data after token verification; they do not expose stored contact details or private notes. NAVIBORI does not currently process payment.
 
+## GPS bootstrap and DEMO route diagnostics
+- GPS navigation now obtains an explicit initial position with getCurrentPosition before starting continuous watchPosition tracking.
+- The first successful GPS fix immediately triggers route calculation instead of waiting for a later watch refresh.
+- Permission, unavailable-position and timeout errors now provide actionable customer messages.
+- When production has no LIVE verified businesses, DEMO points may run an internal route test so the GPS pipeline can be validated end-to-end.
+- DEMO navigation is visibly labeled “GPS DEMO” and “Ruta de prueba DEMO”; external Google Maps launching is disabled for synthetic destinations.
+- A DEMO route must never be represented as a real merchant route. Customer-ready LIVE navigation still requires an active verified business with a verified exterior address and coordinates.
+
 ## Opt-in special push notifications
 - NAVIBORI registers a service worker and exposes a global “Recibir especiales” control on supported browsers.
 - Notification permission is requested only after an explicit user action; NAVIBORI never prompts automatically on page load.
