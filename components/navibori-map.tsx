@@ -40,6 +40,18 @@ const categories:Array<{value:MapCategory;label:string}>=[
   {value:"bienestar",label:"Bienestar"}
 ];
 
+const travelModes:Array<{
+  value:InMapRouteMode;
+  icon:string;
+  label:string;
+  ariaLabel:string;
+}>=[
+  {value:"driving",icon:"🚗",label:"Carro",ariaLabel:"carro"},
+  {value:"walking",icon:"🚶",label:"Caminar",ariaLabel:"caminando"},
+  {value:"cycling",icon:"🚲",label:"Bicicleta",ariaLabel:"bicicleta"},
+  {value:"scooter",icon:"🛴",label:"Scooter",ariaLabel:"scooter"}
+];
+
 function formatDistance(meters:number){
   if(meters<1000){
     return Math.max(1,Math.round(meters*3.28084))+" ft";
@@ -120,6 +132,7 @@ export default function NaviboriMap({
   const [voiceEnabled,setVoiceEnabled]=useState(false);
   const [arrived,setArrived]=useState(false);
   const [directionsOpen,setDirectionsOpen]=useState(false);
+  const [addressCopied,setAddressCopied]=useState(false);
   const [searchTerm,setSearchTerm]=useState("");
   const [pendingNavigation,setPendingNavigation]=useState<{
     slug:string;
@@ -664,7 +677,18 @@ export default function NaviboriMap({
         : "";
 
     const utterance=new SpeechSynthesisUtterance(prefix+instruction);
-    utterance.lang="es-US";
+    const voices=window.speechSynthesis.getVoices();
+    const spanishVoice=voices.find((voice)=>
+      /^es(-|_)/i.test(voice.lang)
+    );
+
+    if(spanishVoice){
+      utterance.voice=spanishVoice;
+      utterance.lang=spanishVoice.lang;
+    }else{
+      utterance.lang="es-US";
+    }
+
     utterance.rate=0.96;
     window.speechSynthesis.speak(utterance);
   }
@@ -928,6 +952,19 @@ export default function NaviboriMap({
     );
   }
 
+  async function copySelectedAddress(){
+    const address=selected?.mapLocation?.address ?? selected?.locationLabel;
+    if(!address) return;
+
+    try{
+      await navigator.clipboard.writeText(address);
+      setAddressCopied(true);
+      window.setTimeout(()=>setAddressCopied(false),1800);
+    }catch{
+      setAddressCopied(false);
+    }
+  }
+
   return (
     <section className="map-panel spatial-cockpit" aria-label="Mapa de comercios NAVIBORI">
       <div className="cockpit-topline">
@@ -998,22 +1035,19 @@ export default function NaviboriMap({
 
                 {business.verifiedLocation && business.mapLocation?.verified && (
                   <div className="map-search-route-actions">
-                    {([
-                      ["driving","🚗","carro"],
-                      ["walking","🚶","caminando"],
-                      ["cycling","🚲","bicicleta"],
-                      ["scooter","🛴","scooter"]
-                    ] as const).map(([routeMode,icon,label])=>(
+                    {travelModes.map((travel)=>(
                       <button
                         type="button"
-                        key={routeMode}
+                        key={travel.value}
                         onClick={()=>{
                           setSearchTerm("");
-                          navigateToNearbyBusiness(business,routeMode);
+                          navigateToNearbyBusiness(business,travel.value);
                         }}
-                        aria-label={"Navegar en "+label+" a "+business.name}
+                        aria-label={"Navegar en "+travel.ariaLabel+" a "+business.name}
+                        title={travel.label}
                       >
-                        {icon}
+                        <span aria-hidden="true">{travel.icon}</span>
+                        <small>{travel.label}</small>
                       </button>
                     ))}
                   </div>
@@ -1104,7 +1138,7 @@ export default function NaviboriMap({
                     className="nearby-business-main"
                     onClick={()=>focusBusiness(business)}
                   >
-                    <span>{formatDistance(distanceMeters)}</span>
+                    <span>Aprox. {formatDistance(distanceMeters)} · en línea directa</span>
                     <strong>{business.name}</strong>
                     <small>
                       {business.mapLocation?.address ?? business.locationLabel}
@@ -1113,19 +1147,16 @@ export default function NaviboriMap({
 
                   {business.verifiedLocation && business.mapLocation?.verified ? (
                     <div className="nearby-business-route-buttons">
-                      {([
-                        ["driving","🚗","carro"],
-                        ["walking","🚶","caminando"],
-                        ["cycling","🚲","bicicleta"],
-                        ["scooter","🛴","scooter"]
-                      ] as const).map(([routeMode,icon,label])=>(
+                      {travelModes.map((travel)=>(
                         <button
                           type="button"
-                          key={routeMode}
-                          onClick={()=>navigateToNearbyBusiness(business,routeMode)}
-                          aria-label={"Navegar en "+label+" a "+business.name}
+                          key={travel.value}
+                          onClick={()=>navigateToNearbyBusiness(business,travel.value)}
+                          aria-label={"Navegar en "+travel.ariaLabel+" a "+business.name}
+                          title={travel.label}
                         >
-                          {icon}
+                          <span aria-hidden="true">{travel.icon}</span>
+                          <small>{travel.label}</small>
                         </button>
                       ))}
                     </div>
@@ -1159,27 +1190,37 @@ export default function NaviboriMap({
               </div>
 
               <strong>{selected.name}</strong>
-              <span>{selected.mapLocation?.address ?? selected.locationLabel}</span>
+              <div className="business-route-address-row">
+                <span>{selected.mapLocation?.address ?? selected.locationLabel}</span>
+                <button type="button" onClick={copySelectedAddress}>
+                  {addressCopied ? "✓ Copiada" : "Copiar dirección"}
+                </button>
+              </div>
 
               {canRoute ? (
                 <>
-                  <div className="business-route-mode-actions">
-                    {([
-                      ["driving","🚗","Carro"],
-                      ["walking","🚶","Caminando"],
-                      ["cycling","🚲","Bicicleta"],
-                      ["scooter","🛴","Scooter"]
-                    ] as const).map(([routeMode,icon,label])=>(
-                      <button
-                        type="button"
-                        key={routeMode}
-                        className={gpsActive && lastRouteMode===routeMode ? "active" : ""}
-                        disabled={routeBusy!==null}
-                        onClick={()=>startGpsNavigation(routeMode)}
-                      >
-                        {routeBusy===routeMode ? "Calculando…" : icon+" "+label}
-                      </button>
-                    ))}
+                  <div className="business-route-launch">
+                    <div>
+                      <span>¿Cómo quieres llegar?</span>
+                      <small>Un toque inicia la ruta y el GPS.</small>
+                    </div>
+                    <div className="business-route-mode-actions">
+                      {travelModes.map((travel)=>(
+                        <button
+                          type="button"
+                          key={travel.value}
+                          className={gpsActive && lastRouteMode===travel.value ? "active" : ""}
+                          disabled={routeBusy!==null}
+                          onClick={()=>startGpsNavigation(travel.value)}
+                          aria-label={"Iniciar GPS en "+travel.ariaLabel+" hacia "+selected.name}
+                        >
+                          <span aria-hidden="true">{travel.icon}</span>
+                          <strong>
+                            {routeBusy===travel.value ? "Calculando…" : travel.label}
+                          </strong>
+                        </button>
+                      ))}
+                    </div>
                   </div>
 
                   {arrived && (
@@ -1369,7 +1410,8 @@ export default function NaviboriMap({
               <strong>Selecciona un comercio</strong>
               <span>
                 Busca por nombre, categoría o dirección; toca un pin; o usa “Mi ubicación”
-                para ordenar comercios cercanos y comenzar navegación GPS en carro o caminando.
+                para ordenar comercios cercanos y comenzar navegación GPS en carro, caminando,
+                bicicleta o scooter.
               </span>
             </>
           )}
