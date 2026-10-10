@@ -44,6 +44,15 @@ Customer-facing slot availability and the merchant daily operations board use th
 
 A submitted request still requires merchant confirmation. Requests in new, accepted, preparing and ready states continue consuming slot capacity until they are completed, cancelled or marked no-show. Customer status links expose only operational status/timing data after token verification; they do not expose stored contact details or private notes. NAVIBORI does not currently process payment.
 
+## Opt-in special push notifications
+- NAVIBORI registers a service worker and exposes a global “Recibir especiales” control on supported browsers.
+- Notification permission is requested only after an explicit user action; NAVIBORI never prompts automatically on page load.
+- Push subscriptions are stored server-side with RLS and direct client access denied. Customer GPS coordinates are not stored with a push subscription.
+- An active verified merchant can manually send its currently active LIVE promotion once. Duplicate sends for the same promotion are prevented by a dispatch ledger.
+- Promotions with a scheduled start time are checked every 10 minutes by Supabase Cron and sent once when they become due.
+- Push delivery wakes the installed PWA, which fetches the current LIVE special and displays the business, promotion title, description and a link to the business profile.
+- Users can disable specials from the same NAVIBORI control; expired push endpoints are automatically disabled after delivery failures.
+
 ## Route step directions
 - Active routes expose an expandable “Indicaciones de la ruta” panel using the same OSRM maneuver steps already returned for turn-by-turn guidance.
 - The panel shows up to twelve upcoming route steps with Spanish instruction text, segment distance and street/road name when available.
