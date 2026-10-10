@@ -955,3 +955,20 @@ h1 span { color: var(--teal); }
 .nearby-business-route-buttons{display:flex;gap:4px}.nearby-business-route-buttons button{width:34px;height:34px;border:1px solid var(--line);border-radius:9px;background:white;cursor:pointer}.nearby-business-route-buttons button:hover{border-color:var(--ocean);background:#f2f7f8}
 .nearby-business-demo{padding:4px 6px;border-radius:999px;background:#eef1f3;color:#6d7680;font-size:.5rem;font-weight:900}
 @media(max-width:760px){.nearby-businesses-panel{left:10px;right:10px;top:10px;width:auto;max-height:34vh}.nearby-businesses-list{display:flex;overflow-x:auto;overflow-y:hidden;padding-bottom:2px}.nearby-business-item{min-width:245px}.nearby-business-main>small{max-width:160px}}
+
+
+/* NAVIBORI commerce map search */
+.map-search-row{position:relative;display:flex;align-items:center;gap:8px;margin:8px 0 10px}
+.map-commerce-search{position:relative;display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:7px;width:min(560px,100%);padding:0 10px;border:1px solid var(--line);border-radius:12px;background:white;box-shadow:0 6px 18px rgba(22,38,46,.06)}
+.map-commerce-search>span{font-size:1rem;color:var(--muted)}
+.map-commerce-search input{min-width:0;height:42px;border:0;outline:0;background:transparent;color:var(--ink);font:inherit;font-size:.75rem}
+.map-commerce-search button{border:0;background:transparent;color:var(--muted);font-size:1.1rem;cursor:pointer}
+.map-search-results{position:absolute;left:0;top:48px;z-index:20;display:grid;gap:5px;width:min(560px,100%);max-height:320px;overflow:auto;padding:8px;border:1px solid var(--line);border-radius:12px;background:white;box-shadow:0 16px 36px rgba(22,38,46,.16)}
+.map-search-results article{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px;align-items:center;padding:5px;border:1px solid transparent;border-radius:9px}
+.map-search-results article.selected{border-color:rgba(36,99,235,.35);background:#f4f7ff}
+.map-search-result-main{display:grid;gap:2px;min-width:0;padding:5px;border:0;background:transparent;text-align:left;cursor:pointer}
+.map-search-result-main span{font-size:.72rem;font-weight:850;color:var(--ink)}
+.map-search-result-main small{font-size:.56rem;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.map-search-route-actions{display:flex;gap:4px}.map-search-route-actions button{width:34px;height:34px;border:1px solid var(--line);border-radius:9px;background:white;cursor:pointer}.map-search-route-actions button:hover{border-color:var(--ocean);background:#f2f7f8}
+.map-search-empty{position:absolute;left:0;top:48px;z-index:20;width:min(560px,100%);padding:10px 12px;border:1px solid var(--line);border-radius:12px;background:white;box-shadow:0 16px 36px rgba(22,38,46,.12);font-size:.66rem;color:var(--muted)}
+@media(max-width:760px){.map-search-row{margin-inline:0}.map-commerce-search,.map-search-results,.map-search-empty{width:100%}.map-search-results{max-height:42vh}}
