@@ -822,6 +822,63 @@ export type Database = {
         }
         Relationships: []
       }
+      promotion_push_dispatches: {
+        Row: {
+          business_id: string
+          created_at: string
+          created_by: string | null
+          dispatch_kind: string
+          error_message: string | null
+          failed_count: number
+          id: string
+          promotion_id: string
+          sent_at: string | null
+          sent_count: number
+          status: string
+        }
+        Insert: {
+          business_id: string
+          created_at?: string
+          created_by?: string | null
+          dispatch_kind: string
+          error_message?: string | null
+          failed_count?: number
+          id?: string
+          promotion_id: string
+          sent_at?: string | null
+          sent_count?: number
+          status?: string
+        }
+        Update: {
+          business_id?: string
+          created_at?: string
+          created_by?: string | null
+          dispatch_kind?: string
+          error_message?: string | null
+          failed_count?: number
+          id?: string
+          promotion_id?: string
+          sent_at?: string | null
+          sent_count?: number
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "promotion_push_dispatches_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "promotion_push_dispatches_promotion_id_fkey"
+            columns: ["promotion_id"]
+            isOneToOne: true
+            referencedRelation: "business_promotions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       publication_events: {
         Row: {
           actor_id: string
@@ -873,6 +930,48 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      push_subscriptions: {
+        Row: {
+          auth: string
+          created_at: string
+          endpoint: string
+          id: string
+          installation_id: string
+          last_seen_at: string
+          p256dh: string
+          specials_enabled: boolean
+          updated_at: string
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          auth: string
+          created_at?: string
+          endpoint: string
+          id?: string
+          installation_id: string
+          last_seen_at?: string
+          p256dh: string
+          specials_enabled?: boolean
+          updated_at?: string
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          auth?: string
+          created_at?: string
+          endpoint?: string
+          id?: string
+          installation_id?: string
+          last_seen_at?: string
+          p256dh?: string
+          specials_enabled?: boolean
+          updated_at?: string
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
       }
       route_edges: {
         Row: {
@@ -1331,6 +1430,7 @@ export type Database = {
           updated_at: string
         }[]
       }
+      get_navibori_vapid_private: { Args: never; Returns: string }
       get_published_spatial_dataset: {
         Args: { p_venue_id: string }
         Returns: {
