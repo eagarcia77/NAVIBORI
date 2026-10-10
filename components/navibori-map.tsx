@@ -129,6 +129,19 @@ export default function NaviboriMap({
   const [gpsActive,setGpsActive]=useState(false);
   const [gpsAccuracy,setGpsAccuracy]=useState<number|null>(null);
   const [gpsTestBusy,setGpsTestBusy]=useState(false);
+  const [gpsDiagnostics,setGpsDiagnostics]=useState<{
+    secure:boolean|null;
+    geolocation:boolean|null;
+    permission:string;
+    routing:string;
+    detail:string;
+  }>({
+    secure:null,
+    geolocation:null,
+    permission:"unknown",
+    routing:"unknown",
+    detail:""
+  });
   const [followGps,setFollowGps]=useState(true);
   const [voiceEnabled,setVoiceEnabled]=useState(false);
   const [arrived,setArrived]=useState(false);
@@ -630,6 +643,66 @@ export default function NaviboriMap({
       return "El dispositivo no pudo determinar tu ubicación. Activa Localización, Wi‑Fi o datos móviles y vuelve a intentar.";
     }
     return "El GPS tardó demasiado en responder. Intenta nuevamente en un lugar con mejor señal.";
+  }
+
+  async function runGpsDiagnostics(){
+    const secure=window.isSecureContext;
+    const geolocation="geolocation" in navigator;
+    let permission="unknown";
+    let routing="checking";
+
+    try{
+      if("permissions" in navigator && navigator.permissions?.query){
+        const status=await navigator.permissions.query(
+          {name:"geolocation"} as PermissionDescriptor
+        );
+        permission=status.state;
+      }
+    }catch{
+      permission="unsupported";
+    }
+
+    setGpsDiagnostics({
+      secure,
+      geolocation,
+      permission,
+      routing,
+      detail:"Verificando motor de rutas…"
+    });
+
+    try{
+      const response=await fetch("/api/routing/health",{
+        method:"GET",
+        cache:"no-store"
+      });
+      const data=await response.json() as {
+        ok?:boolean;
+        osrm?:boolean;
+        valhalla?:boolean;
+      };
+
+      routing=data.ok ? "ok" : "down";
+      const providers=[
+        data.osrm ? "OSRM ✓" : "OSRM ×",
+        data.valhalla ? "Valhalla ✓" : "Valhalla ×"
+      ].join(" · ");
+
+      setGpsDiagnostics({
+        secure,
+        geolocation,
+        permission,
+        routing,
+        detail:providers
+      });
+    }catch{
+      setGpsDiagnostics({
+        secure,
+        geolocation,
+        permission,
+        routing:"error",
+        detail:"No se pudo comprobar el motor de rutas."
+      });
+    }
   }
 
   function testGps(){
@@ -1144,6 +1217,22 @@ export default function NaviboriMap({
 
         <button
           type="button"
+          className={"full-map-gps-button "+(gpsActive ? "active" : "")}
+          aria-label={gpsActive ? "Recentrar GPS" : "Probar GPS"}
+          onClick={()=>{
+            if(gpsActive && userLocation){
+              recenterGpsCamera();
+            }else{
+              testGps();
+            }
+          }}
+          disabled={gpsTestBusy}
+        >
+          {gpsTestBusy ? "…" : gpsActive ? "◎" : "GPS"}
+        </button>
+
+        <button
+          type="button"
           className="full-map-menu-button"
           aria-label={menuOpen ? "Cerrar menú" : "Abrir menú"}
           aria-expanded={menuOpen}
@@ -1255,6 +1344,43 @@ export default function NaviboriMap({
                   </button>
                 )}
               </div>
+              <button
+                type="button"
+                className="full-map-diagnostic-button"
+                onClick={runGpsDiagnostics}
+              >
+                Diagnosticar GPS y rutas
+              </button>
+
+              <div className="full-map-gps-diagnostics" aria-live="polite">
+                <span>
+                  HTTPS
+                  <strong>
+                    {gpsDiagnostics.secure===null
+                      ? "—"
+                      : gpsDiagnostics.secure ? "✓" : "×"}
+                  </strong>
+                </span>
+                <span>
+                  GPS navegador
+                  <strong>
+                    {gpsDiagnostics.geolocation===null
+                      ? "—"
+                      : gpsDiagnostics.geolocation ? "✓" : "×"}
+                  </strong>
+                </span>
+                <span>
+                  Permiso
+                  <strong>{gpsDiagnostics.permission}</strong>
+                </span>
+                <span>
+                  Rutas
+                  <strong>{gpsDiagnostics.routing}</strong>
+                </span>
+              </div>
+              {gpsDiagnostics.detail && (
+                <small className="full-map-menu-status">{gpsDiagnostics.detail}</small>
+              )}
               {locationStatus && <small className="full-map-menu-status">{locationStatus}</small>}
             </section>
 
