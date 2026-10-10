@@ -3,7 +3,7 @@
 import {useEffect,useState} from "react";
 import {createClient} from "@/lib/supabase/client";
 
-type PushState="checking"|"unsupported"|"default"|"enabled"|"denied"|"busy"|"error";
+type PushState="checking"|"unsupported"|"default"|"enabled"|"denied"|"error";
 
 function applicationServerKey(value:string){
   const padding="=".repeat((4-value.length%4)%4);
@@ -31,6 +31,7 @@ function installedStandalone(){
 
 export default function SpecialAlertsControl(){
   const [state,setState]=useState<PushState>("checking");
+  const [busy,setBusy]=useState(false);
   const [message,setMessage]=useState("");
   const [standalone,setStandalone]=useState(false);
 
@@ -75,7 +76,7 @@ export default function SpecialAlertsControl(){
   },[]);
 
   async function enable(){
-    setState("busy");
+    setBusy(true);
     setMessage("");
 
     try{
@@ -134,11 +135,13 @@ export default function SpecialAlertsControl(){
           ? error.message
           : "No se pudieron activar las notificaciones."
       );
+    }finally{
+      setBusy(false);
     }
   }
 
   async function disable(){
-    setState("busy");
+    setBusy(true);
     setMessage("");
 
     try{
@@ -165,6 +168,8 @@ export default function SpecialAlertsControl(){
     }catch{
       setState("error");
       setMessage("No se pudo desactivar la suscripción.");
+    }finally{
+      setBusy(false);
     }
   }
 
@@ -184,16 +189,16 @@ export default function SpecialAlertsControl(){
       </div>
 
       {state==="enabled" ? (
-        <button type="button" onClick={disable} disabled={state==="busy"}>
-          Desactivar
+        <button type="button" onClick={disable} disabled={busy}>
+          {busy ? "Desactivando…" : "Desactivar"}
         </button>
       ) : (
         <button
           type="button"
           onClick={enable}
-          disabled={state==="busy" || state==="denied"}
+          disabled={busy || state==="denied"}
         >
-          {state==="busy" ? "Activando…" : "Activar"}
+          {busy ? "Activando…" : "Activar"}
         </button>
       )}
 
