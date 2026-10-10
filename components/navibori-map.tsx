@@ -189,7 +189,20 @@ export default function NaviboriMap({
   useEffect(()=>{
     if(typeof window!=="undefined"){
       const params=new URLSearchParams(window.location.search);
-      setSelectedSlug(params.get("business"));
+      const businessSlug=params.get("business");
+      const routeMode=params.get("route");
+
+      setSelectedSlug(businessSlug);
+
+      if(
+        businessSlug &&
+        (routeMode==="driving" || routeMode==="walking")
+      ){
+        setPendingNavigation({
+          slug:businessSlug,
+          mode:routeMode
+        });
+      }
     }
 
     if(!mapNode.current || mapRef.current) return;

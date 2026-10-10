@@ -6,7 +6,7 @@ import { activePromotions, featuredOffers, filterCommerce } from "@/lib/commerce
 import { DEMO_COMMERCE } from "@/lib/commerce/demo";
 import { getCommerceOpenState } from "@/lib/commerce/hours";
 import { appendCommerceEvent, type CommerceAnalyticsEvent } from "@/lib/commerce/analytics";
-import { buildBusinessDeepLink } from "@/lib/commerce/deep-link";
+import { buildBusinessDeepLink, buildCommerceMapLink } from "@/lib/commerce/deep-link";
 import { recordPublicBusinessMetric } from "@/lib/commerce/public-metrics";
 import type { CommerceCategory, CommerceProfile } from "@/lib/commerce/types";
 
@@ -223,15 +223,27 @@ export default function CommerceDirectory({
 
             <div className="commerce-actions">
               {selected.verifiedLocation ? (
-                <Link
-                  className="commerce-profile-link"
-                  href={"/?business="+selected.slug}
-                  onClick={()=>record("route_request",selected.id)}
-                >
-                  Cómo llegar
-                </Link>
+                <>
+                  <Link
+                    className="commerce-profile-link"
+                    href={buildCommerceMapLink(selected.slug,"driving")}
+                    onClick={()=>record("route_request",selected.id)}
+                  >
+                    🚗 Ir en carro
+                  </Link>
+                  <Link
+                    className="commerce-profile-link"
+                    href={buildCommerceMapLink(selected.slug,"walking")}
+                    onClick={()=>record("route_request",selected.id)}
+                  >
+                    🚶 Ir caminando
+                  </Link>
+                </>
               ) : (
-                <button type="button" disabled>Cómo llegar</button>
+                <>
+                  <button type="button" disabled>🚗 Ir en carro</button>
+                  <button type="button" disabled>🚶 Ir caminando</button>
+                </>
               )}
 
               {selected.phone ? (

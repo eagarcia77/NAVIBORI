@@ -44,6 +44,12 @@ Customer-facing slot availability and the merchant daily operations board use th
 
 A submitted request still requires merchant confirmation. Requests in new, accepted, preparing and ready states continue consuming slot capacity until they are completed, cancelled or marked no-show. Customer status links expose only operational status/timing data after token verification; they do not expose stored contact details or private notes. NAVIBORI does not currently process payment.
 
+## Profile-to-GPS navigation
+- Public business profiles and the commerce directory expose separate driving and walking actions for verified LIVE locations.
+- Those actions open the NAVIBORI map with `business=<slug>` and `route=driving|walking`.
+- The map resolves the selected business and starts the existing browser GPS navigation flow for the requested mode.
+- Geolocation still requires the customer's browser permission; the deep link never bypasses device privacy controls.
+
 ## Verified exterior location picker
 - Commerce Review includes a MapLibre/OpenStreetMap picker for the public exterior destination used by customer navigation.
 - An administrator can click the map, drag the marker or explicitly use the browser/device current location when physically at the storefront.
