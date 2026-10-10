@@ -19,6 +19,7 @@ import {
   type InMapRouteMode,
   type InMapRouteResult
 } from "@/lib/commerce/in-map-routing";
+import {commerceMatchesSearch} from "@/lib/commerce/map-search";
 import type {CommerceCategory,CommerceProfile} from "@/lib/commerce/types";
 
 const JUANA_DIAZ_REFERENCE:[number,number]=[-66.506,18.052];
@@ -98,6 +99,7 @@ export default function NaviboriMap({
   const [followGps,setFollowGps]=useState(true);
   const [voiceEnabled,setVoiceEnabled]=useState(false);
   const [arrived,setArrived]=useState(false);
+  const [searchTerm,setSearchTerm]=useState("");
   const [pendingNavigation,setPendingNavigation]=useState<{
     slug:string;
     mode:InMapRouteMode;
@@ -107,10 +109,21 @@ export default function NaviboriMap({
     ()=>businesses.filter((business)=>
       business.mapLocation &&
       validRouteCoordinate(business.mapLocation) &&
+      (source==="demo" || (
+        business.verifiedLocation &&
+        business.mapLocation.verified
+      )) &&
       (category==="all" || business.category===category)
     ),
-    [businesses,category]
+    [businesses,category,source]
   );
+
+  const searchResults=useMemo(()=>{
+    if(!searchTerm.trim()) return [];
+    return mappedBusinesses
+      .filter((business)=>commerceMatchesSearch(business,searchTerm))
+      .slice(0,6);
+  },[mappedBusinesses,searchTerm]);
 
   const nearbyBusinesses=useMemo(()=>{
     if(!userLocation) return [];
@@ -809,6 +822,82 @@ export default function NaviboriMap({
 
       <XenoSignalStrip />
 
+      <div className="map-search-row">
+        <div className="map-commerce-search">
+          <span aria-hidden="true">⌕</span>
+          <input
+            type="search"
+            value={searchTerm}
+            onChange={(event)=>setSearchTerm(event.target.value)}
+            placeholder="Buscar comercio, categoría o dirección"
+            aria-label="Buscar comercios en el mapa"
+          />
+          {searchTerm && (
+            <button
+              type="button"
+              onClick={()=>setSearchTerm("")}
+              aria-label="Limpiar búsqueda"
+            >
+              ×
+            </button>
+          )}
+        </div>
+
+        {searchResults.length>0 && (
+          <div className="map-search-results" aria-label="Resultados de comercios">
+            {searchResults.map((business)=>(
+              <article
+                key={business.id}
+                className={business.slug===selectedSlug ? "selected" : ""}
+              >
+                <button
+                  type="button"
+                  className="map-search-result-main"
+                  onClick={()=>{
+                    focusBusiness(business);
+                    setSearchTerm("");
+                  }}
+                >
+                  <span>{business.name}</span>
+                  <small>{business.mapLocation?.address ?? business.locationLabel}</small>
+                </button>
+
+                {business.verifiedLocation && business.mapLocation?.verified && (
+                  <div className="map-search-route-actions">
+                    <button
+                      type="button"
+                      onClick={()=>{
+                        setSearchTerm("");
+                        navigateToNearbyBusiness(business,"driving");
+                      }}
+                      aria-label={"Navegar en carro a "+business.name}
+                    >
+                      🚗
+                    </button>
+                    <button
+                      type="button"
+                      onClick={()=>{
+                        setSearchTerm("");
+                        navigateToNearbyBusiness(business,"walking");
+                      }}
+                      aria-label={"Navegar caminando a "+business.name}
+                    >
+                      🚶
+                    </button>
+                  </div>
+                )}
+              </article>
+            ))}
+          </div>
+        )}
+
+        {searchTerm.trim() && searchResults.length===0 && (
+          <div className="map-search-empty" role="status">
+            No se encontraron comercios en el mapa con esa búsqueda.
+          </div>
+        )}
+      </div>
+
       <div className="map-toolbar" aria-label="Categorías de comercios">
         {categories.map((item)=>(
           <button
@@ -1078,8 +1167,8 @@ export default function NaviboriMap({
             <>
               <strong>Selecciona un comercio</strong>
               <span>
-                Toca un pin o usa “Mi ubicación” para ordenar los comercios cercanos
-                y comenzar navegación GPS en carro o caminando.
+                Busca por nombre, categoría o dirección; toca un pin; o usa “Mi ubicación”
+                para ordenar comercios cercanos y comenzar navegación GPS en carro o caminando.
               </span>
             </>
           )}
