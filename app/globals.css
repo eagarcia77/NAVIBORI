@@ -1015,3 +1015,13 @@ h1 span { color: var(--teal); }
 .navibori-directions-panel li strong{font-size:.64rem;line-height:1.35}
 .navibori-directions-panel li small{font-size:.54rem;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 @media(max-width:620px){.navibori-directions-panel ol{max-height:210px}}
+
+
+/* NAVIBORI special push alerts */
+.special-alert-control{position:fixed;right:16px;top:88px;z-index:80;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:7px 10px;align-items:center;width:min(320px,calc(100vw - 32px));padding:10px 11px;border:1px solid rgba(0,95,143,.2);border-radius:14px;background:rgba(255,255,255,.96);box-shadow:0 10px 28px rgba(22,38,46,.16);backdrop-filter:blur(12px)}
+.special-alert-control>div{display:grid;gap:2px;min-width:0}.special-alert-control>div span{font-size:.52rem;font-weight:900;color:var(--ocean);letter-spacing:.08em}.special-alert-control>div strong{font-size:.72rem}
+.special-alert-control>button{min-height:36px;padding:0 10px;border:1px solid var(--ocean);border-radius:9px;background:var(--ocean);color:white;font-size:.64rem;font-weight:900}
+.special-alert-control.enabled{width:auto;max-width:280px}.special-alert-control.enabled>button{background:white;color:var(--ocean)}
+.special-alert-control.denied{border-color:rgba(160,72,72,.25)}.special-alert-control.denied>button{opacity:.5}
+.special-alert-control>small{grid-column:1/-1;color:var(--muted);font-size:.56rem;line-height:1.35}
+@media(max-width:700px){.special-alert-control{top:auto;right:10px;bottom:10px;width:min(310px,calc(100vw - 20px))}.special-alert-control.enabled{width:min(270px,calc(100vw - 20px))}}
