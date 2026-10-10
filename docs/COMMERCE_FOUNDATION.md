@@ -44,6 +44,13 @@ Customer-facing slot availability and the merchant daily operations board use th
 
 A submitted request still requires merchant confirmation. Requests in new, accepted, preparing and ready states continue consuming slot capacity until they are completed, cancelled or marked no-show. Customer status links expose only operational status/timing data after token verification; they do not expose stored contact details or private notes. NAVIBORI does not currently process payment.
 
+## Route overview and destination clarity
+- The selected commerce destination is visually emphasized on the map and labeled “Destino”.
+- The destination marker represents the verified public entrance used by customer routing.
+- “Ver ruta completa” fits the current route, customer location and destination into one map view.
+- When GPS navigation is active, route overview pauses only automatic camera follow; tracking, turn guidance and rerouting remain active.
+- The customer can return to position-follow mode using “Recentrar en mi GPS”.
+
 ## GPS camera follow and recenter
 - During active GPS navigation, NAVIBORI follows the customer position by default.
 - Direct pointer interaction with the map pauses only the automatic camera follow; GPS tracking, route updates and off-route recalculation continue running.
