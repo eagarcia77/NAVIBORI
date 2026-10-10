@@ -33,7 +33,7 @@ export interface InMapRouteResult{
   durationSeconds:number;
   geometry:RouteGeometry;
   steps:NavigationStep[];
-  provider:"OSRM / OpenStreetMap";
+  provider:"OSRM / OpenStreetMap"|"Valhalla / OpenStreetMap";
 }
 
 interface OsrmManeuver{
@@ -85,6 +85,34 @@ export function routingProviderBase(mode:InMapRouteMode){
     return "https://routing.openstreetmap.de/routed-bike";
   }
   return "https://routing.openstreetmap.de/routed-car";
+}
+
+export function valhallaCosting(mode:InMapRouteMode){
+  switch(mode){
+    case "walking": return "pedestrian";
+    case "cycling": return "bicycle";
+    case "scooter": return "motor_scooter";
+    default: return "auto";
+  }
+}
+
+export function buildValhallaRouteRequest(
+  origin:RoutingCoordinate,
+  destination:RoutingCoordinate,
+  mode:InMapRouteMode
+){
+  return {
+    locations:[
+      {lat:origin.latitude,lon:origin.longitude},
+      {lat:destination.latitude,lon:destination.longitude}
+    ],
+    costing:valhallaCosting(mode),
+    format:"osrm",
+    shape_format:"geojson",
+    language:"es-ES",
+    directions_type:"instructions",
+    alternates:0
+  };
 }
 
 export function routeModeLabel(mode:InMapRouteMode){
@@ -262,7 +290,8 @@ function normalizeSteps(route:NonNullable<OsrmRouteResponse["routes"]>[number]){
 
 export function normalizeOsrmRoute(
   input:OsrmRouteResponse,
-  mode:InMapRouteMode
+  mode:InMapRouteMode,
+  provider:InMapRouteResult["provider"]="OSRM / OpenStreetMap"
 ):InMapRouteResult|null{
   if(input.code!=="Ok") return null;
   const route=input.routes?.[0];
@@ -292,7 +321,7 @@ export function normalizeOsrmRoute(
       coordinates
     },
     steps:normalizeSteps(route),
-    provider:"OSRM / OpenStreetMap"
+    provider
   };
 }
 

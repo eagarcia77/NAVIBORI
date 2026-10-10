@@ -105,6 +105,7 @@ export default function NaviboriMap({
   const userMarkerRef=useRef<maplibregl.Marker|null>(null);
   const routeAbortRef=useRef<AbortController|null>(null);
   const gpsWatchRef=useRef<number|null>(null);
+  const gpsBootstrapTimerRef=useRef<ReturnType<typeof setTimeout>|null>(null);
   const activeNavigationModeRef=useRef<InMapRouteMode|null>(null);
   const lastRouteOriginRef=useRef<RouteCoordinate|null>(null);
   const lastRouteRefreshAtRef=useRef(0);
@@ -128,6 +129,7 @@ export default function NaviboriMap({
   const [lastRouteMode,setLastRouteMode]=useState<InMapRouteMode>("driving");
   const [gpsActive,setGpsActive]=useState(false);
   const [gpsAccuracy,setGpsAccuracy]=useState<number|null>(null);
+  const [gpsTestBusy,setGpsTestBusy]=useState(false);
   const [followGps,setFollowGps]=useState(true);
   const [voiceEnabled,setVoiceEnabled]=useState(false);
   const [arrived,setArrived]=useState(false);
@@ -621,6 +623,86 @@ export default function NaviboriMap({
     );
   }
 
+  function geolocationErrorMessage(error:GeolocationPositionError){
+    if(error.code===error.PERMISSION_DENIED){
+      return "Permiso de ubicación denegado. Activa Localización para NAVIBORI/Safari y vuelve a intentar.";
+    }
+    if(error.code===error.POSITION_UNAVAILABLE){
+      return "El dispositivo no pudo determinar tu ubicación. Activa Localización, Wi‑Fi o datos móviles y vuelve a intentar.";
+    }
+    return "El GPS tardó demasiado en responder. Intenta nuevamente en un lugar con mejor señal.";
+  }
+
+  function testGps(){
+    if(!window.isSecureContext){
+      setLocationStatus("El GPS requiere una conexión HTTPS segura.");
+      return;
+    }
+    if(!navigator.geolocation){
+      setLocationStatus("Este dispositivo o navegador no ofrece geolocalización.");
+      return;
+    }
+
+    setGpsTestBusy(true);
+    setLocationStatus("Probando GPS del dispositivo…");
+
+    const success=(position:GeolocationPosition)=>{
+      const next={
+        latitude:position.coords.latitude,
+        longitude:position.coords.longitude
+      };
+
+      if(!validRouteCoordinate(next)){
+        setGpsTestBusy(false);
+        setLocationStatus("El navegador devolvió una ubicación inválida.");
+        return;
+      }
+
+      const accuracy=Number.isFinite(position.coords.accuracy)
+        ? position.coords.accuracy
+        : null;
+
+      setUserLocation(next);
+      setGpsAccuracy(accuracy);
+      showUserLocation(next);
+      mapRef.current?.easeTo({
+        center:[next.longitude,next.latitude],
+        zoom:16,
+        duration:650
+      });
+      setGpsTestBusy(false);
+      setLocationStatus(
+        "✓ GPS funcionando"+
+        (accuracy!==null ? " · precisión aproximada ±"+Math.round(accuracy)+" m" : "")
+      );
+    };
+
+    const fallbackError=(error:GeolocationPositionError)=>{
+      setGpsTestBusy(false);
+      setLocationStatus(geolocationErrorMessage(error));
+    };
+
+    navigator.geolocation.getCurrentPosition(
+      success,
+      ()=>{
+        navigator.geolocation.getCurrentPosition(
+          success,
+          fallbackError,
+          {
+            enableHighAccuracy:false,
+            timeout:10000,
+            maximumAge:60000
+          }
+        );
+      },
+      {
+        enableHighAccuracy:true,
+        timeout:12000,
+        maximumAge:0
+      }
+    );
+  }
+
   function locateMe(afterLocate?:(coordinate:RouteCoordinate)=>void){
     if(!navigator.geolocation){
       setLocationStatus("Este dispositivo no ofrece geolocalización.");
@@ -780,6 +862,11 @@ export default function NaviboriMap({
   }
 
   function stopGpsNavigation(){
+    if(gpsBootstrapTimerRef.current!==null){
+      clearTimeout(gpsBootstrapTimerRef.current);
+      gpsBootstrapTimerRef.current=null;
+    }
+
     if(gpsWatchRef.current!==null && navigator.geolocation){
       navigator.geolocation.clearWatch(gpsWatchRef.current);
     }
@@ -795,8 +882,13 @@ export default function NaviboriMap({
   function startGpsNavigation(routeMode:InMapRouteMode){
     if(!canRoute) return;
 
+    if(!window.isSecureContext){
+      setLocationStatus("El GPS requiere una conexión HTTPS segura.");
+      return;
+    }
+
     if(!navigator.geolocation){
-      setLocationStatus("Este dispositivo no ofrece GPS/geolocalización.");
+      setLocationStatus("Este dispositivo o navegador no ofrece GPS/geolocalización.");
       return;
     }
 
@@ -812,6 +904,8 @@ export default function NaviboriMap({
     setLocationStatus("Conectando con tu GPS…");
 
     let firstFix=true;
+    let receivedFix=false;
+    let fallbackRequested=false;
 
     const handlePosition=(position:GeolocationPosition)=>{
       const next={
@@ -822,6 +916,12 @@ export default function NaviboriMap({
       if(!validRouteCoordinate(next)){
         setLocationStatus("El GPS devolvió una ubicación inválida. Intenta nuevamente.");
         return;
+      }
+
+      receivedFix=true;
+      if(gpsBootstrapTimerRef.current!==null){
+        clearTimeout(gpsBootstrapTimerRef.current);
+        gpsBootstrapTimerRef.current=null;
       }
 
       const accuracy=Number.isFinite(position.coords.accuracy)
@@ -932,42 +1032,76 @@ export default function NaviboriMap({
       );
     };
 
-    const handleError=(error:GeolocationPositionError)=>{
-      const message=
-        error.code===error.PERMISSION_DENIED
-          ? "Permiso de ubicación denegado. En iPhone: Ajustes > Privacidad y seguridad > Localización > Safari Websites/NAVIBORI."
-          : error.code===error.POSITION_UNAVAILABLE
-            ? "El dispositivo no pudo determinar tu ubicación. Activa Localización y vuelve a intentar."
-            : "El GPS tardó demasiado en responder. Toca nuevamente el modo de transporte para reintentar.";
-
-      setRouteBusy(null);
-      setLocationStatus(message);
-      stopGpsNavigation();
+    const requestLowAccuracyFallback=()=>{
+      if(fallbackRequested || receivedFix) return;
+      fallbackRequested=true;
+      setLocationStatus("GPS de alta precisión no respondió · probando ubicación aproximada…");
+      navigator.geolocation.getCurrentPosition(
+        handlePosition,
+        (error)=>{
+          if(!receivedFix && error.code===error.PERMISSION_DENIED){
+            setRouteBusy(null);
+            setLocationStatus(geolocationErrorMessage(error));
+            stopGpsNavigation();
+          }
+        },
+        {
+          enableHighAccuracy:false,
+          timeout:10000,
+          maximumAge:60000
+        }
+      );
     };
 
-    navigator.geolocation.getCurrentPosition(
-      (position)=>{
-        handlePosition(position);
+    const handleWatchError=(error:GeolocationPositionError)=>{
+      if(receivedFix) return;
 
-        if(gpsWatchRef.current===null){
-          gpsWatchRef.current=navigator.geolocation.watchPosition(
-            handlePosition,
-            handleError,
-            {
-              enableHighAccuracy:true,
-              timeout:20000,
-              maximumAge:2000
-            }
-          );
-        }
-      },
-      handleError,
+      if(error.code===error.PERMISSION_DENIED){
+        setRouteBusy(null);
+        setLocationStatus(geolocationErrorMessage(error));
+        stopGpsNavigation();
+        return;
+      }
+
+      requestLowAccuracyFallback();
+    };
+
+    gpsWatchRef.current=navigator.geolocation.watchPosition(
+      handlePosition,
+      handleWatchError,
       {
         enableHighAccuracy:true,
         timeout:20000,
+        maximumAge:3000
+      }
+    );
+
+    navigator.geolocation.getCurrentPosition(
+      handlePosition,
+      (error)=>{
+        if(error.code===error.PERMISSION_DENIED){
+          setRouteBusy(null);
+          setLocationStatus(geolocationErrorMessage(error));
+          stopGpsNavigation();
+          return;
+        }
+        requestLowAccuracyFallback();
+      },
+      {
+        enableHighAccuracy:true,
+        timeout:12000,
         maximumAge:0
       }
     );
+
+    gpsBootstrapTimerRef.current=setTimeout(()=>{
+      if(receivedFix) return;
+      setRouteBusy(null);
+      setLocationStatus(
+        "No llegó una posición GPS. Usa “Probar GPS”; si falla, revisa el permiso de Localización del dispositivo."
+      );
+      stopGpsNavigation();
+    },25000);
   }
 
   function clearRoute(){
@@ -1017,7 +1151,11 @@ export default function NaviboriMap({
 
         <div className="cockpit-signal" aria-label="Estado del mapa">
           <span className="cockpit-pulse" aria-hidden="true" />
-          <strong>{gpsActive ? "GPS LIVE" : source==="live" ? "Comercios LIVE" : "Comercios DEMO"}</strong>
+          <strong>
+            {gpsActive
+              ? demoRoute ? "GPS DEMO" : "GPS LIVE"
+              : source==="live" ? "Comercios LIVE" : "Comercios DEMO"}
+          </strong>
           <span>
             {gpsActive
               ? "Seguimiento de posición activo"
@@ -1118,6 +1256,9 @@ export default function NaviboriMap({
           </button>
         ))}
         <button type="button" onClick={()=>locateMe()}>Mi ubicación</button>
+        <button type="button" onClick={testGps} disabled={gpsTestBusy}>
+          {gpsTestBusy ? "Probando GPS…" : "Probar GPS"}
+        </button>
         {gpsActive && (
           <button
             type="button"
