@@ -186,10 +186,16 @@ export default function NaviboriMap({
   );
 
   const canRoute=Boolean(
-    selected?.verifiedLocation &&
-    selected.mapLocation &&
-    selected.mapLocation.verified
+    selected?.mapLocation &&
+    validRouteCoordinate(selected.mapLocation) &&
+    (
+      source==="demo"
+        ? selected.demo
+        : selected.verifiedLocation && selected.mapLocation.verified
+    )
   );
+
+  const demoRoute=Boolean(source==="demo" && selected?.demo && selected?.mapLocation);
 
   const nextCue=useMemo(
     ()=>routeResult ? getNextNavigationCue(routeResult) : null,
@@ -800,10 +806,12 @@ export default function NaviboriMap({
     lastSpokenInstructionRef.current="";
     activeNavigationModeRef.current=routeMode;
     setLastRouteMode(routeMode);
-    setGpsActive(true);
     setFollowGps(true);
     followGpsRef.current=true;
-    setLocationStatus("GPS activo · esperando posición precisa…");
+    setRouteBusy(routeMode);
+    setLocationStatus("Conectando con tu GPS…");
+
+    let firstFix=true;
 
     const handlePosition=(position:GeolocationPosition)=>{
       const next={
@@ -811,10 +819,17 @@ export default function NaviboriMap({
         longitude:position.coords.longitude
       };
 
+      if(!validRouteCoordinate(next)){
+        setLocationStatus("El GPS devolvió una ubicación inválida. Intenta nuevamente.");
+        return;
+      }
+
       const accuracy=Number.isFinite(position.coords.accuracy)
         ? position.coords.accuracy
         : null;
 
+      setGpsActive(true);
+      setRouteBusy(null);
       setUserLocation(next);
       setGpsAccuracy(accuracy);
       showUserLocation(next);
@@ -848,8 +863,39 @@ export default function NaviboriMap({
               : activeMode==="walking"
                 ? 12
                 : 24,
-          duration:350
+          duration:firstFix ? 650 : 350
         });
+      }
+
+      if(firstFix){
+        firstFix=false;
+        setRouteStatus(
+          (demoRoute ? "Ruta DEMO · " : "")+
+          "Ubicación obtenida · calculando ruta…"
+        );
+        void calculateRoute(activeMode,next);
+      }else{
+        const now=Date.now();
+        const currentRoute=routeResultRef.current;
+        const offRoute=
+          currentRoute!==null &&
+          isOffNavigationRoute(next,currentRoute,accuracy);
+
+        if(offRoute && now-lastRouteRefreshAtRef.current>=6000){
+          setRouteStatus("Fuera de ruta · recalculando…");
+          void calculateRoute(activeMode,next,{quiet:true});
+        }else if(
+          shouldRefreshNavigationRoute(
+            lastRouteOriginRef.current,
+            next,
+            lastRouteRefreshAtRef.current,
+            now
+          )
+        ){
+          void calculateRoute(activeMode,next,{
+            quiet:currentRoute!==null
+          });
+        }
       }
 
       if(
@@ -880,30 +926,8 @@ export default function NaviboriMap({
         return;
       }
 
-      const now=Date.now();
-      const currentRoute=routeResultRef.current;
-      const offRoute=
-        currentRoute!==null &&
-        isOffNavigationRoute(next,currentRoute,accuracy);
-
-      if(offRoute && now-lastRouteRefreshAtRef.current>=6000){
-        setRouteStatus("Fuera de ruta · recalculando…");
-        void calculateRoute(activeMode,next,{quiet:true});
-      }else if(
-        shouldRefreshNavigationRoute(
-          lastRouteOriginRef.current,
-          next,
-          lastRouteRefreshAtRef.current,
-          now
-        )
-      ){
-        void calculateRoute(activeMode,next,{
-          quiet:currentRoute!==null
-        });
-      }
-
       setLocationStatus(
-        "GPS activo"+
+        (demoRoute ? "GPS DEMO activo" : "GPS activo")+
         (accuracy!==null ? " · precisión ±"+Math.round(accuracy)+" m" : "")
       );
     };
@@ -911,22 +935,37 @@ export default function NaviboriMap({
     const handleError=(error:GeolocationPositionError)=>{
       const message=
         error.code===error.PERMISSION_DENIED
-          ? "Permiso de ubicación denegado. Actívalo para usar navegación GPS."
+          ? "Permiso de ubicación denegado. En iPhone: Ajustes > Privacidad y seguridad > Localización > Safari Websites/NAVIBORI."
           : error.code===error.POSITION_UNAVAILABLE
-            ? "La ubicación GPS no está disponible en este momento."
-            : "El GPS tardó demasiado en responder.";
+            ? "El dispositivo no pudo determinar tu ubicación. Activa Localización y vuelve a intentar."
+            : "El GPS tardó demasiado en responder. Toca nuevamente el modo de transporte para reintentar.";
 
+      setRouteBusy(null);
       setLocationStatus(message);
       stopGpsNavigation();
     };
 
-    gpsWatchRef.current=navigator.geolocation.watchPosition(
-      handlePosition,
+    navigator.geolocation.getCurrentPosition(
+      (position)=>{
+        handlePosition(position);
+
+        if(gpsWatchRef.current===null){
+          gpsWatchRef.current=navigator.geolocation.watchPosition(
+            handlePosition,
+            handleError,
+            {
+              enableHighAccuracy:true,
+              timeout:20000,
+              maximumAge:2000
+            }
+          );
+        }
+      },
       handleError,
       {
         enableHighAccuracy:true,
-        timeout:15000,
-        maximumAge:3000
+        timeout:20000,
+        maximumAge:0
       }
     );
   }
@@ -1186,7 +1225,11 @@ export default function NaviboriMap({
                 <span className={"commerce-demo-badge "+(selected.demo ? "" : "live")}>
                   {selected.demo ? "DEMO" : "LIVE"}
                 </span>
-                {gpsActive && <span className="gps-live-badge">GPS LIVE</span>}
+                {gpsActive && (
+                  <span className="gps-live-badge">
+                    {demoRoute ? "GPS DEMO" : "GPS LIVE"}
+                  </span>
+                )}
               </div>
 
               <strong>{selected.name}</strong>
@@ -1360,16 +1403,23 @@ export default function NaviboriMap({
                         Limpiar ruta
                       </button>
                     )}
-                    <a
-                      href={directionUrl(routeResult?.mode ?? lastRouteMode)}
-                      target="_blank"
-                      rel="noreferrer"
-                    >
-                      Abrir en Google Maps
-                    </a>
+                    {!demoRoute && (
+                      <a
+                        href={directionUrl(routeResult?.mode ?? lastRouteMode)}
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        Abrir en Google Maps
+                      </a>
+                    )}
                     <Link href={"/comercios/"+selected.slug}>Ver comercio</Link>
                   </div>
 
+                  {demoRoute && (
+                    <div className="navibori-demo-route-warning" role="status">
+                      Ruta de prueba DEMO · el destino es sintético y no representa un comercio real.
+                    </div>
+                  )}
                   <small>
                     NAVIBORI usa el GPS del dispositivo mientras esta navegación está activa.
                     El pin “Destino” identifica la entrada verificada del comercio, “Ver ruta completa”
