@@ -44,6 +44,12 @@ Customer-facing slot availability and the merchant daily operations board use th
 
 A submitted request still requires merchant confirmation. Requests in new, accepted, preparing and ready states continue consuming slot capacity until they are completed, cancelled or marked no-show. Customer status links expose only operational status/timing data after token verification; they do not expose stored contact details or private notes. NAVIBORI does not currently process payment.
 
+## GPS camera follow and recenter
+- During active GPS navigation, NAVIBORI follows the customer position by default.
+- Direct pointer interaction with the map pauses only the automatic camera follow; GPS tracking, route updates and off-route recalculation continue running.
+- A persistent “Recentrar en mi GPS” control returns the camera to the current customer position without restarting navigation.
+- The customer may also explicitly toggle between followed and free-map views from the map toolbar.
+
 ## Bicycle and scooter GPS navigation
 - Customer routing supports four NAVIBORI modes: driving, walking, cycling and scooter.
 - Driving uses the FOSSGIS/OSRM car graph; walking uses the foot graph; cycling uses the bike graph.

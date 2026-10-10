@@ -98,6 +98,7 @@ export default function NaviboriMap({
   const lastRouteRefreshAtRef=useRef(0);
   const routeResultRef=useRef<InMapRouteResult|null>(null);
   const followGpsRef=useRef(true);
+  const gpsActiveRef=useRef(false);
   const voiceEnabledRef=useRef(false);
   const lastSpokenInstructionRef=useRef("");
 
@@ -190,6 +191,10 @@ export default function NaviboriMap({
   },[followGps]);
 
   useEffect(()=>{
+    gpsActiveRef.current=gpsActive;
+  },[gpsActive]);
+
+  useEffect(()=>{
     voiceEnabledRef.current=voiceEnabled;
   },[voiceEnabled]);
 
@@ -269,8 +274,20 @@ export default function NaviboriMap({
       map.addControl(new maplibregl.GlobeControl(),"top-right");
     }
 
+    const handleManualMapInteraction=()=>{
+      if(!gpsActiveRef.current || !followGpsRef.current) return;
+      followGpsRef.current=false;
+      setFollowGps(false);
+      setLocationStatus(
+        "Vista libre · el GPS sigue activo y la ruta continúa recalculándose."
+      );
+    };
+
+    map.getCanvas().addEventListener("pointerdown",handleManualMapInteraction);
+
     mapRef.current=map;
     return ()=>{
+      map.getCanvas().removeEventListener("pointerdown",handleManualMapInteraction);
       routeAbortRef.current?.abort();
       if("speechSynthesis" in window){
         window.speechSynthesis.cancel();
@@ -505,6 +522,31 @@ export default function NaviboriMap({
     userMarkerRef.current=new maplibregl.Marker({element})
       .setLngLat([next.longitude,next.latitude])
       .addTo(map);
+  }
+
+  function recenterGpsCamera(){
+    if(!userLocation) return;
+
+    followGpsRef.current=true;
+    setFollowGps(true);
+
+    const activeMode=activeNavigationModeRef.current;
+    mapRef.current?.easeTo({
+      center:[userLocation.longitude,userLocation.latitude],
+      zoom:Math.max(mapRef.current?.getZoom() ?? 16,16),
+      pitch:
+        activeMode==="driving"
+          ? 35
+          : activeMode==="walking"
+            ? 12
+            : 24,
+      duration:450
+    });
+
+    setLocationStatus(
+      "Seguimiento visual GPS reactivado."+
+      (gpsAccuracy!==null ? " Precisión ±"+Math.round(gpsAccuracy)+" m." : "")
+    );
   }
 
   function locateMe(afterLocate?:(coordinate:RouteCoordinate)=>void){
@@ -954,25 +996,34 @@ export default function NaviboriMap({
             type="button"
             className={followGps ? "selected" : ""}
             onClick={()=>{
-              const next=!followGps;
-              followGpsRef.current=next;
-              setFollowGps(next);
-              if(next && userLocation){
-                mapRef.current?.easeTo({
-                  center:[userLocation.longitude,userLocation.latitude],
-                  zoom:Math.max(mapRef.current?.getZoom() ?? 16,16),
-                  duration:350
-                });
+              if(followGps){
+                followGpsRef.current=false;
+                setFollowGps(false);
+                setLocationStatus(
+                  "Vista libre · el GPS sigue activo y la ruta continúa recalculándose."
+                );
+              }else{
+                recenterGpsCamera();
               }
             }}
           >
-            {followGps ? "Siguiendo GPS" : "Seguir GPS"}
+            {followGps ? "Siguiendo GPS" : "Recentrar en mi GPS"}
           </button>
         )}
       </div>
 
       <div className="map-stage">
         <div ref={mapNode} className="map-canvas" />
+
+        {gpsActive && !followGps && userLocation && (
+          <button
+            type="button"
+            className="gps-recenter-floating"
+            onClick={recenterGpsCamera}
+          >
+            ◎ Recentrar en mi GPS
+          </button>
+        )}
 
         {userLocation && nearbyBusinesses.length>0 && !gpsActive && (
           <aside className="nearby-businesses-panel" aria-label="Comercios cerca de mí">
@@ -1174,7 +1225,8 @@ export default function NaviboriMap({
                   <small>
                     NAVIBORI usa el GPS del dispositivo mientras esta navegación está activa.
                     El marcador se mueve contigo, muestra el próximo giro y recalcula si avanzas
-                    o te sales de la ruta. Bicicleta y scooter usan el perfil de micromovilidad
+                    o te sales de la ruta. Si exploras el mapa manualmente, el seguimiento visual
+                    se pausa sin detener el GPS; “Recentrar en mi GPS” vuelve a seguir tu posición. Bicicleta y scooter usan el perfil de micromovilidad
                     basado en rutas de bicicleta; verifica señalización y condiciones locales.
                     Tu ubicación no se guarda en Supabase.
                   </small>
