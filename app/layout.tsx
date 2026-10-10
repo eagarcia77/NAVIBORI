@@ -9,7 +9,12 @@ import SpecialAlertsControl from "@/components/commerce/special-alerts-control";
 export const metadata: Metadata = {
   title: "NAVIBORI XR",
   description: "Puerto Rico Spatial Experience Platform — Juana Díaz Pilot",
-  manifest: "/manifest.webmanifest"
+  manifest: "/manifest.webmanifest",
+  appleWebApp: {
+    capable: true,
+    title: "NAVIBORI",
+    statusBarStyle: "default"
+  }
 };
 
 export const viewport: Viewport = {
