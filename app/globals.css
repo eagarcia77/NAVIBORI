@@ -972,3 +972,13 @@ h1 span { color: var(--teal); }
 .map-search-route-actions{display:flex;gap:4px}.map-search-route-actions button{width:34px;height:34px;border:1px solid var(--line);border-radius:9px;background:white;cursor:pointer}.map-search-route-actions button:hover{border-color:var(--ocean);background:#f2f7f8}
 .map-search-empty{position:absolute;left:0;top:48px;z-index:20;width:min(560px,100%);padding:10px 12px;border:1px solid var(--line);border-radius:12px;background:white;box-shadow:0 16px 36px rgba(22,38,46,.12);font-size:.66rem;color:var(--muted)}
 @media(max-width:760px){.map-search-row{margin-inline:0}.map-commerce-search,.map-search-results,.map-search-empty{width:100%}.map-search-results{max-height:42vh}}
+
+
+/* Commerce review verified exterior location picker */
+.review-location-picker{display:grid;gap:8px;margin:12px 0;padding:10px;border:1px solid var(--line);border-radius:12px;background:#fbfdfe}
+.review-location-picker-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.review-location-picker-head>div{display:grid;gap:3px}.review-location-picker-head span{font-size:.58rem;color:var(--muted);font-weight:900;text-transform:uppercase;letter-spacing:.06em}.review-location-picker-head strong{font-size:.8rem}
+.review-location-picker-head button{min-height:38px;padding:0 11px;border:1px solid var(--ocean);border-radius:9px;background:white;color:var(--ocean);font-size:.68rem;font-weight:850}
+.review-location-picker-map{height:280px;border:1px solid var(--line);border-radius:11px;overflow:hidden;background:#eef3f5}
+.review-location-picker>small{color:var(--muted);font-size:.63rem;line-height:1.4}
+@media(max-width:620px){.review-location-picker-map{height:240px}.review-location-picker-head button{width:100%}}
