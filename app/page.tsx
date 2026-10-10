@@ -59,7 +59,11 @@ export default async function Home() {
         </div>
         <div>
           <strong>Pilot 001</strong>
-          <span>Plano interior pendiente</span>
+          <span>
+            {usingLive
+              ? "Comercios LIVE disponibles"
+              : "Modo DEMO · GPS habilitado solo para prueba"}
+          </span>
         </div>
         <div>
           <strong>XR</strong>
