@@ -1,6 +1,8 @@
 import {describe,expect,it} from "vitest";
 import {
   buildOsrmRouteUrl,
+  buildValhallaRouteRequest,
+  valhallaCosting,
   isPuertoRicoCoordinate,
   normalizeOsrmRoute,
   routingProviderBase,
@@ -20,6 +22,30 @@ describe("in-map commerce routing",()=>{
     expect(routingProviderBase("walking")).toContain("routed-foot");
     expect(routingProviderBase("cycling")).toContain("routed-bike");
     expect(routingProviderBase("scooter")).toContain("routed-bike");
+  });
+
+  it("maps all customer modes to Valhalla costing profiles",()=>{
+    expect(valhallaCosting("driving")).toBe("auto");
+    expect(valhallaCosting("walking")).toBe("pedestrian");
+    expect(valhallaCosting("cycling")).toBe("bicycle");
+    expect(valhallaCosting("scooter")).toBe("motor_scooter");
+
+    expect(
+      buildValhallaRouteRequest(
+        {latitude:18.01,longitude:-66.61},
+        {latitude:18.05,longitude:-66.50},
+        "scooter"
+      )
+    ).toMatchObject({
+      costing:"motor_scooter",
+      format:"osrm",
+      shape_format:"geojson",
+      language:"es-ES",
+      locations:[
+        {lat:18.01,lon:-66.61},
+        {lat:18.05,lon:-66.50}
+      ]
+    });
   });
 
   it("labels all customer navigation modes",()=>{
@@ -70,6 +96,26 @@ describe("in-map commerce routing",()=>{
     expect(route?.distanceMeters).toBe(3218.6);
     expect(route?.durationSeconds).toBe(455);
     expect(route?.geometry.coordinates).toHaveLength(3);
+    expect(route?.provider).toBe("OSRM / OpenStreetMap");
+  });
+
+  it("can identify a Valhalla fallback route",()=>{
+    const route=normalizeOsrmRoute({
+      code:"Ok",
+      routes:[{
+        distance:1200,
+        duration:240,
+        geometry:{
+          type:"LineString",
+          coordinates:[
+            [-66.61,18.01],
+            [-66.50,18.05]
+          ]
+        }
+      }]
+    },"cycling","Valhalla / OpenStreetMap");
+
+    expect(route?.provider).toBe("Valhalla / OpenStreetMap");
   });
 
   it("normalizes turn-by-turn steps and selects the next maneuver",()=>{
