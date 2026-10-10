@@ -44,6 +44,12 @@ Customer-facing slot availability and the merchant daily operations board use th
 
 A submitted request still requires merchant confirmation. Requests in new, accepted, preparing and ready states continue consuming slot capacity until they are completed, cancelled or marked no-show. Customer status links expose only operational status/timing data after token verification; they do not expose stored contact details or private notes. NAVIBORI does not currently process payment.
 
+## Route step directions
+- Active routes expose an expandable “Indicaciones de la ruta” panel using the same OSRM maneuver steps already returned for turn-by-turn guidance.
+- The panel shows up to twelve upcoming route steps with Spanish instruction text, segment distance and street/road name when available.
+- Opening or closing the directions panel does not request another route and does not affect GPS tracking, rerouting or arrival detection.
+- The same feature works across driving, walking, cycling and scooter modes.
+
 ## Route overview and destination clarity
 - The selected commerce destination is visually emphasized on the map and labeled “Destino”.
 - The destination marker represents the verified public entrance used by customer routing.
