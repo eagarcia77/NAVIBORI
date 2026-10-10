@@ -44,6 +44,14 @@ Customer-facing slot availability and the merchant daily operations board use th
 
 A submitted request still requires merchant confirmation. Requests in new, accepted, preparing and ready states continue consuming slot capacity until they are completed, cancelled or marked no-show. Customer status links expose only operational status/timing data after token verification; they do not expose stored contact details or private notes. NAVIBORI does not currently process payment.
 
+## Bicycle and scooter GPS navigation
+- Customer routing supports four NAVIBORI modes: driving, walking, cycling and scooter.
+- Driving uses the FOSSGIS/OSRM car graph; walking uses the foot graph; cycling uses the bike graph.
+- Scooter is a NAVIBORI micromobility mode backed by the OSRM bike graph because the public routing service does not expose a scooter-specific graph.
+- All four modes retain the same browser GPS tracking, route drawing, turn-by-turn instructions, off-route recalculation and arrival detection.
+- External Google Maps fallback maps cycling and scooter to bicycling mode; NAVIBORI remains the primary in-app navigation surface.
+- Micromobility routing is route guidance, not a statement that scooter or bicycle operation is permitted on every segment; customers must follow local signs, access rules and conditions.
+
 ## Profile-to-GPS navigation
 - Public business profiles and the commerce directory expose separate driving and walking actions for verified LIVE locations.
 - Those actions open the NAVIBORI map with `business=<slug>` and `route=driving|walking`.
