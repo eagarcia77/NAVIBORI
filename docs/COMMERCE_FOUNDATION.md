@@ -44,6 +44,12 @@ Customer-facing slot availability and the merchant daily operations board use th
 
 A submitted request still requires merchant confirmation. Requests in new, accepted, preparing and ready states continue consuming slot capacity until they are completed, cancelled or marked no-show. Customer status links expose only operational status/timing data after token verification; they do not expose stored contact details or private notes. NAVIBORI does not currently process payment.
 
+## Map business search
+- Customers can search mapped commerce by business name, category or public address.
+- Search normalizes case and diacritics so terms such as “Diaz” and “Díaz” match consistently.
+- Search results can focus a business on the map or start driving/walking GPS navigation directly for verified LIVE destinations.
+- In LIVE mode, the map now applies defense-in-depth filtering: coordinates alone are insufficient; the business location and map destination must both be verified before the business can appear as a navigable map destination.
+
 ## Nearby commerce discovery
 - The map does not request customer location automatically; the customer explicitly uses “Mi ubicación”.
 - Once a location is available, mapped businesses are ranked by straight-line proximity for discovery only.
