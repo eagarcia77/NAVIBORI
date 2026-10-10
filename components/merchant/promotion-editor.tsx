@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { isPromotionActive } from "@/lib/commerce/catalog";
+import { createClient } from "@/lib/supabase/client";
 import type { CommercePromotion } from "@/lib/commerce/types";
 
 export default function PromotionEditor(){
@@ -14,6 +15,8 @@ export default function PromotionEditor(){
     active:true
   });
   const [saved,setSaved]=useState(false);
+  const [pushBusy,setPushBusy]=useState(false);
+  const [pushStatus,setPushStatus]=useState("");
 
   useEffect(()=>{
     try{
@@ -31,6 +34,51 @@ export default function PromotionEditor(){
     localStorage.setItem("navibori:merchant-promotion",JSON.stringify(promotion));
     window.dispatchEvent(new Event("navibori:merchant-promotion-updated"));
     setSaved(true);
+    setPushStatus("");
+  }
+
+  async function sendSpecialNow(){
+    const businessId=localStorage.getItem("navibori:merchant-business-id");
+    if(!businessId){
+      setPushStatus("Sincroniza primero el comercio con Supabase.");
+      return;
+    }
+
+    setPushBusy(true);
+    setPushStatus("Enviando especial…");
+
+    try{
+      const supabase=createClient();
+      const {data,error}=await supabase.functions.invoke(
+        "send-promotion-push",
+        {body:{businessId}}
+      );
+
+      if(error){
+        throw error;
+      }
+
+      if(data?.duplicate){
+        setPushStatus("Este especial ya fue enviado a los suscriptores.");
+      }else{
+        const sent=Number(data?.sentCount ?? 0);
+        const failed=Number(data?.failedCount ?? 0);
+        setPushStatus(
+          sent>0
+            ? "Especial enviado a "+sent+" dispositivo(s)."+
+              (failed>0 ? " "+failed+" envío(s) no pudieron completarse." : "")
+            : "No hay dispositivos suscritos todavía."
+        );
+      }
+    }catch(error){
+      setPushStatus(
+        error instanceof Error
+          ? error.message
+          : "No se pudo enviar el especial."
+      );
+    }finally{
+      setPushBusy(false);
+    }
   }
 
   const activeNow=isPromotionActive(promotion);
@@ -94,8 +142,21 @@ export default function PromotionEditor(){
 
       <div className="merchant-actions">
         <button type="button" onClick={save}>Guardar promoción</button>
+        <button
+          type="button"
+          onClick={sendSpecialNow}
+          disabled={pushBusy || !activeNow || !promotion.title.trim()}
+        >
+          {pushBusy ? "Enviando…" : "🔔 Enviar especial ahora"}
+        </button>
         {saved && <span role="status">Promoción guardada.</span>}
+        {pushStatus && <span role="status">{pushStatus}</span>}
       </div>
+
+      <small>
+        Las promociones activas con fecha/hora de inicio se revisan automáticamente cada 10 minutos.
+        Cada promoción se envía una sola vez a usuarios que hayan activado “Recibir especiales”.
+      </small>
     </section>
   );
 }

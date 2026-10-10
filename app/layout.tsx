@@ -4,11 +4,17 @@ import "maplibre-gl/dist/maplibre-gl.css";
 import "./globals.css";
 import PeripheralAdapter from "@/components/system/peripheral-adapter";
 import GamepadFocusController from "@/components/system/gamepad-focus-controller";
+import SpecialAlertsControl from "@/components/commerce/special-alerts-control";
 
 export const metadata: Metadata = {
   title: "NAVIBORI XR",
   description: "Puerto Rico Spatial Experience Platform — Juana Díaz Pilot",
-  manifest: "/manifest.webmanifest"
+  manifest: "/manifest.webmanifest",
+  appleWebApp: {
+    capable: true,
+    title: "NAVIBORI",
+    statusBarStyle: "default"
+  }
 };
 
 export const viewport: Viewport = {
@@ -20,7 +26,12 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
   return (
     <html lang="es-PR">
-      <body><PeripheralAdapter /><GamepadFocusController />{children}</body>
+      <body>
+        <PeripheralAdapter />
+        <GamepadFocusController />
+        {children}
+        <SpecialAlertsControl />
+      </body>
     </html>
   );
 }

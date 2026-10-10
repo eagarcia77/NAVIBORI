@@ -14,5 +14,19 @@
       "type": "image/webp",
       "purpose": "any"
     }
+  ],
+  "id": "/",
+  "scope": "/",
+  "shortcuts": [
+    {
+      "name": "Comercios",
+      "short_name": "Comercios",
+      "url": "/comercios"
+    },
+    {
+      "name": "Mapa",
+      "short_name": "Mapa",
+      "url": "/"
+    }
   ]
 }
