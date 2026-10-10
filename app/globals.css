@@ -989,3 +989,9 @@ h1 span { color: var(--teal); }
 .map-search-route-actions,.nearby-business-route-buttons{flex-wrap:wrap}
 @media(max-width:760px){.business-route-mode-actions{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:420px){.business-route-mode-actions{grid-template-columns:1fr}}
+
+
+/* NAVIBORI GPS recenter control */
+.gps-recenter-floating{position:absolute;right:16px;bottom:16px;z-index:8;min-height:42px;padding:0 13px;border:1px solid rgba(0,95,143,.28);border-radius:999px;background:rgba(255,255,255,.96);color:var(--ocean);box-shadow:0 8px 22px rgba(22,38,46,.16);font-size:.7rem;font-weight:900;backdrop-filter:blur(10px)}
+.gps-recenter-floating:hover{border-color:var(--ocean);background:white}
+@media(max-width:620px){.gps-recenter-floating{right:10px;bottom:190px}}
