@@ -4,6 +4,7 @@ import NaviboriBrand from "@/components/brand/navibori-brand";
 import NaviGuide from "@/components/brand/navi-guide";
 import BusinessMetricBeacon from "@/components/commerce/business-metric-beacon";
 import BusinessRequestForm from "@/components/commerce/business-request-form";
+import { buildCommerceMapLink } from "@/lib/commerce/deep-link";
 import { getCommerceBySlug, getCommerceSlugs } from "@/lib/commerce/lookup";
 import { getPublicCommerceBySlug } from "@/lib/commerce/public-data";
 import { getCommerceOpenState } from "@/lib/commerce/hours";
@@ -160,12 +161,22 @@ export default async function BusinessProfilePage({
 
         <aside className="business-profile-side">
           <h2>Acciones</h2>
-          <Link href={"/?business="+business.slug}>Ver en mapa</Link>
+          <Link href={buildCommerceMapLink(business.slug)}>Ver en mapa</Link>
 
           {business.verifiedLocation ? (
-            <Link href={"/?business="+business.slug}>Cómo llegar</Link>
+            <>
+              <Link href={buildCommerceMapLink(business.slug,"driving")}>
+                🚗 Ir en carro
+              </Link>
+              <Link href={buildCommerceMapLink(business.slug,"walking")}>
+                🚶 Ir caminando
+              </Link>
+            </>
           ) : (
-            <button type="button" disabled>Cómo llegar</button>
+            <>
+              <button type="button" disabled>🚗 Ir en carro</button>
+              <button type="button" disabled>🚶 Ir caminando</button>
+            </>
           )}
 
           {business.phone ? (
