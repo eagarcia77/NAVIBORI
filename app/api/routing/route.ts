@@ -1,6 +1,7 @@
 import {NextResponse} from "next/server";
 import {
   buildOsrmRouteUrl,
+  buildValhallaRouteRequest,
   isPuertoRicoCoordinate,
   normalizeOsrmRoute,
   type InMapRouteMode,
@@ -110,19 +111,22 @@ export async function POST(request:Request){
     );
   }
 
-  const url=buildOsrmRouteUrl(origin,destination,payload.mode);
-
-  try{
-    const response=await withRoutingThrottle(async()=>{
+  async function fetchJson(
+    url:string,
+    init:RequestInit,
+    timeoutMs:number
+  ){
+    return withRoutingThrottle(async()=>{
       const controller=new AbortController();
-      const timeout=setTimeout(()=>controller.abort(),12000);
+      const timeout=setTimeout(()=>controller.abort(),timeoutMs);
 
       try{
         return await fetch(url,{
-          method:"GET",
+          ...init,
           headers:{
             "Accept":"application/json",
-            "User-Agent":"NAVIBORI/0.1 (+https://navibori.onrender.com)"
+            "User-Agent":"NAVIBORI/0.1 (+https://navibori.onrender.com)",
+            ...(init.headers ?? {})
           },
           cache:"no-store",
           signal:controller.signal
@@ -131,34 +135,80 @@ export async function POST(request:Request){
         clearTimeout(timeout);
       }
     });
+  }
 
-    if(!response.ok){
+  const primaryUrl=buildOsrmRouteUrl(origin,destination,payload.mode);
+
+  try{
+    try{
+      const response=await fetchJson(
+        primaryUrl,
+        {method:"GET"},
+        10000
+      );
+
+      if(response.ok){
+        const data=await response.json() as OsrmRouteResponse;
+        const route=normalizeOsrmRoute(data,payload.mode);
+
+        if(route){
+          return NextResponse.json(route,{
+            headers:{
+              "Cache-Control":"no-store, max-age=0",
+              "X-Robots-Tag":"noindex",
+              "X-NAVIBORI-Routing-Provider":"osrm"
+            }
+          });
+        }
+      }
+    }catch{
+      // Fall through to Valhalla.
+    }
+
+    const fallbackResponse=await fetchJson(
+      "https://valhalla1.openstreetmap.de/route",
+      {
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify(
+          buildValhallaRouteRequest(origin,destination,payload.mode)
+        )
+      },
+      12000
+    );
+
+    if(!fallbackResponse.ok){
       return NextResponse.json(
-        {error:"El servicio de rutas no respondió correctamente."},
+        {error:"Los servicios de rutas no respondieron correctamente."},
         {status:502,headers:{"Cache-Control":"no-store"}}
       );
     }
 
-    const data=await response.json() as OsrmRouteResponse;
-    const route=normalizeOsrmRoute(data,payload.mode);
+    const fallbackData=await fallbackResponse.json() as OsrmRouteResponse;
+    const fallbackRoute=normalizeOsrmRoute(
+      fallbackData,
+      payload.mode,
+      "Valhalla / OpenStreetMap"
+    );
 
-    if(!route){
+    if(!fallbackRoute){
       return NextResponse.json(
-        {error:data.message || "No se encontró una ruta disponible."},
+        {error:fallbackData.message || "No se encontró una ruta disponible."},
         {status:404,headers:{"Cache-Control":"no-store"}}
       );
     }
 
-    return NextResponse.json(route,{
+    return NextResponse.json(fallbackRoute,{
       headers:{
         "Cache-Control":"no-store, max-age=0",
-        "X-Robots-Tag":"noindex"
+        "X-Robots-Tag":"noindex",
+        "X-NAVIBORI-Routing-Provider":"valhalla"
       }
     });
   }catch(error){
     const message=
       error instanceof Error && error.name==="AbortError"
-        ? "El cálculo de la ruta excedió el tiempo de espera."
+        ? "Los servicios de rutas excedieron el tiempo de espera."
         : "No se pudo calcular la ruta en este momento.";
 
     return NextResponse.json(
