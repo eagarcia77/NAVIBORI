@@ -171,11 +171,19 @@ export default async function BusinessProfilePage({
               <Link href={buildCommerceMapLink(business.slug,"walking")}>
                 🚶 Ir caminando
               </Link>
+              <Link href={buildCommerceMapLink(business.slug,"cycling")}>
+                🚲 Ir en bicicleta
+              </Link>
+              <Link href={buildCommerceMapLink(business.slug,"scooter")}>
+                🛴 Ir en scooter
+              </Link>
             </>
           ) : (
             <>
               <button type="button" disabled>🚗 Ir en carro</button>
               <button type="button" disabled>🚶 Ir caminando</button>
+              <button type="button" disabled>🚲 Ir en bicicleta</button>
+              <button type="button" disabled>🛴 Ir en scooter</button>
             </>
           )}
 

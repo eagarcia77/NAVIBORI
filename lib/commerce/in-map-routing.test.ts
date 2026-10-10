@@ -10,13 +10,23 @@ import {
   getNextNavigationCue,
   distanceToRouteMeters,
   isOffNavigationRoute,
-  hasArrivedAtDestination
+  hasArrivedAtDestination,
+  routeModeLabel
 } from "./in-map-routing";
 
 describe("in-map commerce routing",()=>{
-  it("selects car and foot routing services",()=>{
+  it("selects car, foot and bike routing services",()=>{
     expect(routingProviderBase("driving")).toContain("routed-car");
     expect(routingProviderBase("walking")).toContain("routed-foot");
+    expect(routingProviderBase("cycling")).toContain("routed-bike");
+    expect(routingProviderBase("scooter")).toContain("routed-bike");
+  });
+
+  it("labels all customer navigation modes",()=>{
+    expect(routeModeLabel("driving")).toBe("En carro");
+    expect(routeModeLabel("walking")).toBe("Caminando");
+    expect(routeModeLabel("cycling")).toBe("En bicicleta");
+    expect(routeModeLabel("scooter")).toBe("En scooter");
   });
 
   it("builds an OSRM GeoJSON route URL with lon-lat coordinate order",()=>{

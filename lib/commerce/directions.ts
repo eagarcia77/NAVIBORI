@@ -1,4 +1,4 @@
-export type DirectionsMode="driving"|"walking";
+export type DirectionsMode="driving"|"walking"|"cycling"|"scooter";
 
 export interface RouteCoordinate{
   latitude:number;
@@ -13,7 +13,10 @@ export function buildGoogleDirectionsUrl(
   const params=new URLSearchParams({
     api:"1",
     destination:destination.latitude+","+destination.longitude,
-    travelmode:mode,
+    travelmode:
+      mode==="cycling" || mode==="scooter"
+        ? "bicycling"
+        : mode,
     dir_action:"navigate"
   });
 

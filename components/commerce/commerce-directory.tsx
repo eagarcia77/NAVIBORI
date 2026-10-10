@@ -238,11 +238,27 @@ export default function CommerceDirectory({
                   >
                     🚶 Ir caminando
                   </Link>
+                  <Link
+                    className="commerce-profile-link"
+                    href={buildCommerceMapLink(selected.slug,"cycling")}
+                    onClick={()=>record("route_request",selected.id)}
+                  >
+                    🚲 Ir en bicicleta
+                  </Link>
+                  <Link
+                    className="commerce-profile-link"
+                    href={buildCommerceMapLink(selected.slug,"scooter")}
+                    onClick={()=>record("route_request",selected.id)}
+                  >
+                    🛴 Ir en scooter
+                  </Link>
                 </>
               ) : (
                 <>
                   <button type="button" disabled>🚗 Ir en carro</button>
                   <button type="button" disabled>🚶 Ir caminando</button>
+                  <button type="button" disabled>🚲 Ir en bicicleta</button>
+                  <button type="button" disabled>🛴 Ir en scooter</button>
                 </>
               )}
 

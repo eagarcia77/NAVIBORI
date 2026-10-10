@@ -982,3 +982,10 @@ h1 span { color: var(--teal); }
 .review-location-picker-map{height:280px;border:1px solid var(--line);border-radius:11px;overflow:hidden;background:#eef3f5}
 .review-location-picker>small{color:var(--muted);font-size:.63rem;line-height:1.4}
 @media(max-width:620px){.review-location-picker-map{height:240px}.review-location-picker-head button{width:100%}}
+
+
+/* NAVIBORI four-mode routing */
+.business-route-mode-actions{grid-template-columns:repeat(4,minmax(0,1fr))}
+.map-search-route-actions,.nearby-business-route-buttons{flex-wrap:wrap}
+@media(max-width:760px){.business-route-mode-actions{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:420px){.business-route-mode-actions{grid-template-columns:1fr}}

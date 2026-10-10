@@ -7,11 +7,15 @@ describe("Business deep links",()=>{
       .toBe("https://navibori.onrender.com/comercios/cafe-demo");
   });
 
-  it("builds map links with driving and walking modes",()=>{
+  it("builds map links with supported navigation modes",()=>{
     expect(buildCommerceMapLink("cafe-demo","driving"))
       .toBe("/?business=cafe-demo&route=driving");
     expect(buildCommerceMapLink("cafe-demo","walking"))
       .toBe("/?business=cafe-demo&route=walking");
+    expect(buildCommerceMapLink("cafe-demo","cycling"))
+      .toBe("/?business=cafe-demo&route=cycling");
+    expect(buildCommerceMapLink("cafe-demo","scooter"))
+      .toBe("/?business=cafe-demo&route=scooter");
     expect(buildCommerceMapLink("cafe-demo"))
       .toBe("/?business=cafe-demo");
   });

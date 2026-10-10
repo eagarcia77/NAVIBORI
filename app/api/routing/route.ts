@@ -16,7 +16,12 @@ type RoutingQueueGlobal=typeof globalThis & {
 };
 
 function validMode(value:unknown):value is InMapRouteMode{
-  return value==="driving" || value==="walking";
+  return (
+    value==="driving" ||
+    value==="walking" ||
+    value==="cycling" ||
+    value==="scooter"
+  );
 }
 
 function coordinateFrom(value:unknown):RoutingCoordinate|null{
