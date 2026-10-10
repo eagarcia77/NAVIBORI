@@ -1025,3 +1025,22 @@ h1 span { color: var(--teal); }
 .special-alert-control.denied{border-color:rgba(160,72,72,.25)}.special-alert-control.denied>button{opacity:.5}
 .special-alert-control>small{grid-column:1/-1;color:var(--muted);font-size:.56rem;line-height:1.35}
 @media(max-width:700px){.special-alert-control{top:auto;right:10px;bottom:10px;width:min(310px,calc(100vw - 20px))}.special-alert-control.enabled{width:min(270px,calc(100vw - 20px))}}
+
+
+/* NAVIBORI simplified four-mode commerce navigation */
+.business-route-address-row{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
+.business-route-address-row>span{flex:1;color:var(--muted);font-size:.76rem;line-height:1.4}
+.business-route-address-row>button{flex:0 0 auto;min-height:32px;padding:0 9px;border:1px solid var(--line);border-radius:8px;background:white;color:var(--ocean);font-size:.62rem;font-weight:900}
+.business-route-launch{display:grid;gap:8px;padding:9px;border:1px solid rgba(0,95,143,.14);border-radius:12px;background:#f8fbfd}
+.business-route-launch>div:first-child{display:grid;gap:2px}
+.business-route-launch>div:first-child>span{font-size:.74rem;font-weight:900;color:var(--ink)}
+.business-route-launch>div:first-child>small{font-size:.58rem;color:var(--muted)}
+.business-route-mode-actions{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
+.business-route-mode-actions>button{display:grid;place-items:center;gap:2px;min-height:54px;padding:6px;border:1px solid var(--line);border-radius:10px;background:white;color:var(--ink)}
+.business-route-mode-actions>button>span{font-size:1.1rem;line-height:1}
+.business-route-mode-actions>button>strong{font-size:.62rem}
+.business-route-mode-actions>button.active{border-color:var(--ocean);background:#eef7fb;color:var(--ocean)}
+.map-search-route-actions button,.nearby-business-route-buttons button{display:grid;place-items:center;gap:1px;min-width:46px;min-height:38px;padding:4px 6px}
+.map-search-route-actions button small,.nearby-business-route-buttons button small{font-size:.48rem;font-weight:800;color:inherit}
+@media(max-width:760px){.business-route-mode-actions{grid-template-columns:repeat(2,minmax(0,1fr))}.business-route-mode-actions>button{min-height:48px}}
+@media(max-width:460px){.business-route-address-row{display:grid}.business-route-address-row>button{justify-self:start}.map-search-route-actions button small,.nearby-business-route-buttons button small{display:none}}
