@@ -844,20 +844,49 @@ export default function NaviboriMap({
         </div>
 
         {searchResults.length>0 && (
-          <div className="map-search-results" role="listbox" aria-label="Resultados de comercios">
+          <div className="map-search-results" aria-label="Resultados de comercios">
             {searchResults.map((business)=>(
-              <button
-                type="button"
+              <article
                 key={business.id}
                 className={business.slug===selectedSlug ? "selected" : ""}
-                onClick={()=>{
-                  focusBusiness(business);
-                  setSearchTerm("");
-                }}
               >
-                <span>{business.name}</span>
-                <small>{business.mapLocation?.address ?? business.locationLabel}</small>
-              </button>
+                <button
+                  type="button"
+                  className="map-search-result-main"
+                  onClick={()=>{
+                    focusBusiness(business);
+                    setSearchTerm("");
+                  }}
+                >
+                  <span>{business.name}</span>
+                  <small>{business.mapLocation?.address ?? business.locationLabel}</small>
+                </button>
+
+                {business.verifiedLocation && business.mapLocation?.verified && (
+                  <div className="map-search-route-actions">
+                    <button
+                      type="button"
+                      onClick={()=>{
+                        setSearchTerm("");
+                        navigateToNearbyBusiness(business,"driving");
+                      }}
+                      aria-label={"Navegar en carro a "+business.name}
+                    >
+                      🚗
+                    </button>
+                    <button
+                      type="button"
+                      onClick={()=>{
+                        setSearchTerm("");
+                        navigateToNearbyBusiness(business,"walking");
+                      }}
+                      aria-label={"Navegar caminando a "+business.name}
+                    >
+                      🚶
+                    </button>
+                  </div>
+                )}
+              </article>
             ))}
           </div>
         )}
