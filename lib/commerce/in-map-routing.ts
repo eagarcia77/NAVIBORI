@@ -1,4 +1,4 @@
-export type InMapRouteMode="driving"|"walking";
+export type InMapRouteMode="driving"|"walking"|"cycling"|"scooter";
 
 export interface RoutingCoordinate{
   latitude:number;
@@ -78,9 +78,22 @@ export function isPuertoRicoCoordinate(value:RoutingCoordinate){
 }
 
 export function routingProviderBase(mode:InMapRouteMode){
-  return mode==="walking"
-    ? "https://routing.openstreetmap.de/routed-foot"
-    : "https://routing.openstreetmap.de/routed-car";
+  if(mode==="walking"){
+    return "https://routing.openstreetmap.de/routed-foot";
+  }
+  if(mode==="cycling" || mode==="scooter"){
+    return "https://routing.openstreetmap.de/routed-bike";
+  }
+  return "https://routing.openstreetmap.de/routed-car";
+}
+
+export function routeModeLabel(mode:InMapRouteMode){
+  switch(mode){
+    case "walking": return "Caminando";
+    case "cycling": return "En bicicleta";
+    case "scooter": return "En scooter";
+    default: return "En carro";
+  }
 }
 
 export function buildOsrmRouteUrl(
