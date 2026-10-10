@@ -44,6 +44,13 @@ Customer-facing slot availability and the merchant daily operations board use th
 
 A submitted request still requires merchant confirmation. Requests in new, accepted, preparing and ready states continue consuming slot capacity until they are completed, cancelled or marked no-show. Customer status links expose only operational status/timing data after token verification; they do not expose stored contact details or private notes. NAVIBORI does not currently process payment.
 
+## Runtime GPS diagnostics
+- The full-map experience exposes a persistent GPS control so customers can test/recenter location without opening the menu.
+- The GPS menu can run a runtime diagnostic that checks HTTPS secure context, browser geolocation support, geolocation permission state when the Permissions API is available, and server-side routing health.
+- The application now sends an explicit Permissions-Policy header allowing geolocation for self.
+- /api/routing/health validates routing availability from the NAVIBORI server using fixed Puerto Rico test coordinates; it never uses or stores customer GPS data.
+- Diagnostic output separates device/browser permission problems from routing-provider problems.
+
 ## GPS dual acquisition and routing fallback
 - GPS startup now runs getCurrentPosition and watchPosition in parallel and uses the first valid fix received.
 - If high-accuracy positioning fails without a permission denial, NAVIBORI retries with lower-accuracy cached positioning before giving up.
