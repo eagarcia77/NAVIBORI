@@ -315,13 +315,26 @@ export default function NaviboriMap({
       const location=business.mapLocation!;
       const element=document.createElement("button");
       element.type="button";
-      element.className="business-map-marker "+(business.verifiedLocation ? "verified" : "demo");
+      element.className=[
+        "business-map-marker",
+        business.verifiedLocation ? "verified" : "demo",
+        business.slug===selectedSlug ? "selected-destination" : ""
+      ].filter(Boolean).join(" ");
       element.setAttribute("aria-label","Ver "+business.name+" en el mapa");
       element.title=business.name;
 
       const initial=document.createElement("span");
-      initial.textContent=business.name.slice(0,1).toUpperCase();
+      initial.textContent=business.slug===selectedSlug
+        ? "◎"
+        : business.name.slice(0,1).toUpperCase();
       element.appendChild(initial);
+
+      if(business.slug===selectedSlug){
+        const destinationLabel=document.createElement("small");
+        destinationLabel.className="business-map-destination-label";
+        destinationLabel.textContent="Destino";
+        element.appendChild(destinationLabel);
+      }
 
       element.addEventListener("click",()=>{
         focusBusiness(business);
@@ -522,6 +535,44 @@ export default function NaviboriMap({
     userMarkerRef.current=new maplibregl.Marker({element})
       .setLngLat([next.longitude,next.latitude])
       .addTo(map);
+  }
+
+  function showFullRoute(){
+    const map=mapRef.current;
+    const route=routeResultRef.current;
+    if(!map || !route) return;
+
+    const bounds=new maplibregl.LngLatBounds();
+    route.geometry.coordinates.forEach(([longitude,latitude])=>{
+      bounds.extend([longitude,latitude]);
+    });
+
+    if(userLocation){
+      bounds.extend([userLocation.longitude,userLocation.latitude]);
+    }
+
+    if(selected?.mapLocation){
+      bounds.extend([
+        selected.mapLocation.longitude,
+        selected.mapLocation.latitude
+      ]);
+    }
+
+    if(bounds.isEmpty()) return;
+
+    if(gpsActiveRef.current){
+      followGpsRef.current=false;
+      setFollowGps(false);
+      setLocationStatus(
+        "Vista de ruta completa · el GPS sigue activo y la ruta continúa recalculándose."
+      );
+    }
+
+    map.fitBounds(bounds,{
+      padding:{top:70,right:70,bottom:220,left:70},
+      maxZoom:17,
+      duration:650
+    });
   }
 
   function recenterGpsCamera(){
@@ -1196,6 +1247,11 @@ export default function NaviboriMap({
                         {voiceEnabled ? "🔊 Voz activada" : "🔇 Activar voz"}
                       </button>
                     )}
+                    {routeResult && (
+                      <button type="button" onClick={showFullRoute}>
+                        🗺️ Ver ruta completa
+                      </button>
+                    )}
                     {gpsActive && (
                       <button
                         type="button"
@@ -1224,6 +1280,8 @@ export default function NaviboriMap({
 
                   <small>
                     NAVIBORI usa el GPS del dispositivo mientras esta navegación está activa.
+                    El pin “Destino” identifica la entrada verificada del comercio y “Ver ruta completa”
+                    muestra el recorrido completo sin detener la navegación.
                     El marcador se mueve contigo, muestra el próximo giro y recalcula si avanzas
                     o te sales de la ruta. Si exploras el mapa manualmente, el seguimiento visual
                     se pausa sin detener el GPS; “Recentrar en mi GPS” vuelve a seguir tu posición. Bicicleta y scooter usan el perfil de micromovilidad
