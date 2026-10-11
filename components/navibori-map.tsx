@@ -2981,6 +2981,18 @@ export default function NaviboriMap({
               <button
                 type="button"
                 className="navibori-diagnostics-copy"
+                disabled={!userLocation || !mapReady}
+                onClick={()=>{
+                  recenterGpsCamera();
+                  setMenuOpen(false);
+                }}
+              >{tr("Volver a mi ubicación","Return to my location")}</button>
+              {gpsAccuracy!==null && gpsAccuracy>100 && (
+                <small role="alert">{tr("Precisión GPS baja (más de 100 m). No dependas de esta ubicación para maniobras.","Low GPS accuracy (over 100 m). Do not rely on this position for maneuvers.")}</small>
+              )}
+              <button
+                type="button"
+                className="navibori-diagnostics-copy"
                 onClick={async ()=>{
                   setDiagnosticsCopyStatus("idle");
                   const report=[
