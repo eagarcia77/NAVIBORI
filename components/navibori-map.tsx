@@ -25,6 +25,7 @@ import {
 import {commerceMatchesSearch} from "@/lib/commerce/map-search";
 import {canNavigateCommerce} from "@/lib/commerce/navigation-eligibility";
 import {
+  NAVIBORI_LOCALE_CHANGE_EVENT,
   browserNaviboriLocale,
   naviboriCopy,
   type NaviboriLocale
@@ -299,9 +300,20 @@ export default function NaviboriMap({
   );
 
   useEffect(()=>{
-    const locale=browserNaviboriLocale();
-    setDeviceLocale(locale);
-    document.documentElement.lang=locale.locale;
+    const applyLocale=()=>{
+      const locale=browserNaviboriLocale();
+      setDeviceLocale(locale);
+      document.documentElement.lang=locale.locale;
+    };
+
+    applyLocale();
+    window.addEventListener("languagechange",applyLocale);
+    window.addEventListener(NAVIBORI_LOCALE_CHANGE_EVENT,applyLocale);
+
+    return ()=>{
+      window.removeEventListener("languagechange",applyLocale);
+      window.removeEventListener(NAVIBORI_LOCALE_CHANGE_EVENT,applyLocale);
+    };
   },[]);
 
   useEffect(()=>{
