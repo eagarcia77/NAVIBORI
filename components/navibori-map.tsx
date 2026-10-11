@@ -2958,7 +2958,35 @@ export default function NaviboriMap({
                 <div><dt>{tr("Ruta","Route")}</dt><dd>{routeResult ? tr("Calculada","Calculated") : tr("Sin ruta","No route")}</dd></div>
                 <div><dt>{tr("Navegación","Navigation")}</dt><dd>{navigationPhase}</dd></div>
                 <div><dt>{tr("Comercios","Businesses")}</dt><dd>{source==="live" ? "LIVE" : "DEMO"} · {mappedBusinesses.length}</dd></div>
+                <div><dt>{tr("Sitio seguro","Secure origin")}</dt><dd>{gpsDiagnostics.secure===null ? "—" : gpsDiagnostics.secure ? "HTTPS" : tr("No seguro","Insecure")}</dd></div>
+                <div><dt>{tr("Geolocalización","Geolocation")}</dt><dd>{gpsDiagnostics.geolocation===null ? "—" : gpsDiagnostics.geolocation ? tr("Disponible","Available") : tr("No disponible","Unavailable")}</dd></div>
+                <div><dt>{tr("Permiso GPS","GPS permission")}</dt><dd>{gpsDiagnostics.permission}</dd></div>
+                <div><dt>{tr("Servicio de rutas","Routing service")}</dt><dd>{gpsDiagnostics.routing}</dd></div>
               </dl>
+              {gpsDiagnostics.detail && <small role="status">{gpsDiagnostics.detail}</small>}
+              <button
+                type="button"
+                className="navibori-diagnostics-copy"
+                onClick={()=>{
+                  const report=[
+                    "NAVIBORI diagnostics",
+                    "Build: "+buildRevision,
+                    "Map: "+basemapState,
+                    "GPS: "+(gpsActive ? (demoRoute ? "DEMO" : "LIVE") : "inactive"),
+                    "Accuracy: "+(gpsAccuracy===null ? "unknown" : Math.round(gpsAccuracy)+" m"),
+                    "GPS permission: "+gpsDiagnostics.permission,
+                    "Geolocation available: "+String(gpsDiagnostics.geolocation),
+                    "Secure origin: "+String(gpsDiagnostics.secure),
+                    "Routing service: "+gpsDiagnostics.routing,
+                    "Route: "+(routeResult ? "calculated" : "none"),
+                    "Navigation phase: "+navigationPhase,
+                    "Follow: "+String(followGps),
+                    "Businesses: "+source+" / "+mappedBusinesses.length,
+                    "Status: "+routeStatus
+                  ].join("\n");
+                  void navigator.clipboard?.writeText(report);
+                }}
+              >{tr("Copiar diagnóstico","Copy diagnostics")}</button>
               <small>{tr("La precisión y el estado se actualizan mientras usas NAVIBORI. DEMO no representa navegación GPS real.","Status and accuracy update while NAVIBORI runs. DEMO is not live GPS navigation.")}</small>
             </details>
 
