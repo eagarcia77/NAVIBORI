@@ -2767,3 +2767,8 @@ html[data-motion="reduced"] .navibori-drift-bridge-marker i{
   z-index:2;
   overflow:hidden;
 }
+
+/* Route remains visible while GPS, turn and destination markers stay on top. */
+.full-map-stage .maplibregl-marker {
+  z-index:4;
+}
