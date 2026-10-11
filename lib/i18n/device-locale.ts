@@ -144,7 +144,8 @@ const ES={
     compras:"Compras",
     artesania:"Artesanía",
     servicios:"Servicios",
-    bienestar:"Bienestar"
+    bienestar:"Bienestar",
+    otros:"Otros"
   },
   mode:{
     driving:"En carro",
@@ -216,7 +217,8 @@ const EN={
     compras:"Shopping",
     artesania:"Crafts",
     servicios:"Services",
-    bienestar:"Wellness"
+    bienestar:"Wellness",
+    otros:"Other"
   },
   mode:{
     driving:"Driving",
