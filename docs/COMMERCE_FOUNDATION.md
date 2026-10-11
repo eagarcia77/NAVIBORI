@@ -58,6 +58,15 @@ A submitted request still requires merchant confirmation. Requests in new, accep
 - Voice guidance may repeat the same instruction at far, near and now distance bands.
 - Route progress remains session-only and is not persisted.
 
+## Peripheral-aware language and adaptive controls
+- NAVIBORI language priority is: peripheral/host locale, then browser/device languages, then Puerto Rico Spanish fallback.
+- A native shell, kiosk, embedded peripheral host, or future vehicle integration can set `window.__NAVIBORI_PERIPHERAL_LOCALE__` before hydration or dispatch `navibori:peripheral-locale` with `detail.locale` at runtime.
+- Runtime peripheral language changes propagate through `navibori:localechange`; the full map, navigation HUD, voice locale, routing locale, document language, and special-alert controls update without a reload.
+- The menu exposes the active locale and whether it came from the device or a peripheral so operators can verify the source.
+- Browser APIs do not expose the UI language of arbitrary keyboards, headsets, or gamepads. When a peripheral does not provide locale metadata through the host bridge, NAVIBORI correctly falls back to the device/browser locale.
+- PeripheralAdapter now drives adaptive control density: touch/gamepad/XR use comfortable targets, pointer layouts can be compact, keyboard/gamepad focus is emphasized, and reduced-motion preferences suppress nonessential CSS motion.
+- Touch targets are kept at comfortable sizes while the map remains the dominant interactive surface.
+
 ## High-visibility navigation route
 - The route overlay now uses four visual layers: route glow, dark casing, high-contrast primary line, and repeated directional arrows.
 - Route layers are explicitly moved to the top of the MapLibre layer stack so the raster basemap cannot cover them.
