@@ -28,6 +28,12 @@ import {chooseNavigationBearing} from "@/lib/commerce/navigation-sensor-fusion";
 import {buildPhotonRouteGradient} from "@/lib/commerce/photon-corridor";
 import {buildOrbitalLookahead} from "@/lib/commerce/orbital-lookahead";
 import {
+  adaptiveCameraProfile,
+  buildTrajectoryPrediction,
+  type TrajectoryPrediction,
+  type TrajectoryRisk
+} from "@/lib/commerce/trajectory-shield";
+import {
   NAVIBORI_LOCALE_CHANGE_EVENT,
   browserNaviboriLocale,
   naviboriCopy,
@@ -271,6 +277,7 @@ export default function NaviboriMap({
   const destinationBeaconRef=useRef<maplibregl.Marker|null>(null);
   const photonCursorRef=useRef<maplibregl.Marker|null>(null);
   const orbitalTargetRef=useRef<maplibregl.Marker|null>(null);
+  const trajectoryGhostRef=useRef<maplibregl.Marker|null>(null);
   const deviceHeadingRef=useRef<number|null>(null);
   const orientationHandlerRef=useRef<((event:DeviceOrientationEvent)=>void)|null>(null);
   const routeAbortRef=useRef<AbortController|null>(null);
@@ -286,6 +293,7 @@ export default function NaviboriMap({
   const voiceEnabledRef=useRef(false);
   const lastSpokenInstructionRef=useRef("");
   const wakeLockRef=useRef<WakeLockSentinel|null>(null);
+  const lastTrajectoryRiskRef=useRef<TrajectoryRisk>("stable");
 
   const [deviceLocale,setDeviceLocale]=useState<NaviboriLocale>({
     language:"es",
@@ -317,6 +325,7 @@ export default function NaviboriMap({
   const [gpsActive,setGpsActive]=useState(false);
   const [gpsAccuracy,setGpsAccuracy]=useState<number|null>(null);
   const [gpsSpeedKph,setGpsSpeedKph]=useState<number|null>(null);
+  const [trajectoryPrediction,setTrajectoryPrediction]=useState<TrajectoryPrediction|null>(null);
   const [astraCompassState,setAstraCompassState]=useState<
     "idle"|"active"|"blocked"|"unsupported"
   >("idle");
@@ -524,6 +533,8 @@ export default function NaviboriMap({
     photonCursorRef.current=null;
     orbitalTargetRef.current?.remove();
     orbitalTargetRef.current=null;
+    trajectoryGhostRef.current?.remove();
+    trajectoryGhostRef.current=null;
 
     if(routeResult && selected?.mapLocation){
       const element=document.createElement("div");
@@ -605,6 +616,33 @@ export default function NaviboriMap({
         .addTo(map);
     }
 
+    if(
+      gpsActive &&
+      trajectoryPrediction &&
+      trajectoryPrediction.risk!=="stable"
+    ){
+      const element=document.createElement("div");
+      element.className=
+        "navibori-trajectory-ghost "+trajectoryPrediction.risk;
+      element.setAttribute(
+        "aria-label",
+        tr(
+          "Posición proyectada por Trajectory Shield",
+          "Trajectory Shield projected position"
+        )
+      );
+      element.innerHTML="<span></span><i></i>";
+      trajectoryGhostRef.current=new maplibregl.Marker({
+        element,
+        anchor:"center"
+      })
+        .setLngLat([
+          trajectoryPrediction.futureCoordinate.longitude,
+          trajectoryPrediction.futureCoordinate.latitude
+        ])
+        .addTo(map);
+    }
+
     return ()=>{
       nextTurnMarkerRef.current?.remove();
       nextTurnMarkerRef.current=null;
@@ -614,6 +652,8 @@ export default function NaviboriMap({
       photonCursorRef.current=null;
       orbitalTargetRef.current?.remove();
       orbitalTargetRef.current=null;
+      trajectoryGhostRef.current?.remove();
+      trajectoryGhostRef.current=null;
     };
   },[
     gpsActive,
@@ -624,6 +664,9 @@ export default function NaviboriMap({
     navigationProgress?.snapped.longitude,
     orbitalLookahead?.coordinate.latitude,
     orbitalLookahead?.coordinate.longitude,
+    trajectoryPrediction?.futureCoordinate.latitude,
+    trajectoryPrediction?.futureCoordinate.longitude,
+    trajectoryPrediction?.risk,
     routeResult,
     selected?.mapLocation?.latitude,
     selected?.mapLocation?.longitude
@@ -1605,6 +1648,8 @@ export default function NaviboriMap({
     setGpsActive(false);
     setGpsAccuracy(null);
     setGpsSpeedKph(null);
+    setTrajectoryPrediction(null);
+    lastTrajectoryRiskRef.current="stable";
     if(!options.preservePhase){
       setNavigationPhase("idle");
     }
@@ -1783,49 +1828,70 @@ export default function NaviboriMap({
           : null;
       const cameraCenter=cameraLookahead?.coordinate ?? next;
       const routeBearingPoint=cameraLookahead?.coordinate ?? next;
+      const routeHeading=
+        cameraRoute
+          ? getRouteBearingNearPoint(
+              cameraRoute,
+              routeBearingPoint
+            )
+          : null;
+      const navigationBearing=chooseNavigationBearing({
+        gpsHeading:heading,
+        speedKph:speedKphNow,
+        deviceHeading:deviceHeadingRef.current,
+        routeHeading
+      });
+
+      const prediction=
+        cameraRoute
+          ? buildTrajectoryPrediction(
+              cameraRoute,
+              next,
+              navigationBearing,
+              speedKphNow,
+              accuracy
+            )
+          : null;
+
+      setTrajectoryPrediction(prediction);
+
+      const risk=prediction?.risk ?? "stable";
+      if(
+        risk==="warning" &&
+        lastTrajectoryRiskRef.current!=="warning"
+      ){
+        const haptics=navigator as Navigator & {
+          vibrate?:(pattern:number|number[])=>boolean;
+        };
+        haptics.vibrate?.([45,35,45]);
+        setRouteStatus(
+          tr(
+            "Trajectory Shield · posible desvío detectado. Alinea con el corredor.",
+            "Trajectory Shield · possible drift detected. Align with the corridor."
+          )
+        );
+      }
+      lastTrajectoryRiskRef.current=risk;
+
+      const cameraProfile=adaptiveCameraProfile(
+        activeMode,
+        speedKphNow,
+        cameraCue?.distanceMeters ?? null,
+        risk
+      );
 
       if(followGpsRef.current){
         const map=mapRef.current;
-        const nearTurn=
-          typeof cameraCue?.distanceMeters==="number" &&
-          cameraCue.distanceMeters<=120;
-        const fast=
-          typeof speedKphNow==="number" &&
-          speedKphNow>=55;
-
         map?.easeTo({
           center:[cameraCenter.longitude,cameraCenter.latitude],
-          zoom:Math.max(
-            map?.getZoom() ?? 16,
-            activeMode==="driving"
-              ? fast ? 16.45 : 16.8
-              : activeMode==="walking"
-                ? 17.2
-                : 16.9
-          ),
-          offset:[0,nearTurn ? 90 : 135],
+          zoom:cameraProfile.zoom,
+          offset:[0,cameraProfile.offsetY],
           bearing:
-            chooseNavigationBearing({
-              gpsHeading:heading,
-              speedKph:speedKphNow,
-              deviceHeading:deviceHeadingRef.current,
-              routeHeading:
-                cameraRoute
-                  ? getRouteBearingNearPoint(
-                      cameraRoute,
-                      routeBearingPoint
-                    )
-                  : null
-            }) ??
+            navigationBearing ??
             map?.getBearing() ??
             0,
-          pitch:
-            activeMode==="driving"
-              ? nearTurn ? 38 : 48
-              : activeMode==="walking"
-                ? 18
-                : 31,
-          duration:firstFix ? 650 : 350
+          pitch:cameraProfile.pitch,
+          duration:firstFix ? 650 : cameraProfile.duration
         });
       }
 
@@ -1996,6 +2062,8 @@ export default function NaviboriMap({
     setRouteResult(null);
     setRouteStatus("");
     setRouteBusy(null);
+    setTrajectoryPrediction(null);
+    lastTrajectoryRiskRef.current="stable";
     setArrived(false);
     lastSpokenInstructionRef.current="";
   }
@@ -2127,6 +2195,24 @@ export default function NaviboriMap({
                   <strong>
                     {Math.round(orbitalLookahead.lookaheadMeters)} m
                   </strong>
+                </div>
+              )}
+
+              {trajectoryPrediction && trajectoryPrediction.risk!=="stable" && (
+                <div
+                  className={"trajectory-shield-chip "+trajectoryPrediction.risk}
+                  aria-live="assertive"
+                >
+                  <span>TRAJECTORY SHIELD</span>
+                  <strong>
+                    {trajectoryPrediction.risk==="warning"
+                      ? tr("CORRIGE RUMBO","CORRECT COURSE")
+                      : tr("VIGILANDO DERIVA","WATCHING DRIFT")}
+                  </strong>
+                  <small>
+                    {Math.round(trajectoryPrediction.horizonSeconds)} s · ~
+                    {Math.round(trajectoryPrediction.futureDistanceFromRouteMeters)} m
+                  </small>
                 </div>
               )}
 
