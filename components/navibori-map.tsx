@@ -2947,6 +2947,21 @@ export default function NaviboriMap({
               </button>
             </div>
 
+            <details className="navibori-health-panel">
+              <summary>{tr("Estado técnico de navegación","Navigation health")}</summary>
+              <dl>
+                <div><dt>{tr("Versión","Version")}</dt><dd>{buildRevision}</dd></div>
+                <div><dt>{tr("Mapa","Map")}</dt><dd>{basemapState}</dd></div>
+                <div><dt>GPS</dt><dd>{gpsActive ? (demoRoute ? "DEMO" : "LIVE") : tr("Inactivo","Inactive")}</dd></div>
+                <div><dt>{tr("Precisión","Accuracy")}</dt><dd>{gpsAccuracy===null ? "—" : "±"+Math.round(gpsAccuracy)+" m"}</dd></div>
+                <div><dt>{tr("Seguimiento","Follow mode")}</dt><dd>{followGps ? tr("Activado","On") : tr("Pausado","Paused")}</dd></div>
+                <div><dt>{tr("Ruta","Route")}</dt><dd>{routeResult ? tr("Calculada","Calculated") : tr("Sin ruta","No route")}</dd></div>
+                <div><dt>{tr("Navegación","Navigation")}</dt><dd>{navigationPhase}</dd></div>
+                <div><dt>{tr("Comercios","Businesses")}</dt><dd>{source==="live" ? "LIVE" : "DEMO"} · {mappedBusinesses.length}</dd></div>
+              </dl>
+              <small>{tr("La precisión y el estado se actualizan mientras usas NAVIBORI. DEMO no representa navegación GPS real.","Status and accuracy update while NAVIBORI runs. DEMO is not live GPS navigation.")}</small>
+            </details>
+
             <div className="full-map-menu-search">
               <input
                 type="search"
