@@ -1152,3 +1152,86 @@ body{overflow:hidden}
 .navibori-navigation-phase.error>button{grid-column:1/-1;min-height:38px;border:0;border-radius:10px;background:var(--ocean);color:white;font-size:.66rem;font-weight:900;box-shadow:0 7px 18px rgba(0,95,143,.22)}
 .navibori-navigation-phase.error>button:active{transform:translateY(1px)}
 @media(max-width:620px){.navibori-navigation-phase.error>button{min-height:42px;font-size:.7rem}}
+
+
+/* NAVIBORI 2026 navigation surface refresh */
+.navibori-navigation-maneuver{
+  background:rgba(248,250,252,.88);
+  border-color:rgba(255,255,255,.72);
+  box-shadow:0 12px 30px rgba(15,23,42,.16);
+  backdrop-filter:blur(22px) saturate(165%);
+  -webkit-backdrop-filter:blur(22px) saturate(165%);
+}
+.navibori-navigation-maneuver>strong{letter-spacing:-.015em}
+.navibori-navigation-footer{
+  background:rgba(248,250,252,.86);
+  border-color:rgba(255,255,255,.74);
+  box-shadow:0 12px 32px rgba(15,23,42,.18);
+  backdrop-filter:blur(22px) saturate(165%);
+  -webkit-backdrop-filter:blur(22px) saturate(165%);
+}
+.navibori-navigation-footer>div{background:rgba(255,255,255,.55)}
+.navibori-navigation-footer>button{
+  box-shadow:0 3px 10px rgba(15,23,42,.06);
+}
+.full-map-menu-button,.full-map-gps-button{
+  background:rgba(248,250,252,.86);
+  backdrop-filter:blur(22px) saturate(165%);
+  -webkit-backdrop-filter:blur(22px) saturate(165%);
+}
+.navibori-gps-marker{
+  box-shadow:0 0 0 7px rgba(10,132,255,.14),0 6px 18px rgba(15,23,42,.22);
+}
+@media(max-width:760px){
+  .full-map-cockpit .maplibregl-control-container .maplibregl-ctrl-top-right{
+    top:78px;
+    right:8px;
+  }
+  .navibori-navigation-maneuver{
+    left:66px;
+    right:8px;
+    top:max(8px,env(safe-area-inset-top));
+    padding:9px 11px;
+    border-radius:17px;
+  }
+  .navibori-navigation-maneuver>span{font-size:.58rem}
+  .navibori-navigation-maneuver>strong{
+    font-size:.98rem;
+    line-height:1.16;
+  }
+  .navibori-navigation-maneuver>small{font-size:.58rem}
+  .navibori-navigation-footer{
+    grid-template-columns:repeat(3,minmax(0,1fr));
+    width:calc(100% - 16px);
+    gap:5px;
+    padding:6px;
+    border-radius:18px;
+  }
+  .navibori-navigation-footer>div{
+    padding:5px 6px;
+    min-height:38px;
+  }
+  .navibori-navigation-footer>div:nth-child(4){display:none}
+  .navibori-navigation-footer>div span{font-size:.45rem}
+  .navibori-navigation-footer>div strong{font-size:.64rem}
+  .navibori-navigation-footer>button{
+    min-height:36px;
+    padding:0 6px;
+    font-size:.54rem;
+    border-radius:10px;
+  }
+  .navibori-navigation-footer>button:nth-of-type(1),
+  .navibori-navigation-footer>button:nth-of-type(2),
+  .navibori-navigation-footer>button:nth-of-type(3){
+    grid-column:auto;
+  }
+  .full-map-stage:has(.navibori-navigation-hud) .full-map-brand-pill{
+    display:none;
+  }
+}
+@media(max-width:430px){
+  .navibori-navigation-footer{
+    grid-template-columns:repeat(3,minmax(0,1fr));
+  }
+  .navibori-navigation-maneuver{left:62px}
+}
