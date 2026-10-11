@@ -60,6 +60,10 @@ import {
   type GravityLensPhase
 } from "@/lib/commerce/gravity-lens";
 import {
+  buildDriftBridgeEstimate,
+  type DriftBridgeEstimate
+} from "@/lib/commerce/astra-drift-bridge";
+import {
   NAVIBORI_LOCALE_CHANGE_EVENT,
   browserNaviboriLocale,
   naviboriCopy,
@@ -304,6 +308,7 @@ export default function NaviboriMap({
   const photonCursorRef=useRef<maplibregl.Marker|null>(null);
   const orbitalTargetRef=useRef<maplibregl.Marker|null>(null);
   const trajectoryGhostRef=useRef<maplibregl.Marker|null>(null);
+  const driftBridgeMarkerRef=useRef<maplibregl.Marker|null>(null);
   const deviceHeadingRef=useRef<number|null>(null);
   const orientationHandlerRef=useRef<((event:DeviceOrientationEvent)=>void)|null>(null);
   const routeAbortRef=useRef<AbortController|null>(null);
@@ -322,6 +327,12 @@ export default function NaviboriMap({
   const lastTrajectoryRiskRef=useRef<TrajectoryRisk>("stable");
   const lastVectorGatePhaseRef=useRef<ReturnType<typeof deriveVectorGatePhase>>("cruise");
   const lastFlightDirectorPhaseRef=useRef<FlightDirectorPhase|null>(null);
+  const lastGpsFixRef=useRef<{
+    at:number;
+    traveledMeters:number;
+    speedKph:number|null;
+    accuracyMeters:number|null;
+  }|null>(null);
 
   const [deviceLocale,setDeviceLocale]=useState<NaviboriLocale>({
     language:"es",
@@ -356,6 +367,7 @@ export default function NaviboriMap({
   const [navigationBearingDegrees,setNavigationBearingDegrees]=useState<number|null>(null);
   const [trajectoryPrediction,setTrajectoryPrediction]=useState<TrajectoryPrediction|null>(null);
   const [gravityLensPhase,setGravityLensPhase]=useState<GravityLensPhase>("cruise");
+  const [driftBridgeEstimate,setDriftBridgeEstimate]=useState<DriftBridgeEstimate|null>(null);
   const [astraCompassState,setAstraCompassState]=useState<
     "idle"|"active"|"blocked"|"unsupported"
   >("idle");
