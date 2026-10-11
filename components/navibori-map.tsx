@@ -49,7 +49,8 @@ const categories:Array<{value:MapCategory;label:string}>=[
   {value:"compras",label:"Compras"},
   {value:"artesania",label:"Artesanía"},
   {value:"servicios",label:"Servicios"},
-  {value:"bienestar",label:"Bienestar"}
+  {value:"bienestar",label:"Bienestar"},
+  {value:"otros",label:"Otros"}
 ];
 
 const travelModes:Array<{
