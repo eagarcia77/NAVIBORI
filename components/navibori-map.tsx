@@ -414,6 +414,7 @@ export default function NaviboriMap({
   const [arrived,setArrived]=useState(false);
   const [directionsOpen,setDirectionsOpen]=useState(false);
   const [addressCopied,setAddressCopied]=useState(false);
+  const [diagnosticsCopyStatus,setDiagnosticsCopyStatus]=useState<"idle"|"success"|"error">("idle");
   const [searchTerm,setSearchTerm]=useState("");
   const [pendingNavigation,setPendingNavigation]=useState<{
     slug:string;
@@ -2967,7 +2968,8 @@ export default function NaviboriMap({
               <button
                 type="button"
                 className="navibori-diagnostics-copy"
-                onClick={()=>{
+                onClick={async ()=>{
+                  setDiagnosticsCopyStatus("idle");
                   const report=[
                     "NAVIBORI diagnostics",
                     "Build: "+buildRevision,
@@ -2984,9 +2986,17 @@ export default function NaviboriMap({
                     "Businesses: "+source+" / "+mappedBusinesses.length,
                     "Status: "+routeStatus
                   ].join("\n");
-                  void navigator.clipboard?.writeText(report);
+                  try {
+                    if(!navigator.clipboard?.writeText) throw new Error("Clipboard unavailable");
+                    await navigator.clipboard.writeText(report);
+                    setDiagnosticsCopyStatus("success");
+                  } catch {
+                    setDiagnosticsCopyStatus("error");
+                  }
                 }}
-              >{tr("Copiar diagnóstico","Copy diagnostics")}</button>
+              >{diagnosticsCopyStatus==="success" ? tr("Diagnóstico copiado","Diagnostics copied") : tr("Copiar diagnóstico","Copy diagnostics")}</button>
+              {diagnosticsCopyStatus==="error" && <small role="alert">{tr("No se pudo copiar. Comprueba los permisos del navegador.","Could not copy. Check browser permissions.")}</small>}
+              {diagnosticsCopyStatus==="success" && <small role="status">{tr("Informe copiado sin coordenadas GPS.","Report copied without GPS coordinates.")}</small>}
               <small>{tr("La precisión y el estado se actualizan mientras usas NAVIBORI. DEMO no representa navegación GPS real.","Status and accuracy update while NAVIBORI runs. DEMO is not live GPS navigation.")}</small>
             </details>
 
