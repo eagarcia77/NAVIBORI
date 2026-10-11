@@ -25,6 +25,7 @@ import {
 import {commerceMatchesSearch} from "@/lib/commerce/map-search";
 import {canNavigateCommerce} from "@/lib/commerce/navigation-eligibility";
 import {chooseNavigationBearing} from "@/lib/commerce/navigation-sensor-fusion";
+import {buildPhotonRouteGradient} from "@/lib/commerce/photon-corridor";
 import {
   NAVIBORI_LOCALE_CHANGE_EVENT,
   browserNaviboriLocale,
@@ -148,6 +149,110 @@ function ensureRouteArrowImage(map:maplibregl.Map){
 
   const image=context.getImageData(0,0,size,size);
   map.addImage(ROUTE_ARROW_IMAGE_ID,image,{pixelRatio:2});
+}
+
+function ensureRouteInfrastructure(map:maplibregl.Map){
+  if(!map.isStyleLoaded()) return false;
+
+  try{
+    ensureRouteArrowImage(map);
+
+    if(!map.getSource(ROUTE_SOURCE_ID)){
+      map.addSource(ROUTE_SOURCE_ID,{
+        type:"geojson",
+        data:{
+          type:"FeatureCollection",
+          features:[]
+        },
+        lineMetrics:true
+      });
+    }
+
+    if(!map.getLayer(ROUTE_GLOW_ID)){
+      map.addLayer({
+        id:ROUTE_GLOW_ID,
+        type:"line",
+        source:ROUTE_SOURCE_ID,
+        layout:{
+          "line-cap":"round",
+          "line-join":"round"
+        },
+        paint:{
+          "line-color":"#0a84ff",
+          "line-width":20,
+          "line-opacity":0.3,
+          "line-blur":4
+        }
+      });
+    }
+
+    if(!map.getLayer(ROUTE_CASING_ID)){
+      map.addLayer({
+        id:ROUTE_CASING_ID,
+        type:"line",
+        source:ROUTE_SOURCE_ID,
+        layout:{
+          "line-cap":"round",
+          "line-join":"round"
+        },
+        paint:{
+          "line-color":"#10263b",
+          "line-width":14,
+          "line-opacity":0.98
+        }
+      });
+    }
+
+    if(!map.getLayer(ROUTE_LINE_ID)){
+      map.addLayer({
+        id:ROUTE_LINE_ID,
+        type:"line",
+        source:ROUTE_SOURCE_ID,
+        layout:{
+          "line-cap":"round",
+          "line-join":"round"
+        },
+        paint:{
+          "line-color":"#0a84ff",
+          "line-width":9,
+          "line-opacity":1
+        }
+      });
+    }
+
+    if(map.hasImage(ROUTE_ARROW_IMAGE_ID) && !map.getLayer(ROUTE_ARROW_ID)){
+      map.addLayer({
+        id:ROUTE_ARROW_ID,
+        type:"symbol",
+        source:ROUTE_SOURCE_ID,
+        layout:{
+          "symbol-placement":"line",
+          "symbol-spacing":64,
+          "icon-image":ROUTE_ARROW_IMAGE_ID,
+          "icon-size":0.78,
+          "icon-rotation-alignment":"map",
+          "icon-pitch-alignment":"map",
+          "icon-allow-overlap":true,
+          "icon-ignore-placement":true
+        }
+      });
+    }
+
+    for(const layerId of [
+      ROUTE_GLOW_ID,
+      ROUTE_CASING_ID,
+      ROUTE_LINE_ID,
+      ROUTE_ARROW_ID
+    ]){
+      if(map.getLayer(layerId)){
+        map.moveLayer(layerId);
+      }
+    }
+
+    return true;
+  }catch{
+    return false;
+  }
 }
 
 export default function NaviboriMap({
@@ -542,8 +647,15 @@ export default function NaviboriMap({
     });
 
     map.on("load",()=>{
+      ensureRouteInfrastructure(map);
       setBasemapState("ready");
       setMapReady(true);
+    });
+
+    map.on("styledata",()=>{
+      if(map.isStyleLoaded()){
+        ensureRouteInfrastructure(map);
+      }
     });
     map.on("error",(event)=>{
       if(event?.error) setBasemapState("error");
@@ -672,6 +784,7 @@ export default function NaviboriMap({
     if(!map || !mapReady) return;
 
     if(!routeResult){
+      ensureRouteInfrastructure(map);
       const empty={
         type:"FeatureCollection" as const,
         features:[]
@@ -686,7 +799,10 @@ export default function NaviboriMap({
 
     const renderRoute=()=>{
       if(cancelled) return true;
-      return drawRouteOnMap(routeResult);
+      return drawRouteOnMap(
+        routeResult,
+        navigationProgress?.progressRatio ?? 0
+      );
     };
 
     const rendered=renderRoute();
@@ -734,7 +850,14 @@ export default function NaviboriMap({
     }
 
     return cleanup;
-  },[followGps,gpsActive,mapReady,routeResult,userLocation]);
+  },[
+    followGps,
+    gpsActive,
+    mapReady,
+    navigationProgress?.progressRatio,
+    routeResult,
+    userLocation
+  ]);
 
   function activateMapMode(next:RealityMode){
     const map=mapRef.current;
@@ -821,7 +944,10 @@ export default function NaviboriMap({
       .addTo(map);
   }
 
-  function drawRouteOnMap(route:InMapRouteResult){
+  function drawRouteOnMap(
+    route:InMapRouteResult,
+    progressRatio=0
+  ){
     const map=mapRef.current;
     if(
       !map ||
@@ -838,93 +964,27 @@ export default function NaviboriMap({
     };
 
     try{
-      const existing=map.getSource(ROUTE_SOURCE_ID) as maplibregl.GeoJSONSource|undefined;
-
-      if(existing){
-        existing.setData(feature);
-      }else{
-        map.addSource(ROUTE_SOURCE_ID,{
-          type:"geojson",
-          data:feature,
-          lineMetrics:true
-        });
+      if(!ensureRouteInfrastructure(map)){
+        return false;
       }
 
-      for(const layerId of [
-        ROUTE_ARROW_ID,
+      const source=map.getSource(ROUTE_SOURCE_ID) as maplibregl.GeoJSONSource|undefined;
+      if(!source) return false;
+
+      source.setData(feature);
+
+      const color=routeLineColor(route.mode);
+      map.setPaintProperty(ROUTE_GLOW_ID,"line-color",color);
+      map.setPaintProperty(
+        ROUTE_GLOW_ID,
+        "line-opacity",
+        gpsActiveRef.current ? 0.42 : 0.28
+      );
+      map.setPaintProperty(
         ROUTE_LINE_ID,
-        ROUTE_CASING_ID,
-        ROUTE_GLOW_ID
-      ]){
-        if(map.getLayer(layerId)){
-          map.removeLayer(layerId);
-        }
-      }
-
-      map.addLayer({
-        id:ROUTE_GLOW_ID,
-        type:"line",
-        source:ROUTE_SOURCE_ID,
-        layout:{
-          "line-cap":"round",
-          "line-join":"round"
-        },
-        paint:{
-          "line-color":routeLineColor(route.mode),
-          "line-width":18,
-          "line-opacity":0.28,
-          "line-blur":3
-        }
-      });
-
-      map.addLayer({
-        id:ROUTE_CASING_ID,
-        type:"line",
-        source:ROUTE_SOURCE_ID,
-        layout:{
-          "line-cap":"round",
-          "line-join":"round"
-        },
-        paint:{
-          "line-color":"#17324d",
-          "line-width":13,
-          "line-opacity":0.98
-        }
-      });
-
-      map.addLayer({
-        id:ROUTE_LINE_ID,
-        type:"line",
-        source:ROUTE_SOURCE_ID,
-        layout:{
-          "line-cap":"round",
-          "line-join":"round"
-        },
-        paint:{
-          "line-color":routeLineColor(route.mode),
-          "line-width":8.5,
-          "line-opacity":1
-        }
-      });
-
-      ensureRouteArrowImage(map);
-      if(map.hasImage(ROUTE_ARROW_IMAGE_ID)){
-        map.addLayer({
-          id:ROUTE_ARROW_ID,
-          type:"symbol",
-          source:ROUTE_SOURCE_ID,
-          layout:{
-            "symbol-placement":"line",
-            "symbol-spacing":70,
-            "icon-image":ROUTE_ARROW_IMAGE_ID,
-            "icon-size":0.72,
-            "icon-rotation-alignment":"map",
-            "icon-pitch-alignment":"map",
-            "icon-allow-overlap":true,
-            "icon-ignore-placement":true
-          }
-        });
-      }
+        "line-gradient",
+        buildPhotonRouteGradient(progressRatio,color)
+      );
 
       for(const layerId of [
         ROUTE_GLOW_ID,
