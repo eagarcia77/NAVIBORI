@@ -58,6 +58,16 @@ A submitted request still requires merchant confirmation. Requests in new, accep
 - Voice guidance may repeat the same instruction at far, near and now distance bands.
 - Route progress remains session-only and is not persisted.
 
+## Route arrows and device language
+- Active navigation draws a high-contrast route from the current origin to the selected commerce destination and overlays repeated directional arrow symbols along the route.
+- Route arrows use the same route geometry returned by OSRM/Valhalla, so they indicate the path the customer should follow rather than a straight-line bearing.
+- NAVIBORI reads navigator.languages / navigator.language on the device and updates the document language at runtime.
+- Navigation locale is forwarded to the routing API and Valhalla. English devices receive English turn instructions; Spanish devices receive Spanish turn instructions.
+- Speech synthesis prefers a voice matching the device locale and falls back to the corresponding supported language.
+- Arrival time formatting follows the device locale.
+- Special/promotion notification controls switch between Spanish and English using the device language.
+- For device languages not yet translated by NAVIBORI, locale-aware formatting is preserved while interface/instruction copy falls back to Spanish.
+
 ## Waze-style navigation preflight
 - Every transport entry point uses the same commerce navigation eligibility rule, including map pins, Nearby and the destination card.
 - Each navigation attempt automatically runs a lightweight GPS/routing preflight in parallel with location acquisition.
