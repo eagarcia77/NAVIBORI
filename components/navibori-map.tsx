@@ -493,6 +493,22 @@ export default function NaviboriMap({
   );
 
   useEffect(()=>{
+    if(exoDockState==="inactive") return;
+
+    const haptics=navigator as Navigator & {
+      vibrate?:(pattern:number|number[])=>boolean;
+    };
+
+    if(exoDockState==="acquire"){
+      haptics.vibrate?.(28);
+    }else if(exoDockState==="align"){
+      haptics.vibrate?.([32,45,32]);
+    }else if(exoDockState==="dock"){
+      haptics.vibrate?.([55,35,85]);
+    }
+  },[exoDockState]);
+
+  useEffect(()=>{
     const applyLocale=()=>{
       const locale=browserNaviboriLocale();
       setDeviceLocale(locale);
