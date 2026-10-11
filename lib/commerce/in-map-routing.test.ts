@@ -10,6 +10,8 @@ import {
   shouldRefreshNavigationRoute,
   buildSpanishNavigationInstruction,
   getNextNavigationCue,
+  getNavigationCueAtProgress,
+  getNavigationProgress,
   distanceToRouteMeters,
   isOffNavigationRoute,
   hasArrivedAtDestination,
@@ -187,6 +189,81 @@ describe("in-map commerce routing",()=>{
     expect(
       buildSpanishNavigationInstruction("arrive",null,"",null)
     ).toBe("Has llegado a tu destino.");
+  });
+
+  it("tracks live route progress and advances the maneuver cue",()=>{
+    const route=normalizeOsrmRoute({
+      code:"Ok",
+      routes:[{
+        distance:1000,
+        duration:600,
+        geometry:{
+          type:"LineString",
+          coordinates:[
+            [-66.5000,18.0000],
+            [-66.5000,18.0050],
+            [-66.5000,18.0100]
+          ]
+        },
+        legs:[{
+          steps:[
+            {
+              distance:400,
+              duration:200,
+              name:"PR-1",
+              maneuver:{
+                type:"depart",
+                modifier:"straight",
+                location:[-66.5000,18.0000]
+              }
+            },
+            {
+              distance:500,
+              duration:320,
+              name:"Calle A",
+              maneuver:{
+                type:"turn",
+                modifier:"right",
+                location:[-66.5000,18.0040]
+              }
+            },
+            {
+              distance:100,
+              duration:80,
+              name:"",
+              maneuver:{
+                type:"arrive",
+                modifier:"right",
+                location:[-66.5000,18.0090]
+              }
+            }
+          ]
+        }]
+      }]
+    },"driving");
+
+    expect(route).not.toBe(null);
+    if(!route) return;
+
+    const progress=getNavigationProgress(
+      route,
+      {latitude:18.0045,longitude:-66.5001}
+    );
+
+    expect(progress).not.toBe(null);
+    expect(progress?.progressRatio).toBeGreaterThan(0.35);
+    expect(progress?.progressRatio).toBeLessThan(0.55);
+    expect(progress?.remainingMeters).toBeLessThan(700);
+    expect(progress?.remainingSeconds).toBeLessThan(450);
+    expect(progress?.distanceFromRouteMeters).toBeLessThan(20);
+
+    const firstCue=getNavigationCueAtProgress(route,100);
+    expect(firstCue?.instruction).toBe("Gira a la derecha en Calle A.");
+    expect(firstCue?.distanceMeters).toBe(300);
+
+    const arrivalCue=getNavigationCueAtProgress(route,850);
+    expect(arrivalCue?.instruction).toBe("Has llegado a tu destino.");
+    expect(arrivalCue?.distanceMeters).toBe(50);
   });
 
   it("detects off-route movement and arrival",()=>{
