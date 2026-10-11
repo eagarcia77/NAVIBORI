@@ -549,13 +549,11 @@ export default function NaviboriMap({
     };
     map.once("idle",handleStyleReady);
 
-    if(!rendered){
-      return ()=>{
-        cancelled=true;
-        retryTimers.forEach((timer)=>window.clearTimeout(timer));
-        map.off("idle",handleStyleReady);
-      };
-    }
+    const cleanup=()=>{
+      cancelled=true;
+      retryTimers.forEach((timer)=>window.clearTimeout(timer));
+      map.off("idle",handleStyleReady);
+    };
 
     if(gpsActive && followGps && userLocation){
       map.easeTo({
@@ -563,7 +561,7 @@ export default function NaviboriMap({
         zoom:Math.max(map.getZoom(),16),
         duration:350
       });
-      return;
+      return cleanup;
     }
 
     const bounds=new maplibregl.LngLatBounds();
@@ -573,11 +571,13 @@ export default function NaviboriMap({
 
     if(!bounds.isEmpty()){
       map.fitBounds(bounds,{
-        padding:{top:70,right:70,bottom:210,left:70},
+        padding:{top:70,right:70,bottom:170,left:70},
         maxZoom:17,
         duration:750
       });
     }
+
+    return cleanup;
   },[followGps,gpsActive,mapReady,routeResult,userLocation]);
 
   function activateMapMode(next:RealityMode){
