@@ -1,0 +1,10 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import {routeProgress,estimatedSeconds} from "./route-progress.js";
+const route=[{lat:18,lng:-66},{lat:18.001,lng:-66}];
+test("at start remaining route is near full length",()=>{const p=routeProgress(route,route[0]);assert.ok(p.fraction<0.001);assert.ok(p.remainingMeters>100);});
+test("midpoint progress is about half",()=>{const p=routeProgress(route,{lat:18.0005,lng:-66});assert.ok(Math.abs(p.fraction-0.5)<0.01);});
+test("at destination remaining is zero",()=>assert.ok(routeProgress(route,route[1]).remainingMeters<0.01));
+test("off route distance is detected",()=>assert.ok(routeProgress(route,{lat:18.0005,lng:-65.999}).distanceFromRouteMeters>90));
+test("invalid route is rejected",()=>assert.equal(routeProgress([],route[0]),null));
+test("ETA requires reliable speed",()=>{assert.equal(estimatedSeconds(100,10),10);assert.equal(estimatedSeconds(100,null),null);});
