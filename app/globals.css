@@ -2720,3 +2720,34 @@ html[data-motion="reduced"] .navibori-drift-bridge-marker i{
     max-width: min(520px, calc(100vw - 24px));
   }
 }
+
+/* iPhone navigation: prioritize the next maneuver over laboratory telemetry. */
+.navibori-navigation-hud .astra-flight-director,
+.navibori-navigation-hud [class*="astra-flight-director"],
+.navibori-navigation-hud .lagrange-cockpit-chip,
+.navibori-navigation-hud .orbital-lookahead-chip,
+.navibori-navigation-hud .photon-corridor-meter,
+.navibori-navigation-hud .astra-drift-bridge-chip {display:none!important;}
+@media(max-width:760px){
+  .navibori-navigation-maneuver{
+    top:max(8px,env(safe-area-inset-top));
+    left:72px;
+    transform:none;
+    width:calc(100% - 148px);
+    max-width:none;
+    padding:9px 11px;
+    gap:2px;
+    border-radius:14px;
+  }
+  .navibori-navigation-maneuver>strong{
+    font-size:clamp(.96rem,3.9vw,1.15rem);
+    line-height:1.17;
+    overflow-wrap:anywhere;
+  }
+  .navibori-navigation-maneuver>small{font-size:.61rem;}
+  .navibori-navigation-footer{
+    bottom:max(9px,env(safe-area-inset-bottom));
+    gap:5px;
+    padding:7px;
+  }
+}
