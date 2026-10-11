@@ -36,6 +36,7 @@ function installedStandalone(){
 export default function SpecialAlertsControl(){
   const [state,setState]=useState<PushState>("checking");
   const [busy,setBusy]=useState(false);
+  const [expanded,setExpanded]=useState(false);
   const [message,setMessage]=useState("");
   const [standalone,setStandalone]=useState(false);
   const [language,setLanguage]=useState<"es"|"en">("es");
@@ -222,7 +223,7 @@ export default function SpecialAlertsControl(){
   if(state==="checking" || state==="unsupported") return null;
 
   return (
-    <aside className={"special-alert-control "+state} aria-live="polite">
+    <aside className={"special-alert-control "+state+(expanded ? " expanded" : " collapsed")} aria-live="polite">
       <div>
         <span>{language==="en" ? "SPECIALS" : "ESPECIALES"}</span>
         <strong>
@@ -234,7 +235,8 @@ export default function SpecialAlertsControl(){
         </strong>
       </div>
 
-      {state==="enabled" ? (
+      <button type="button" className="special-alert-toggle" onClick={()=>setExpanded(value=>!value)} aria-expanded={expanded} aria-label={language==="en" ? "Show or hide special alert settings" : "Mostrar u ocultar ajustes de especiales"}>{expanded ? "−" : "⚙"}</button>
+      {expanded && (state==="enabled" ? (
         <button type="button" onClick={disable} disabled={busy}>
           {busy
             ? language==="en" ? "Disabling…" : "Desactivando…"
@@ -250,16 +252,16 @@ export default function SpecialAlertsControl(){
             ? language==="en" ? "Enabling…" : "Activando…"
             : language==="en" ? "Enable" : "Activar"}
         </button>
-      )}
+      ))}
 
-      {!standalone && state!=="enabled" && (
+      {expanded && !standalone && state!=="enabled" && (
         <small>
           {language==="en"
             ? "On iPhone/iPad, install NAVIBORI on the Home Screen to receive push alerts."
             : "En iPhone/iPad, instala NAVIBORI en la pantalla de inicio para recibir avisos push."}
         </small>
       )}
-      {message && <small>{message}</small>}
+      {expanded && message && <small>{message}</small>}
     </aside>
   );
 }
