@@ -2399,3 +2399,45 @@ html[data-motion="reduced"] .astra-flight-director-reticle b{transition:none}
   .astra-flight-director>div:first-child small{display:none}
   .astra-flight-director-reticle{flex-basis:68px}
 }
+
+
+/* NAVIBORI Gravity Lens */
+.full-map-cockpit[data-gravity-lens="acquire"] .navibori-navigation-maneuver{
+  border-color:rgba(10,132,255,.24);
+}
+.full-map-cockpit[data-gravity-lens="focus"] .navibori-navigation-maneuver{
+  border-color:rgba(103,232,249,.42);
+  box-shadow:
+    0 14px 34px rgba(15,23,42,.16),
+    0 0 0 1px rgba(10,132,255,.08),
+    0 0 24px rgba(10,132,255,.08);
+}
+.full-map-cockpit[data-gravity-lens="commit"] .navibori-navigation-maneuver{
+  border-color:rgba(103,232,249,.62);
+  box-shadow:
+    0 14px 34px rgba(15,23,42,.16),
+    0 0 0 1px rgba(10,132,255,.12),
+    0 0 30px rgba(103,232,249,.14);
+}
+.full-map-cockpit[data-gravity-lens="focus"] .vector-gate-map,
+.full-map-cockpit[data-gravity-lens="commit"] .vector-gate-map{
+  filter:
+    drop-shadow(0 8px 18px rgba(15,23,42,.14))
+    drop-shadow(0 0 12px rgba(103,232,249,.2));
+}
+.full-map-cockpit[data-gravity-lens="commit"] .vector-gate-map .vector-gate-frame{
+  box-shadow:
+    0 0 0 8px rgba(103,232,249,.07),
+    0 0 38px rgba(10,132,255,.28),
+    inset 0 0 22px rgba(103,232,249,.12);
+}
+.full-map-cockpit[data-gravity-lens="focus"] .maplibregl-canvas,
+.full-map-cockpit[data-gravity-lens="commit"] .maplibregl-canvas{
+  transition:filter .28s ease;
+}
+:root[data-motion="reduced"] .full-map-cockpit[data-gravity-lens] .navibori-navigation-maneuver,
+:root[data-motion="reduced"] .full-map-cockpit[data-gravity-lens] .vector-gate-map,
+:root[data-motion="reduced"] .full-map-cockpit[data-gravity-lens] .maplibregl-canvas{
+  transition:none!important;
+  animation:none!important;
+}
