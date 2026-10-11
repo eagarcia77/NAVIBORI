@@ -2633,3 +2633,22 @@ html[data-motion="reduced"] .navibori-drift-bridge-marker i{
   opacity: .78;
   white-space: nowrap;
 }
+
+.navibori-health-panel {
+  margin: 8px 0 12px;
+  padding: 10px 12px;
+  border: 1px solid rgba(17, 94, 125, .18);
+  border-radius: 12px;
+  background: rgba(245, 250, 253, .94);
+  color: var(--ink);
+}
+.navibori-health-panel summary {
+  cursor: pointer;
+  font-size: .82rem;
+  font-weight: 800;
+}
+.navibori-health-panel dl {display: grid; gap: 5px; margin: 10px 0;}
+.navibori-health-panel dl > div {display: flex; justify-content: space-between; gap: 12px; font-size: .75rem;}
+.navibori-health-panel dt {color: var(--muted);}
+.navibori-health-panel dd {margin: 0; font-weight: 750; text-align: right; overflow-wrap: anywhere;}
+.navibori-health-panel > small {display: block; font-size: .67rem; line-height: 1.35;}
