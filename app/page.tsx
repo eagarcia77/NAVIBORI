@@ -20,6 +20,7 @@ export default async function Home() {
       <NaviboriMap
         businesses={businesses}
         source={usingLive ? "live" : "demo"}
+        buildRevision={(process.env.RENDER_GIT_COMMIT || "local").slice(0,7)}
       />
     </main>
   );
