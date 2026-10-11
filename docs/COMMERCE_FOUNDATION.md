@@ -107,6 +107,16 @@ A submitted request still requires merchant confirmation. Requests in new, accep
 - Arrival mode switches the navigation surface into a confirmation state near the destination.
 - Peripheral-adaptive control sizing, XR/gamepad affordances and reduced-motion preferences continue to apply across all phases.
 
+## EXODOCK adaptive cockpit
+- EXODOCK is an aerospace-inspired final-approach mode, not a claim of extraterrestrial technology.
+- It activates only during the final route segment: ACQUIRE at 180 m, ALIGN at 80 m and DOCK at 25 m/arrival.
+- Final approach progressively reduces camera pitch, increases destination emphasis and declutters secondary experimental HUD modules so the customer can focus on the actual route and destination.
+- Supported browsers may emit short haptic patterns on EXODOCK phase changes; unsupported devices simply ignore the vibration request.
+- The adaptive cockpit consumes the PeripheralAdapter profile already exposed on the document root. Touch, gamepad and XR get larger targets; fine-pointer devices use more compact controls; reduced-motion preferences disable decorative movement.
+- Peripheral/native-shell locale can override the browser/device locale using either window.__NAVIBORI_PERIPHERAL_LOCALE__ before hydration or a CustomEvent named navibori:peripheral-locale with detail.locale.
+- If no peripheral locale is supplied, NAVIBORI continues to follow navigator.languages / navigator.language.
+- Transport labels, nearby commerce navigation and primary map controls use the active locale consistently.
+
 ## High-visibility navigation route
 - The route overlay now uses four visual layers: route glow, dark casing, high-contrast primary line, and repeated directional arrows.
 - Route layers are explicitly moved to the top of the MapLibre layer stack so the raster basemap cannot cover them.
