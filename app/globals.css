@@ -2597,3 +2597,29 @@ html[data-motion="reduced"] .navibori-drift-bridge-marker i{
     min-height: 44px;
   }
 }
+
+/* Navigation-first mobile HUD: show maneuvers, keep secondary telemetry discreet. */
+@media (max-width: 640px) {
+  .navibori-navigation-maneuver {
+    gap: 2px;
+    padding: 9px 11px;
+    border-radius: 14px;
+  }
+  .navibori-navigation-maneuver > strong {
+    font-size: clamp(1.05rem, 4.1vw, 1.28rem);
+    line-height: 1.22;
+    overflow-wrap: anywhere;
+  }
+  .navibori-navigation-maneuver > small {
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+  .astra-flight-director {
+    margin-top: 3px;
+    padding: 4px 7px;
+    gap: 6px;
+  }
+  .astra-flight-director > div:first-child small {
+    display: none;
+  }
+}
