@@ -114,6 +114,7 @@ export default function NaviboriMap({
   const gpsActiveRef=useRef(false);
   const voiceEnabledRef=useRef(false);
   const lastSpokenInstructionRef=useRef("");
+  const wakeLockRef=useRef<WakeLockSentinel|null>(null);
 
   const [mapReady,setMapReady]=useState(false);
   const [mode,setMode]=useState<RealityMode>("2d");
@@ -130,6 +131,7 @@ export default function NaviboriMap({
   const [lastRouteMode,setLastRouteMode]=useState<InMapRouteMode>("driving");
   const [gpsActive,setGpsActive]=useState(false);
   const [gpsAccuracy,setGpsAccuracy]=useState<number|null>(null);
+  const [gpsSpeedKph,setGpsSpeedKph]=useState<number|null>(null);
   const [gpsTestBusy,setGpsTestBusy]=useState(false);
   const [gpsDiagnostics,setGpsDiagnostics]=useState<{
     secure:boolean|null;
@@ -233,6 +235,25 @@ export default function NaviboriMap({
   useEffect(()=>{
     voiceEnabledRef.current=voiceEnabled;
   },[voiceEnabled]);
+
+  useEffect(()=>{
+    const handleVisibility=()=>{
+      if(
+        document.visibilityState==="visible" &&
+        gpsActiveRef.current &&
+        "wakeLock" in navigator
+      ){
+        void navigator.wakeLock.request("screen")
+          .then((sentinel)=>{
+            wakeLockRef.current=sentinel;
+          })
+          .catch(()=>{});
+      }
+    };
+
+    document.addEventListener("visibilitychange",handleVisibility);
+    return ()=>document.removeEventListener("visibilitychange",handleVisibility);
+  },[]);
 
   useEffect(()=>{
     if(
@@ -624,7 +645,8 @@ export default function NaviboriMap({
     const activeMode=activeNavigationModeRef.current;
     mapRef.current?.easeTo({
       center:[userLocation.longitude,userLocation.latitude],
-      zoom:Math.max(mapRef.current?.getZoom() ?? 16,16),
+      zoom:Math.max(mapRef.current?.getZoom() ?? 16,16.8),
+      offset:[0,110],
       pitch:
         activeMode==="driving"
           ? 42
@@ -960,6 +982,12 @@ export default function NaviboriMap({
     lastRouteRefreshAtRef.current=0;
     setGpsActive(false);
     setGpsAccuracy(null);
+    setGpsSpeedKph(null);
+
+    if(wakeLockRef.current){
+      void wakeLockRef.current.release().catch(()=>{});
+      wakeLockRef.current=null;
+    }
   }
 
   function startGpsNavigation(routeMode:InMapRouteMode){
@@ -985,6 +1013,14 @@ export default function NaviboriMap({
     followGpsRef.current=true;
     setRouteBusy(routeMode);
     setLocationStatus("Conectando con tu GPS…");
+
+    if("wakeLock" in navigator){
+      void navigator.wakeLock.request("screen")
+        .then((sentinel)=>{
+          wakeLockRef.current=sentinel;
+        })
+        .catch(()=>{});
+    }
 
     const cachedOrigin=
       userLocation && validRouteCoordinate(userLocation)
@@ -1069,11 +1105,18 @@ export default function NaviboriMap({
           ? position.coords.speed
           : null;
 
+      setGpsSpeedKph(
+        speed!==null
+          ? Math.max(0,Math.round(speed*3.6))
+          : null
+      );
+
       if(followGpsRef.current){
         const map=mapRef.current;
         map?.easeTo({
           center:[next.longitude,next.latitude],
-          zoom:Math.max(map?.getZoom() ?? 16,16),
+          zoom:Math.max(map?.getZoom() ?? 16,16.8),
+          offset:[0,110],
           bearing:
             heading!==null && (speed===null || speed>0.8)
               ? heading
@@ -1319,11 +1362,29 @@ export default function NaviboriMap({
                 <strong>{formatDistance(routeResult.distanceMeters)}</strong>
               </div>
               <div>
-                <span>Modo</span>
-                <strong>{routeModeIcon(routeResult.mode)} {routeModeLabel(routeResult.mode)}</strong>
+                <span>Velocidad</span>
+                <strong>
+                  {gpsSpeedKph!==null ? gpsSpeedKph+" km/h" : "—"}
+                </strong>
               </div>
-              <button type="button" onClick={recenterGpsCamera}>
-                ◎ Recentrar
+              <div>
+                <span>GPS</span>
+                <strong>
+                  {gpsAccuracy!==null
+                    ? gpsAccuracy<=20
+                      ? "Excelente · ±"+Math.round(gpsAccuracy)+" m"
+                      : gpsAccuracy<=50
+                        ? "Bueno · ±"+Math.round(gpsAccuracy)+" m"
+                        : "Débil · ±"+Math.round(gpsAccuracy)+" m"
+                    : "Buscando…"}
+                </strong>
+              </div>
+              <button
+                type="button"
+                className={followGps ? "active" : ""}
+                onClick={recenterGpsCamera}
+              >
+                {followGps ? "◎ Siguiendo" : "◎ Recentrar"}
               </button>
               <button
                 type="button"
