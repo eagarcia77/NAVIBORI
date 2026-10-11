@@ -25,7 +25,7 @@ export class ProximityOffers {
     if(!Array.isArray(merchants)||merchants.length>500) throw new TypeError("Invalid merchant list");
     this.merchants=merchants.filter(m=>m&&valid(m.location)&&typeof m.id==="string");
     const ids=new Set(this.merchants.map(m=>m.id));
-    for(const id of this.inside) if(!ids.has(id)) this.inside.delete(id);
+    for(const key of this.inside) if(!ids.has(key.split(":")[0])) this.inside.delete(key);
   }
   updatePosition(position) {
     if(!this.enabled||!valid(position)||!Number.isFinite(position.accuracyMeters)||position.accuracyMeters>50) return [];
@@ -33,13 +33,14 @@ export class ProximityOffers {
     for(const merchant of this.merchants) {
       const distance=NavigationTracker.distanceMeters(position,merchant.location);
       const inside=distance<=this.radiusMeters;
-      const wasInside=this.inside.has(merchant.id);
-      if(!inside) {if(distance>this.radiusMeters+50)this.inside.delete(merchant.id);continue;}
+      const offerKey=merchant.id+":"+(merchant.promotion?.id||"");
+      const wasInside=this.inside.has(offerKey);
+      if(!inside) {if(distance>this.radiusMeters+50)for(const key of this.inside) if(key.startsWith(merchant.id+":")) this.inside.delete(key);continue;}
       if(!eligibleOffer(merchant,now)||wasInside) continue;
-      const key=merchant.id+":"+merchant.promotion.id;
+      const key=offerKey;
       const last=this.lastSent.get(key);
-      if(last!==undefined&&now-last<this.cooldownMs) {this.inside.add(merchant.id);continue;}
-      this.lastSent.set(key,now);this.inside.add(merchant.id);
+      if(last!==undefined&&now-last<this.cooldownMs) {this.inside.add(offerKey);continue;}
+      this.lastSent.set(key,now);this.inside.add(offerKey);
       const message={merchantId:merchant.id,merchantName:merchant.name,offerId:merchant.promotion.id,
         title:merchant.promotion.title,expiresAt:merchant.promotion.endsAt,distanceMeters:Math.round(distance)};
       out.push(message);this.onOffer(message);
