@@ -32,6 +32,11 @@ import {
   lagrangePhaseLabel
 } from "@/lib/commerce/lagrange-cockpit";
 import {
+  deriveExoDockState,
+  exoDockCameraProfile,
+  exoDockLabel
+} from "@/lib/commerce/exodock";
+import {
   adaptiveCameraProfile,
   buildTrajectoryPrediction,
   type TrajectoryPrediction,
@@ -474,6 +479,19 @@ export default function NaviboriMap({
     ]
   );
 
+  const exoDockState=useMemo(
+    ()=>deriveExoDockState({
+      gpsActive,
+      arrived,
+      remainingMeters:navigationProgress?.remainingMeters ?? null
+    }),
+    [
+      arrived,
+      gpsActive,
+      navigationProgress?.remainingMeters
+    ]
+  );
+
   useEffect(()=>{
     const applyLocale=()=>{
       const locale=browserNaviboriLocale();
@@ -559,7 +577,7 @@ export default function NaviboriMap({
 
     if(routeResult && selected?.mapLocation){
       const element=document.createElement("div");
-      element.className="navibori-holo-destination";
+      element.className="navibori-holo-destination exodock-"+exoDockState;
       element.setAttribute(
         "aria-label",
         tr("Destino de navegación","Navigation destination")
@@ -1894,12 +1912,22 @@ export default function NaviboriMap({
       }
       lastTrajectoryRiskRef.current=risk;
 
-      const cameraProfile=adaptiveCameraProfile(
-        activeMode,
-        speedKphNow,
-        cameraCue?.distanceMeters ?? null,
-        risk
-      );
+      const liveDockState=deriveExoDockState({
+        gpsActive:true,
+        arrived:false,
+        remainingMeters:
+          cameraRoute
+            ? getNavigationProgress(cameraRoute,next)?.remainingMeters ?? null
+            : null
+      });
+      const cameraProfile=
+        exoDockCameraProfile(liveDockState,activeMode) ??
+        adaptiveCameraProfile(
+          activeMode,
+          speedKphNow,
+          cameraCue?.distanceMeters ?? null,
+          risk
+        );
 
       if(followGpsRef.current){
         const map=mapRef.current;
@@ -2124,6 +2152,7 @@ export default function NaviboriMap({
     <section
       className="map-panel spatial-cockpit full-map-cockpit"
       data-cockpit-phase={lagrangePhase}
+      data-exodock-state={exoDockState}
       aria-label={tr("Mapa de comercios NAVIBORI","NAVIBORI business map")}
     >
       <div className="map-stage full-map-stage">
@@ -2186,6 +2215,7 @@ export default function NaviboriMap({
               "navibori-navigation-hud lagrange-phase-"+lagrangePhase
             }
             data-lagrange-phase={lagrangePhase}
+            data-exodock-state={exoDockState}
             aria-live="polite"
           >
             <div className={"navibori-navigation-maneuver vector-gate-"+vectorGateState}>
@@ -2204,9 +2234,32 @@ export default function NaviboriMap({
                   )}
                 </strong>
               </div>
+              {exoDockState!=="inactive" && (
+                <div
+                  className={"exodock-chip "+exoDockState}
+                  aria-label={tr(
+                    "Sistema de aproximación final EXODOCK",
+                    "EXODOCK final approach system"
+                  )}
+                >
+                  <span>◇ EXODOCK</span>
+                  <strong>
+                    {exoDockLabel(exoDockState,deviceLocale.language)}
+                    {navigationProgress
+                      ? " · "+Math.max(
+                          0,
+                          Math.round(navigationProgress.remainingMeters)
+                        )+" m"
+                      : ""}
+                  </strong>
+                </div>
+              )}
               <span>
                 {nextCue
-                  ? formatManeuverDistance(nextCue.distanceMeters)
+                  ? formatManeuverDistance(
+                      nextCue.distanceMeters,
+                      deviceLocale.language
+                    )
                   : routeModeIcon(routeResult.mode)}
               </span>
               <strong>
@@ -2504,7 +2557,7 @@ export default function NaviboriMap({
                   </strong>
                 </span>
                 <span>
-                  GPS navegador
+                  {deviceLocale.language==="en" ? "Browser GPS" : "GPS navegador"}
                   <strong>
                     {gpsDiagnostics.geolocation===null
                       ? "—"
@@ -2512,11 +2565,11 @@ export default function NaviboriMap({
                   </strong>
                 </span>
                 <span>
-                  Permiso
+                  {deviceLocale.language==="en" ? "Permission" : "Permiso"}
                   <strong>{gpsDiagnostics.permission}</strong>
                 </span>
                 <span>
-                  Rutas
+                  {deviceLocale.language==="en" ? "Routes" : "Rutas"}
                   <strong>{gpsDiagnostics.routing}</strong>
                 </span>
               </div>
@@ -2561,7 +2614,7 @@ export default function NaviboriMap({
                   className={mode==="globe" ? "active" : ""}
                   onClick={()=>activateMapMode("globe")}
                 >
-                  Globo
+                  {deviceLocale.language==="en" ? "Globe" : "Globo"}
                 </button>
               </div>
             </section>
@@ -2604,8 +2657,8 @@ export default function NaviboriMap({
           <aside className="nearby-businesses-panel" aria-label="Comercios cerca de mí">
             <div className="nearby-businesses-heading">
               <div>
-                <span>Cerca de mí</span>
-                <strong>Comercios próximos</strong>
+                <span>{deviceLocale.language==="en" ? "Near me" : "Cerca de mí"}</span>
+                <strong>{deviceLocale.language==="en" ? "Nearby businesses" : "Comercios próximos"}</strong>
               </div>
               {gpsAccuracy!==null && (
                 <small>GPS ±{Math.round(gpsAccuracy)} m</small>
@@ -2625,7 +2678,11 @@ export default function NaviboriMap({
                     className="nearby-business-main"
                     onClick={()=>focusBusiness(business)}
                   >
-                    <span>Aprox. {formatDistance(distanceMeters)} · en línea directa</span>
+                    <span>
+                      {deviceLocale.language==="en" ? "Approx. " : "Aprox. "}
+                      {formatDistance(distanceMeters)}
+                      {deviceLocale.language==="en" ? " · straight-line" : " · en línea directa"}
+                    </span>
                     <strong>{business.name}</strong>
                     <small>
                       {business.mapLocation?.address ?? business.locationLabel}
@@ -2706,7 +2763,9 @@ export default function NaviboriMap({
                         >
                           <span aria-hidden="true">{travel.icon}</span>
                           <strong>
-                            {routeBusy===travel.value ? "Calculando…" : travel.label}
+                            {routeBusy===travel.value
+  ? deviceLocale.language==="en" ? "Calculating…" : "Calculando…"
+  : copy.modeShort[travel.value]}
                           </strong>
                         </button>
                       ))}
