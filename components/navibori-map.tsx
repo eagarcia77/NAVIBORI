@@ -2625,8 +2625,8 @@ export default function NaviboriMap({
         <div ref={mapNode} className="map-canvas full-map-canvas" />
         {routeResult && (
           <svg ref={routeSvgRef} className="navibori-route-svg-fallback" aria-hidden="true" preserveAspectRatio="none">
-            <polyline fill="none" stroke="#ffffff" strokeWidth="13" strokeLinejoin="round" strokeLinecap="round" />
-            <polyline fill="none" stroke={routeLineColor(routeResult.mode)} strokeWidth="8" strokeLinejoin="round" strokeLinecap="round" />
+            <polyline fill="none" stroke="#ffffff" strokeWidth="10" strokeLinejoin="round" strokeLinecap="round" />
+            <polyline fill="none" stroke={routeLineColor(routeResult.mode)} strokeWidth="6" strokeLinejoin="round" strokeLinecap="round" />
           </svg>
         )}
 
