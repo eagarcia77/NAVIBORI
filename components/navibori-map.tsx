@@ -1013,12 +1013,9 @@ export default function NaviboriMap({
         " · "+formatDuration(route.durationSeconds)
       );
 
-      routePreviewTimerRef.current=setTimeout(()=>{
-        routePreviewTimerRef.current=null;
-        followGpsRef.current=true;
-        setFollowGps(true);
-        recenterGpsCamera();
-      },1800);
+      // Keep the entire route visible until the customer explicitly recenters.
+      // GPS tracking, turn guidance and rerouting continue in the background.
+      setLocationStatus("Ruta completa visible · toca Recentrar GPS para seguir tu posición.");
     };
 
     if(cachedOrigin){
