@@ -518,6 +518,75 @@ function projectMeters(
   };
 }
 
+function normalizeBearing(value:number){
+  const normalized=value%360;
+  return normalized<0 ? normalized+360 : normalized;
+}
+
+export function bearingBetweenCoordinates(
+  from:RoutingCoordinate,
+  to:RoutingCoordinate
+){
+  const lat1=toRadians(from.latitude);
+  const lat2=toRadians(to.latitude);
+  const deltaLon=toRadians(to.longitude-from.longitude);
+
+  const y=Math.sin(deltaLon)*Math.cos(lat2);
+  const x=
+    Math.cos(lat1)*Math.sin(lat2)-
+    Math.sin(lat1)*Math.cos(lat2)*Math.cos(deltaLon);
+
+  if(Math.abs(x)<1e-12 && Math.abs(y)<1e-12) return null;
+
+  return normalizeBearing(Math.atan2(y,x)*180/Math.PI);
+}
+
+export function getRouteBearingNearPoint(
+  route:InMapRouteResult,
+  point:RoutingCoordinate
+){
+  const coordinates=route.geometry.coordinates;
+  if(coordinates.length<2) return null;
+
+  const refLatitude=point.latitude;
+  const projectedPoint=projectMeters(point,refLatitude);
+
+  let bestDistance=Number.POSITIVE_INFINITY;
+  let bestBearing:number|null=null;
+
+  for(let index=1;index<coordinates.length;index+=1){
+    const [aLon,aLat]=coordinates[index-1];
+    const [bLon,bLat]=coordinates[index];
+    const aCoordinate={latitude:aLat,longitude:aLon};
+    const bCoordinate={latitude:bLat,longitude:bLon};
+    const a=projectMeters(aCoordinate,refLatitude);
+    const b=projectMeters(bCoordinate,refLatitude);
+    const abX=b.x-a.x;
+    const abY=b.y-a.y;
+    const lengthSquared=abX*abX+abY*abY;
+
+    let t=0;
+    if(lengthSquared>0){
+      t=((projectedPoint.x-a.x)*abX+(projectedPoint.y-a.y)*abY)/lengthSquared;
+      t=Math.max(0,Math.min(1,t));
+    }
+
+    const nearestX=a.x+t*abX;
+    const nearestY=a.y+t*abY;
+    const distance=Math.hypot(
+      projectedPoint.x-nearestX,
+      projectedPoint.y-nearestY
+    );
+
+    if(distance<bestDistance){
+      bestDistance=distance;
+      bestBearing=bearingBetweenCoordinates(aCoordinate,bCoordinate);
+    }
+  }
+
+  return bestBearing;
+}
+
 export function distanceToRouteMeters(
   point:RoutingCoordinate,
   geometry:RouteGeometry
