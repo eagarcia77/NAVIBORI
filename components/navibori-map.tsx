@@ -14,6 +14,7 @@ import {
   getNextNavigationCue,
   getNavigationCueAtProgress,
   getNavigationProgress,
+  getRouteBearingNearPoint,
   hasArrivedAtDestination,
   isOffNavigationRoute,
   routeModeLabel,
@@ -1195,7 +1196,11 @@ export default function NaviboriMap({
           bearing:
             heading!==null && (speed===null || speed>0.8)
               ? heading
-              : map?.getBearing() ?? 0,
+              : routeResultRef.current
+                ? getRouteBearingNearPoint(routeResultRef.current,next) ??
+                  map?.getBearing() ??
+                  0
+                : map?.getBearing() ?? 0,
           pitch:
             activeMode==="driving"
               ? 42
