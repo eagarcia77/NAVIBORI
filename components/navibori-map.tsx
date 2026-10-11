@@ -1372,11 +1372,8 @@ export default function NaviboriMap({
     };
 
     if(gpsActive && followGps && userLocation){
-      map.easeTo({
-        center:[userLocation.longitude,userLocation.latitude],
-        zoom:Math.max(map.getZoom(),16),
-        duration:350
-      });
+      // The foreground GPS tracker owns the adaptive camera during navigation.
+      // Avoid a competing easeTo() here, which resets its look-ahead and zoom.
       return cleanup;
     }
 
