@@ -12,6 +12,8 @@ import {
   getNextNavigationCue,
   getNavigationCueAtProgress,
   getNavigationProgress,
+  bearingBetweenCoordinates,
+  getRouteBearingNearPoint,
   distanceToRouteMeters,
   isOffNavigationRoute,
   hasArrivedAtDestination,
@@ -264,6 +266,66 @@ describe("in-map commerce routing",()=>{
     const arrivalCue=getNavigationCueAtProgress(route,850);
     expect(arrivalCue?.instruction).toBe("Has llegado a tu destino.");
     expect(arrivalCue?.distanceMeters).toBe(50);
+  });
+
+  it("computes route bearings for Waze-style camera follow",()=>{
+    expect(
+      bearingBetweenCoordinates(
+        {latitude:18.0,longitude:-66.5},
+        {latitude:18.01,longitude:-66.5}
+      )
+    ).toBeCloseTo(0,1);
+
+    expect(
+      bearingBetweenCoordinates(
+        {latitude:18.0,longitude:-66.5},
+        {latitude:18.0,longitude:-66.49}
+      )
+    ).toBeCloseTo(90,1);
+
+    expect(
+      bearingBetweenCoordinates(
+        {latitude:18.0,longitude:-66.5},
+        {latitude:17.99,longitude:-66.5}
+      )
+    ).toBeCloseTo(180,1);
+
+    expect(
+      bearingBetweenCoordinates(
+        {latitude:18.0,longitude:-66.5},
+        {latitude:18.0,longitude:-66.51}
+      )
+    ).toBeCloseTo(270,1);
+  });
+
+  it("uses the nearest route segment for camera bearing",()=>{
+    const route={
+      mode:"driving" as const,
+      distanceMeters:2000,
+      durationSeconds:300,
+      geometry:{
+        type:"LineString" as const,
+        coordinates:[
+          [-66.50,18.00],
+          [-66.50,18.01],
+          [-66.49,18.01]
+        ] as [number,number][]
+      },
+      steps:[],
+      provider:"OSRM / OpenStreetMap" as const
+    };
+
+    const northBearing=getRouteBearingNearPoint(
+      route,
+      {latitude:18.005,longitude:-66.5001}
+    );
+    const eastBearing=getRouteBearingNearPoint(
+      route,
+      {latitude:18.0101,longitude:-66.495}
+    );
+
+    expect(northBearing).toBeCloseTo(0,1);
+    expect(eastBearing).toBeCloseTo(90,1);
   });
 
   it("detects off-route movement and arrival",()=>{
