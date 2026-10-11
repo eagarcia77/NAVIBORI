@@ -11,11 +11,11 @@ export function eligibleOffer(merchant,now=Date.now()) {
   return start<=now&&now<end&&start<end;
 }
 export class ProximityOffers {
-  constructor({onOffer=()=>{},radiusMeters=150,cooldownMs=6*60*60*1000,now=()=>Date.now(),storage=null}={}) {
+  constructor({onOffer=()=>{},radiusMeters=150,cooldownMs=6*60*60*1000,now=()=>Date.now()}={}) {
     if(!Number.isFinite(radiusMeters)||radiusMeters<30||radiusMeters>500) throw new RangeError("Invalid radius");
     if(!Number.isFinite(cooldownMs)||cooldownMs<60000) throw new RangeError("Invalid cooldown");
     this.onOffer=onOffer;this.radiusMeters=radiusMeters;this.cooldownMs=cooldownMs;this.now=now;
-    this.storage=storage;this.enabled=false;this.merchants=[];this.lastSent=new Map();this.inside=new Set();
+    this.enabled=false;this.merchants=[];this.lastSent=new Map();this.inside=new Set();
   }
   setConsent(enabled) {
     this.enabled=enabled===true;
