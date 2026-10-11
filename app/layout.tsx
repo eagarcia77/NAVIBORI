@@ -5,6 +5,7 @@ import "./globals.css";
 import PeripheralAdapter from "@/components/system/peripheral-adapter";
 import GamepadFocusController from "@/components/system/gamepad-focus-controller";
 import SpecialAlertsControl from "@/components/commerce/special-alerts-control";
+import DeviceLanguage from "@/components/system/device-language";
 
 export const metadata: Metadata = {
   title: "NAVIBORI XR",
@@ -27,6 +28,7 @@ export default function RootLayout({ children }: Readonly<{ children: ReactNode 
   return (
     <html lang="es-PR">
       <body>
+        <DeviceLanguage />
         <PeripheralAdapter />
         <GamepadFocusController />
         {children}

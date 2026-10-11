@@ -92,7 +92,13 @@ export async function POST(request:Request){
     mode?:unknown;
     origin?:unknown;
     destination?:unknown;
+    locale?:unknown;
   };
+
+  const locale=
+    typeof payload.locale==="string" && payload.locale.trim()
+      ? payload.locale.slice(0,35)
+      : "es-ES";
 
   if(!validMode(payload.mode)){
     return NextResponse.json(
@@ -149,7 +155,12 @@ export async function POST(request:Request){
 
       if(response.ok){
         const data=await response.json() as OsrmRouteResponse;
-        const route=normalizeOsrmRoute(data,payload.mode);
+        const route=normalizeOsrmRoute(
+          data,
+          payload.mode,
+          "OSRM / OpenStreetMap",
+          locale
+        );
 
         if(route){
           return NextResponse.json(route,{
@@ -171,7 +182,12 @@ export async function POST(request:Request){
         method:"POST",
         headers:{"Content-Type":"application/json"},
         body:JSON.stringify(
-          buildValhallaRouteRequest(origin,destination,payload.mode)
+          buildValhallaRouteRequest(
+            origin,
+            destination,
+            payload.mode,
+            locale
+          )
         )
       },
       12000
@@ -188,7 +204,8 @@ export async function POST(request:Request){
     const fallbackRoute=normalizeOsrmRoute(
       fallbackData,
       payload.mode,
-      "Valhalla / OpenStreetMap"
+      "Valhalla / OpenStreetMap",
+      locale
     );
 
     if(!fallbackRoute){

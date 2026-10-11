@@ -108,7 +108,8 @@ export function valhallaCosting(mode:InMapRouteMode){
 export function buildValhallaRouteRequest(
   origin:RoutingCoordinate,
   destination:RoutingCoordinate,
-  mode:InMapRouteMode
+  mode:InMapRouteMode,
+  locale="es-ES"
 ){
   return {
     locations:[
@@ -118,18 +119,20 @@ export function buildValhallaRouteRequest(
     costing:valhallaCosting(mode),
     format:"osrm",
     shape_format:"geojson",
-    language:"es-ES",
+    language:locale,
     directions_type:"instructions",
     alternates:0
   };
 }
 
-export function routeModeLabel(mode:InMapRouteMode){
+export function routeModeLabel(mode:InMapRouteMode,locale="es-ES"){
+  const english=locale.toLowerCase().startsWith("en");
+
   switch(mode){
-    case "walking": return "Caminando";
-    case "cycling": return "En bicicleta";
-    case "scooter": return "En scooter";
-    default: return "En carro";
+    case "walking": return english ? "Walking" : "Caminando";
+    case "cycling": return english ? "Cycling" : "En bicicleta";
+    case "scooter": return english ? "Scooter" : "En scooter";
+    default: return english ? "Driving" : "En carro";
   }
 }
 
@@ -254,7 +257,89 @@ export function buildSpanishNavigationInstruction(
   }
 }
 
-function normalizeSteps(route:NonNullable<OsrmRouteResponse["routes"]>[number]){
+function englishDirectionLabel(modifier:string|null){
+  switch(modifier){
+    case "left": return "left";
+    case "right": return "right";
+    case "slight left": return "slightly left";
+    case "slight right": return "slightly right";
+    case "sharp left": return "sharply left";
+    case "sharp right": return "sharply right";
+    case "uturn": return "around";
+    case "straight": return "straight";
+    default: return modifier ?? "";
+  }
+}
+
+function englishRoadSuffix(name:string){
+  const clean=name.trim();
+  return clean ? " onto "+clean : "";
+}
+
+export function buildEnglishNavigationInstruction(
+  type:string,
+  modifier:string|null,
+  name:string,
+  exit:number|null
+){
+  const direction=englishDirectionLabel(modifier);
+  const road=englishRoadSuffix(name);
+
+  switch(type){
+    case "depart":
+      return name ? "Start on "+name+"." : "Start the route.";
+    case "arrive":
+      return "You have arrived at your destination.";
+    case "turn":
+      return direction ? "Turn "+direction+road+"." : "Turn"+road+".";
+    case "continue":
+      return direction && direction!=="straight"
+        ? "Continue "+direction+road+"."
+        : "Continue straight"+road+".";
+    case "new name":
+      return name ? "Continue on "+name+"." : "Continue on the road.";
+    case "merge":
+      return direction ? "Merge "+direction+road+"." : "Merge"+road+".";
+    case "on ramp":
+      return direction ? "Take the ramp "+direction+road+"." : "Take the ramp"+road+".";
+    case "off ramp":
+      return direction ? "Take the exit "+direction+road+"." : "Take the exit"+road+".";
+    case "fork":
+      return direction ? "At the fork, keep "+direction+road+"." : "Continue through the fork"+road+".";
+    case "end of road":
+      return direction ? "At the end of the road, turn "+direction+road+"." : "Continue to the end of the road"+road+".";
+    case "roundabout":
+    case "rotary":
+      return exit
+        ? "At the roundabout, take exit "+exit+road+"."
+        : "Enter the roundabout"+road+".";
+    case "roundabout turn":
+      return direction ? "At the roundabout, turn "+direction+road+"." : "Continue through the roundabout"+road+".";
+    case "exit roundabout":
+      return exit ? "Exit the roundabout at exit "+exit+road+"." : "Exit the roundabout"+road+".";
+    case "notification":
+      return name ? "Continue on "+name+"." : "Continue on the route.";
+    default:
+      return direction ? "Continue "+direction+road+"." : "Continue"+road+".";
+  }
+}
+
+export function buildNavigationInstruction(
+  type:string,
+  modifier:string|null,
+  name:string,
+  exit:number|null,
+  locale="es-ES"
+){
+  return locale.toLowerCase().startsWith("en")
+    ? buildEnglishNavigationInstruction(type,modifier,name,exit)
+    : buildSpanishNavigationInstruction(type,modifier,name,exit);
+}
+
+function normalizeSteps(
+  route:NonNullable<OsrmRouteResponse["routes"]>[number],
+  locale="es-ES"
+){
   const steps:NavigationStep[]=[];
 
   for(const leg of route.legs ?? []){
@@ -282,7 +367,7 @@ function normalizeSteps(route:NonNullable<OsrmRouteResponse["routes"]>[number]){
           : null;
 
       steps.push({
-        instruction:buildSpanishNavigationInstruction(type,modifier,name,exit),
+        instruction:buildNavigationInstruction(type,modifier,name,exit,locale),
         type,
         modifier,
         name,
@@ -300,7 +385,8 @@ function normalizeSteps(route:NonNullable<OsrmRouteResponse["routes"]>[number]){
 export function normalizeOsrmRoute(
   input:OsrmRouteResponse,
   mode:InMapRouteMode,
-  provider:InMapRouteResult["provider"]="OSRM / OpenStreetMap"
+  provider:InMapRouteResult["provider"]="OSRM / OpenStreetMap",
+  locale="es-ES"
 ):InMapRouteResult|null{
   if(input.code!=="Ok") return null;
   const route=input.routes?.[0];
@@ -329,7 +415,7 @@ export function normalizeOsrmRoute(
       type:"LineString",
       coordinates
     },
-    steps:normalizeSteps(route),
+    steps:normalizeSteps(route,locale),
     provider
   };
 }

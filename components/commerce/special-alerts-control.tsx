@@ -2,6 +2,7 @@
 
 import {useEffect,useState} from "react";
 import {createClient} from "@/lib/supabase/client";
+import {browserNaviboriLocale} from "@/lib/i18n/device-locale";
 
 type PushState="checking"|"unsupported"|"default"|"enabled"|"denied"|"error";
 
@@ -34,12 +35,14 @@ export default function SpecialAlertsControl(){
   const [busy,setBusy]=useState(false);
   const [message,setMessage]=useState("");
   const [standalone,setStandalone]=useState(false);
+  const [language,setLanguage]=useState<"es"|"en">("es");
 
   useEffect(()=>{
     let active=true;
 
     (async()=>{
       setStandalone(installedStandalone());
+      setLanguage(browserNaviboriLocale().language);
 
       if(
         !("serviceWorker" in navigator) ||
@@ -67,7 +70,11 @@ export default function SpecialAlertsControl(){
       }catch{
         if(active){
           setState("error");
-          setMessage("No se pudo preparar las notificaciones.");
+          setMessage(
+            language==="en"
+              ? "Notifications could not be prepared."
+              : "No se pudo preparar las notificaciones."
+          );
         }
       }
     })();
@@ -85,8 +92,12 @@ export default function SpecialAlertsControl(){
         setState(permission==="denied" ? "denied" : "default");
         setMessage(
           permission==="denied"
-            ? "Las notificaciones están bloqueadas en este dispositivo."
-            : "No se activaron las notificaciones."
+            ? language==="en"
+              ? "Notifications are blocked on this device."
+              : "Las notificaciones están bloqueadas en este dispositivo."
+            : language==="en"
+              ? "Notifications were not enabled."
+              : "No se activaron las notificaciones."
         );
         return;
       }
@@ -100,7 +111,11 @@ export default function SpecialAlertsControl(){
       );
 
       if(configError || !config?.publicKey){
-        throw new Error("No se pudo obtener la configuración push.");
+        throw new Error(
+          language==="en"
+            ? "Push configuration could not be loaded."
+            : "No se pudo obtener la configuración push."
+        );
       }
 
       let subscription=await registration.pushManager.getSubscription();
@@ -127,13 +142,19 @@ export default function SpecialAlertsControl(){
       if(error) throw error;
 
       setState("enabled");
-      setMessage("Recibirás especiales y promociones LIVE de NAVIBORI.");
+      setMessage(
+        language==="en"
+          ? "You will receive NAVIBORI LIVE specials and promotions."
+          : "Recibirás especiales y promociones LIVE de NAVIBORI."
+      );
     }catch(error){
       setState("error");
       setMessage(
         error instanceof Error
           ? error.message
-          : "No se pudieron activar las notificaciones."
+          : language==="en"
+            ? "Notifications could not be enabled."
+            : "No se pudieron activar las notificaciones."
       );
     }finally{
       setBusy(false);
@@ -164,10 +185,18 @@ export default function SpecialAlertsControl(){
       }
 
       setState("default");
-      setMessage("Los especiales quedaron desactivados en este dispositivo.");
+      setMessage(
+        language==="en"
+          ? "Special alerts were disabled on this device."
+          : "Los especiales quedaron desactivados en este dispositivo."
+      );
     }catch{
       setState("error");
-      setMessage("No se pudo desactivar la suscripción.");
+      setMessage(
+        language==="en"
+          ? "The subscription could not be disabled."
+          : "No se pudo desactivar la suscripción."
+      );
     }finally{
       setBusy(false);
     }
@@ -178,19 +207,21 @@ export default function SpecialAlertsControl(){
   return (
     <aside className={"special-alert-control "+state} aria-live="polite">
       <div>
-        <span>ESPECIALES</span>
+        <span>{language==="en" ? "SPECIALS" : "ESPECIALES"}</span>
         <strong>
           {state==="enabled"
-            ? "🔔 Avisos activados"
+            ? language==="en" ? "🔔 Alerts enabled" : "🔔 Avisos activados"
             : state==="denied"
-              ? "🔕 Avisos bloqueados"
-              : "🔔 Recibir especiales"}
+              ? language==="en" ? "🔕 Alerts blocked" : "🔕 Avisos bloqueados"
+              : language==="en" ? "🔔 Receive specials" : "🔔 Recibir especiales"}
         </strong>
       </div>
 
       {state==="enabled" ? (
         <button type="button" onClick={disable} disabled={busy}>
-          {busy ? "Desactivando…" : "Desactivar"}
+          {busy
+            ? language==="en" ? "Disabling…" : "Desactivando…"
+            : language==="en" ? "Disable" : "Desactivar"}
         </button>
       ) : (
         <button
@@ -198,13 +229,17 @@ export default function SpecialAlertsControl(){
           onClick={enable}
           disabled={busy || state==="denied"}
         >
-          {busy ? "Activando…" : "Activar"}
+          {busy
+            ? language==="en" ? "Enabling…" : "Activando…"
+            : language==="en" ? "Enable" : "Activar"}
         </button>
       )}
 
       {!standalone && state!=="enabled" && (
         <small>
-          En iPhone/iPad, instala NAVIBORI en la pantalla de inicio para recibir avisos push.
+          {language==="en"
+            ? "On iPhone/iPad, install NAVIBORI on the Home Screen to receive push alerts."
+            : "En iPhone/iPad, instala NAVIBORI en la pantalla de inicio para recibir avisos push."}
         </small>
       )}
       {message && <small>{message}</small>}
