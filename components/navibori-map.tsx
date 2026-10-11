@@ -104,6 +104,7 @@ export default function NaviboriMap({
   const routeAbortRef=useRef<AbortController|null>(null);
   const gpsWatchRef=useRef<number|null>(null);
   const gpsBootstrapTimerRef=useRef<ReturnType<typeof setTimeout>|null>(null);
+  const routePreviewTimerRef=useRef<ReturnType<typeof setTimeout>|null>(null);
   const activeNavigationModeRef=useRef<InMapRouteMode|null>(null);
   const lastRouteOriginRef=useRef<RouteCoordinate|null>(null);
   const lastRouteRefreshAtRef=useRef(0);
@@ -328,6 +329,9 @@ export default function NaviboriMap({
       }
       if(gpsWatchRef.current!==null && navigator.geolocation){
         navigator.geolocation.clearWatch(gpsWatchRef.current);
+      }
+      if(routePreviewTimerRef.current!==null){
+        clearTimeout(routePreviewTimerRef.current);
       }
       markersRef.current.forEach((marker)=>marker.remove());
       userMarkerRef.current?.remove();
@@ -910,6 +914,7 @@ export default function NaviboriMap({
         " · "+formatDistance(data.distanceMeters)+
         " · "+formatDuration(data.durationSeconds)
       );
+      return data;
     }catch(error){
       if(error instanceof Error && error.name==="AbortError") return;
 
@@ -925,6 +930,7 @@ export default function NaviboriMap({
             ? error.message
             : "No se pudo calcular la ruta."
       );
+      return null;
     }finally{
       if(routeAbortRef.current===controller){
         routeAbortRef.current=null;
@@ -937,6 +943,10 @@ export default function NaviboriMap({
     if(gpsBootstrapTimerRef.current!==null){
       clearTimeout(gpsBootstrapTimerRef.current);
       gpsBootstrapTimerRef.current=null;
+    }
+    if(routePreviewTimerRef.current!==null){
+      clearTimeout(routePreviewTimerRef.current);
+      routePreviewTimerRef.current=null;
     }
 
     if(gpsWatchRef.current!==null && navigator.geolocation){
@@ -984,23 +994,37 @@ export default function NaviboriMap({
     let receivedFix=cachedOrigin!==null;
     let fallbackRequested=false;
 
+    const previewThenFollow=async(origin:RouteCoordinate)=>{
+      followGpsRef.current=false;
+      setFollowGps(false);
+      setRouteStatus(
+        (demoRoute ? "Ruta DEMO · " : "")+
+        "Calculando y dibujando ruta…"
+      );
+
+      const route=await calculateRoute(routeMode,origin);
+      if(!route) return;
+
+      showFullRoute();
+      setRouteStatus(
+        routeModeLabel(routeMode)+
+        " · ruta lista · "+formatDistance(route.distanceMeters)+
+        " · "+formatDuration(route.durationSeconds)
+      );
+
+      routePreviewTimerRef.current=setTimeout(()=>{
+        routePreviewTimerRef.current=null;
+        followGpsRef.current=true;
+        setFollowGps(true);
+        recenterGpsCamera();
+      },1800);
+    };
+
     if(cachedOrigin){
       setGpsActive(true);
       setRouteBusy(null);
       showUserLocation(cachedOrigin);
-      setRouteStatus(
-        (demoRoute ? "Ruta DEMO · " : "")+
-        "Usando tu última ubicación · calculando ruta…"
-      );
-
-      mapRef.current?.easeTo({
-        center:[cachedOrigin.longitude,cachedOrigin.latitude],
-        zoom:Math.max(mapRef.current?.getZoom() ?? 16,16),
-        pitch:routeMode==="driving" ? 42 : routeMode==="walking" ? 15 : 28,
-        duration:500
-      });
-
-      void calculateRoute(routeMode,cachedOrigin);
+      void previewThenFollow(cachedOrigin);
     }
 
     const handlePosition=(position:GeolocationPosition)=>{
@@ -1065,11 +1089,7 @@ export default function NaviboriMap({
 
       if(firstFix){
         firstFix=false;
-        setRouteStatus(
-          (demoRoute ? "Ruta DEMO · " : "")+
-          "Ubicación obtenida · calculando ruta…"
-        );
-        void calculateRoute(activeMode,next);
+        void previewThenFollow(next);
       }else{
         const now=Date.now();
         const currentRoute=routeResultRef.current;
