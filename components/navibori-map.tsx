@@ -183,6 +183,8 @@ export default function NaviboriMap({
     ()=>naviboriCopy(deviceLocale.language),
     [deviceLocale.language]
   );
+  const tr=(es:string,en:string)=>
+    deviceLocale.language==="en" ? en : es;
 
   const [mapReady,setMapReady]=useState(false);
   const [mode,setMode]=useState<RealityMode>("2d");
@@ -436,7 +438,10 @@ export default function NaviboriMap({
       followGpsRef.current=false;
       setFollowGps(false);
       setLocationStatus(
-        "Vista libre · el GPS sigue activo y la ruta continúa recalculándose."
+        tr(
+          "Vista libre · el GPS sigue activo y la ruta continúa recalculándose.",
+          "Free map view · GPS remains active and the route keeps recalculating."
+        )
       );
     };
 
@@ -650,8 +655,14 @@ export default function NaviboriMap({
       focusBusiness(business);
       setLocationStatus(
         source==="live"
-          ? "Este comercio todavía no tiene una ubicación LIVE verificada para navegación."
-          : "Este destino DEMO no tiene coordenadas válidas para probar navegación."
+          ? tr(
+            "Este comercio todavía no tiene una ubicación LIVE verificada para navegación.",
+            "This business does not yet have a verified LIVE location for navigation."
+          )
+          : tr(
+            "Este destino DEMO no tiene coordenadas válidas para probar navegación.",
+            "This DEMO destination does not have valid coordinates for navigation testing."
+          )
       );
       return;
     }
@@ -674,7 +685,7 @@ export default function NaviboriMap({
 
     const element=document.createElement("div");
     element.className="navibori-gps-marker";
-    element.setAttribute("aria-label","Tu ubicación GPS");
+    element.setAttribute("aria-label",tr("Tu ubicación GPS","Your GPS location"));
     const dot=document.createElement("span");
     element.appendChild(dot);
 
@@ -836,7 +847,10 @@ export default function NaviboriMap({
       followGpsRef.current=false;
       setFollowGps(false);
       setLocationStatus(
-        "Vista de ruta completa · el GPS sigue activo y la ruta continúa recalculándose."
+        tr(
+          "Vista de ruta completa · el GPS sigue activo y la ruta continúa recalculándose.",
+          "Full route view · GPS remains active and the route keeps recalculating."
+        )
       );
     }
 
@@ -868,19 +882,25 @@ export default function NaviboriMap({
     });
 
     setLocationStatus(
-      "Seguimiento visual GPS reactivado."+
+      tr("Seguimiento visual GPS reactivado.","GPS camera follow restored.")+
       (gpsAccuracy!==null ? " Precisión ±"+Math.round(gpsAccuracy)+" m." : "")
     );
   }
 
   function geolocationErrorMessage(error:GeolocationPositionError){
     if(error.code===error.PERMISSION_DENIED){
-      return "Permiso de ubicación denegado. Activa Localización para NAVIBORI/Safari y vuelve a intentar.";
+      return tr(
+        "Permiso de ubicación denegado. Activa Localización para NAVIBORI/Safari y vuelve a intentar.",
+        "Location permission denied. Enable Location for NAVIBORI/Safari and try again."
+      );
     }
     if(error.code===error.POSITION_UNAVAILABLE){
       return "El dispositivo no pudo determinar tu ubicación. Activa Localización, Wi‑Fi o datos móviles y vuelve a intentar.";
     }
-    return "El GPS tardó demasiado en responder. Intenta nuevamente en un lugar con mejor señal.";
+    return tr(
+      "El GPS tardó demasiado en responder. Intenta nuevamente en un lugar con mejor señal.",
+      "GPS took too long to respond. Try again where signal is stronger."
+    );
   }
 
   async function runGpsDiagnostics(){
@@ -905,7 +925,7 @@ export default function NaviboriMap({
       geolocation,
       permission,
       routing,
-      detail:"Verificando motor de rutas…"
+      detail:tr("Verificando motor de rutas…","Checking routing engine…")
     });
 
     try{
@@ -938,7 +958,7 @@ export default function NaviboriMap({
         geolocation,
         permission,
         routing:"error",
-        detail:"No se pudo comprobar el motor de rutas."
+        detail:tr("No se pudo comprobar el motor de rutas.","The routing engine could not be checked.")
       });
     }
   }
@@ -946,16 +966,19 @@ export default function NaviboriMap({
   function testGps(){
     if(!window.isSecureContext){
       setNavigationPhase("error");
-      setLocationStatus("El GPS requiere una conexión HTTPS segura.");
+      setLocationStatus(tr("El GPS requiere una conexión HTTPS segura.","GPS requires a secure HTTPS connection."));
       return;
     }
     if(!navigator.geolocation){
-      setLocationStatus("Este dispositivo o navegador no ofrece geolocalización.");
+      setLocationStatus(tr(
+      "Este dispositivo o navegador no ofrece geolocalización.",
+      "This device or browser does not provide geolocation."
+    ));
       return;
     }
 
     setGpsTestBusy(true);
-    setLocationStatus("Probando GPS del dispositivo…");
+    setLocationStatus(tr("Probando GPS del dispositivo…","Testing device GPS…"));
 
     const success=(position:GeolocationPosition)=>{
       const next={
@@ -965,7 +988,7 @@ export default function NaviboriMap({
 
       if(!validRouteCoordinate(next)){
         setGpsTestBusy(false);
-        setLocationStatus("El navegador devolvió una ubicación inválida.");
+        setLocationStatus(tr("El navegador devolvió una ubicación inválida.","The browser returned an invalid location."));
         return;
       }
 
@@ -983,7 +1006,7 @@ export default function NaviboriMap({
       });
       setGpsTestBusy(false);
       setLocationStatus(
-        (selected && canRoute ? "✓ GPS funcionando · iniciando ruta" : "✓ GPS funcionando · selecciona un comercio")+
+        (selected && canRoute ? tr("✓ GPS funcionando · iniciando ruta","✓ GPS working · starting route") : tr("✓ GPS funcionando · selecciona un comercio","✓ GPS working · select a business"))+
         (accuracy!==null ? " · precisión aproximada ±"+Math.round(accuracy)+" m" : "")
       );
 
@@ -1026,7 +1049,7 @@ export default function NaviboriMap({
       return;
     }
 
-    setLocationStatus("Buscando tu ubicación…");
+    setLocationStatus(tr("Buscando tu ubicación…","Finding your location…"));
     navigator.geolocation.getCurrentPosition(
       (position)=>{
         const next={
@@ -1040,7 +1063,10 @@ export default function NaviboriMap({
             ? position.coords.accuracy
             : null
         );
-        setLocationStatus("Tu ubicación está activa solo durante esta sesión.");
+        setLocationStatus(tr(
+          "Tu ubicación está activa solo durante esta sesión.",
+          "Your location is active only during this session."
+        ));
         showUserLocation(next);
 
         if(afterLocate){
@@ -1056,7 +1082,10 @@ export default function NaviboriMap({
       },
       ()=>{
         setLocationStatus(
-          "No se pudo acceder a tu ubicación. Verifica el permiso de ubicación del navegador."
+          tr(
+      "No se pudo acceder a tu ubicación. Verifica el permiso de ubicación del navegador.",
+      "Your location could not be accessed. Check the browser location permission."
+    )
         );
       },
       {enableHighAccuracy:true,timeout:12000,maximumAge:10000}
@@ -1153,7 +1182,7 @@ export default function NaviboriMap({
       const data=await response.json() as InMapRouteResult|{error?:string};
 
       if(!response.ok || !("geometry" in data)){
-        throw new Error("error" in data && data.error ? data.error : "No se encontró una ruta.");
+        throw new Error("error" in data && data.error ? data.error : tr("No se encontró una ruta.","No route was found."));
       }
 
       routeResultRef.current=data;
@@ -1198,7 +1227,7 @@ export default function NaviboriMap({
               : "GPS activo · no se pudo actualizar la ruta; se conserva la última ruta.")
           : error instanceof Error
             ? error.message
-            : "No se pudo calcular la ruta."
+            : tr("No se pudo calcular la ruta.","The route could not be calculated.")
       );
       return null;
     }finally{
@@ -1249,13 +1278,16 @@ export default function NaviboriMap({
     void runGpsDiagnostics();
 
     if(!window.isSecureContext){
-      setLocationStatus("El GPS requiere una conexión HTTPS segura.");
+      setLocationStatus(tr("El GPS requiere una conexión HTTPS segura.","GPS requires a secure HTTPS connection."));
       return;
     }
 
     if(!navigator.geolocation){
       setNavigationPhase("error");
-      setLocationStatus("Este dispositivo o navegador no ofrece GPS/geolocalización.");
+      setLocationStatus(tr(
+      "Este dispositivo o navegador no ofrece GPS/geolocalización.",
+      "This device or browser does not provide GPS/geolocation."
+    ));
       return;
     }
 
@@ -1269,7 +1301,7 @@ export default function NaviboriMap({
     followGpsRef.current=true;
     setRouteBusy(routeMode);
     setNavigationPhase("permission");
-    setLocationStatus("Conectando con tu GPS…");
+    setLocationStatus(tr("Conectando con tu GPS…","Connecting to your GPS…"));
 
     if("wakeLock" in navigator){
       void navigator.wakeLock.request("screen")
@@ -1332,7 +1364,10 @@ export default function NaviboriMap({
       };
 
       if(!validRouteCoordinate(next)){
-        setLocationStatus("El GPS devolvió una ubicación inválida. Intenta nuevamente.");
+        setLocationStatus(tr(
+          "El GPS devolvió una ubicación inválida. Intenta nuevamente.",
+          "GPS returned an invalid location. Try again."
+        ));
         return;
       }
 
@@ -1425,7 +1460,7 @@ export default function NaviboriMap({
           isOffNavigationRoute(next,currentRoute,accuracy);
 
         if(offRoute && now-lastRouteRefreshAtRef.current>=6000){
-          setRouteStatus("Fuera de ruta · recalculando…");
+          setRouteStatus(tr("Fuera de ruta · recalculando…","Off route · recalculating…"));
           void calculateRoute(activeMode,next,{quiet:true});
         }else if(
           shouldRefreshNavigationRoute(
@@ -1454,7 +1489,7 @@ export default function NaviboriMap({
       ){
         setArrived(true);
         setRouteStatus("Has llegado a "+selected.name+".");
-        setLocationStatus("Destino alcanzado · GPS detenido.");
+        setLocationStatus(tr("Destino alcanzado · GPS detenido.","Destination reached · GPS stopped."));
         speakNavigation(copy.destinationReached,0,true);
         stopGpsNavigation();
         mapRef.current?.easeTo({
@@ -1478,7 +1513,10 @@ export default function NaviboriMap({
     const requestLowAccuracyFallback=()=>{
       if(fallbackRequested || receivedFix) return;
       fallbackRequested=true;
-      setLocationStatus("GPS de alta precisión no respondió · probando ubicación aproximada…");
+      setLocationStatus(tr(
+        "GPS de alta precisión no respondió · probando ubicación aproximada…",
+        "High-accuracy GPS did not respond · trying approximate location…"
+      ));
       navigator.geolocation.getCurrentPosition(
         handlePosition,
         (error)=>{
@@ -1544,7 +1582,10 @@ export default function NaviboriMap({
       setRouteBusy(null);
       setNavigationPhase("error");
       setLocationStatus(
-        "No llegó una posición GPS. Pulsa “Reintentar GPS” o abre ☰ > Diagnosticar GPS y rutas."
+        tr(
+        "No llegó una posición GPS. Pulsa “Reintentar GPS” o abre ☰ > Diagnosticar GPS y rutas.",
+        "No GPS position was received. Tap “Retry GPS” or open ☰ > Diagnose GPS and routes."
+      )
       );
       stopGpsNavigation({preservePhase:true});
     },25000);
@@ -1594,7 +1635,7 @@ export default function NaviboriMap({
   }
 
   return (
-    <section className="map-panel spatial-cockpit full-map-cockpit" aria-label="Mapa de comercios NAVIBORI">
+    <section className="map-panel spatial-cockpit full-map-cockpit" aria-label=tr("Mapa de comercios NAVIBORI","NAVIBORI business map")>
       <div className="map-stage full-map-stage">
         <div ref={mapNode} className="map-canvas full-map-canvas" />
 
@@ -1732,7 +1773,7 @@ export default function NaviboriMap({
                 className="danger"
                 onClick={()=>{
                   stopGpsNavigation();
-                  setLocationStatus("GPS detenido. La ruta permanece visible.");
+                  setLocationStatus(tr("GPS detenido. La ruta permanece visible.","GPS stopped. The route remains visible."));
                 }}
               >
                 {copy.finish}
@@ -2198,7 +2239,7 @@ export default function NaviboriMap({
                         type="button"
                         onClick={()=>{
                           stopGpsNavigation();
-                          setLocationStatus("GPS detenido. La ruta permanece visible.");
+                          setLocationStatus(tr("GPS detenido. La ruta permanece visible.","GPS stopped. The route remains visible."));
                         }}
                       >
                         Detener GPS
