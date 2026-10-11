@@ -480,7 +480,12 @@ export default function NaviboriMap({
         business.verifiedLocation ? "verified" : "demo",
         business.slug===selectedSlug ? "selected-destination" : ""
       ].filter(Boolean).join(" ");
-      element.setAttribute("aria-label","Ver "+business.name+" en el mapa");
+      element.setAttribute(
+        "aria-label",
+        (deviceLocale.language==="en" ? "View " : "Ver ")+
+        business.name+
+        (deviceLocale.language==="en" ? " on map" : " en el mapa")
+      );
       element.title=business.name;
 
       const initial=document.createElement("span");
@@ -492,7 +497,7 @@ export default function NaviboriMap({
       if(business.slug===selectedSlug){
         const destinationLabel=document.createElement("small");
         destinationLabel.className="business-map-destination-label";
-        destinationLabel.textContent="Destino";
+        destinationLabel.textContent=copy.destination;
         element.appendChild(destinationLabel);
       }
 
@@ -521,7 +526,14 @@ export default function NaviboriMap({
       const location=mappedBusinesses[0].mapLocation!;
       map.easeTo({center:[location.longitude,location.latitude],zoom:16,duration:700});
     }
-  },[mappedBusinesses,mapReady,routeResult,selectedSlug]);
+  },[
+    mappedBusinesses,
+    mapReady,
+    routeResult,
+    selectedSlug,
+    copy.destination,
+    deviceLocale.language
+  ]);
 
   useEffect(()=>{
     const map=mapRef.current;
@@ -1614,16 +1626,16 @@ export default function NaviboriMap({
 
         {navigationPhase!=="idle" && selected && (
           <div className={"navibori-navigation-phase "+navigationPhase} aria-live="polite">
-            <span className={navigationPhase==="permission"||navigationPhase==="gps"||navigationPhase==="routing"||navigationPhase==="navigating" ? "done" : ""}>1 Permiso</span>
-            <span className={navigationPhase==="gps"||navigationPhase==="routing"||navigationPhase==="navigating" ? "done" : ""}>2 GPS</span>
-            <span className={navigationPhase==="routing"||navigationPhase==="navigating" ? "done" : ""}>3 Ruta</span>
-            <span className={navigationPhase==="navigating" ? "done" : ""}>4 Navegando</span>
+            <span className={navigationPhase==="permission"||navigationPhase==="gps"||navigationPhase==="routing"||navigationPhase==="navigating" ? "done" : ""}>{copy.permissionStep}</span>
+            <span className={navigationPhase==="gps"||navigationPhase==="routing"||navigationPhase==="navigating" ? "done" : ""}>{copy.gpsStep}</span>
+            <span className={navigationPhase==="routing"||navigationPhase==="navigating" ? "done" : ""}>{copy.routeStep}</span>
+            <span className={navigationPhase==="navigating" ? "done" : ""}>{copy.navigatingStep}</span>
             {navigationPhase==="error" && (
               <button
                 type="button"
                 onClick={()=>startGpsNavigation(lastRouteMode)}
               >
-                Reintentar GPS
+                {copy.retryGps}
               </button>
             )}
           </div>
@@ -1668,21 +1680,21 @@ export default function NaviboriMap({
                 </strong>
               </div>
               <div>
-                <span>Velocidad</span>
+                <span>{copy.speed}</span>
                 <strong>
                   {gpsSpeedKph!==null ? gpsSpeedKph+" km/h" : "—"}
                 </strong>
               </div>
               <div>
-                <span>GPS</span>
+                <span>{copy.gps}</span>
                 <strong>
                   {gpsAccuracy!==null
                     ? gpsAccuracy<=20
-                      ? "Excelente · ±"+Math.round(gpsAccuracy)+" m"
+                      ? copy.excellent+" · ±"+Math.round(gpsAccuracy)+" m"
                       : gpsAccuracy<=50
-                        ? "Bueno · ±"+Math.round(gpsAccuracy)+" m"
-                        : "Débil · ±"+Math.round(gpsAccuracy)+" m"
-                    : "Buscando…"}
+                        ? copy.good+" · ±"+Math.round(gpsAccuracy)+" m"
+                        : copy.weak+" · ±"+Math.round(gpsAccuracy)+" m"
+                    : copy.searching}
                 </strong>
               </div>
               <button
@@ -1690,7 +1702,7 @@ export default function NaviboriMap({
                 className={followGps ? "active" : ""}
                 onClick={recenterGpsCamera}
               >
-                {followGps ? "◎ Siguiendo" : "◎ Recentrar"}
+                {followGps ? copy.following : copy.recenter}
               </button>
               <button
                 type="button"
@@ -1713,7 +1725,7 @@ export default function NaviboriMap({
                   }
                 }}
               >
-                {voiceEnabled ? "🔊 Voz" : "🔇 Voz"}
+                {(voiceEnabled ? "🔊 " : "🔇 ")+copy.voice}
               </button>
               <button
                 type="button"
@@ -1723,7 +1735,7 @@ export default function NaviboriMap({
                   setLocationStatus("GPS detenido. La ruta permanece visible.");
                 }}
               >
-                Finalizar
+                {copy.finish}
               </button>
             </div>
           </aside>
@@ -1742,8 +1754,8 @@ export default function NaviboriMap({
           <aside className="full-map-menu" aria-label="Menú principal NAVIBORI">
             <div className="full-map-menu-head">
               <div>
-                <span>MENÚ</span>
-                <strong>Explorar y navegar</strong>
+                <span>{copy.menu}</span>
+                <strong>{copy.exploreNavigate}</strong>
               </div>
               <button
                 type="button"
@@ -1759,8 +1771,8 @@ export default function NaviboriMap({
                 type="search"
                 value={searchTerm}
                 onChange={(event)=>setSearchTerm(event.target.value)}
-                placeholder="Buscar comercio o dirección"
-                aria-label="Buscar comercio o dirección"
+                placeholder={copy.searchPlaceholder}
+                aria-label={copy.searchPlaceholder}
               />
               {searchTerm && (
                 <button
@@ -1794,7 +1806,7 @@ export default function NaviboriMap({
 
             {searchTerm.trim() && searchResults.length===0 && (
               <small className="full-map-menu-empty">
-                No se encontraron comercios con esa búsqueda.
+                {copy.noResults}
               </small>
             )}
 
@@ -1810,10 +1822,10 @@ export default function NaviboriMap({
                   disabled={gpsTestBusy}
                 >
                   {gpsTestBusy
-  ? "Probando…"
+  ? copy.testingGps
   : selected && canRoute
-    ? "◎ Probar GPS e iniciar ruta"
-    : "◎ Probar GPS"}
+    ? copy.testGpsAndRoute
+    : copy.testGps}
                 </button>
                 <button
                   type="button"
@@ -1822,7 +1834,7 @@ export default function NaviboriMap({
                     setMenuOpen(false);
                   }}
                 >
-                  ⦿ Mi ubicación
+                  {copy.myLocation}
                 </button>
                 {gpsActive && (
                   <button
@@ -1832,7 +1844,7 @@ export default function NaviboriMap({
                       setMenuOpen(false);
                     }}
                   >
-                    ◎ Recentrar GPS
+                    {copy.recenterGps}
                   </button>
                 )}
               </div>
@@ -1841,7 +1853,7 @@ export default function NaviboriMap({
                 className="full-map-diagnostic-button"
                 onClick={runGpsDiagnostics}
               >
-                Diagnosticar GPS y rutas
+                {copy.diagnoseGps}
               </button>
 
               <div className="full-map-gps-diagnostics" aria-live="polite">
@@ -1877,7 +1889,7 @@ export default function NaviboriMap({
             </section>
 
             <section className="full-map-menu-section">
-              <span>Categorías</span>
+              <span>{copy.categories}</span>
               <div className="full-map-category-grid">
                 {categories.map((item)=>(
                   <button
@@ -1890,14 +1902,14 @@ export default function NaviboriMap({
                       setMenuOpen(false);
                     }}
                   >
-                    {item.label}
+                    {copy.category[item.value]}
                   </button>
                 ))}
               </div>
             </section>
 
             <section className="full-map-menu-section">
-              <span>Vista</span>
+              <span>{copy.view}</span>
               <div className="full-map-menu-grid">
                 <button
                   type="button"
@@ -1917,7 +1929,7 @@ export default function NaviboriMap({
             </section>
 
             <nav className="full-map-menu-links" aria-label="Opciones NAVIBORI">
-              <Link href="/comercios">Comercios</Link>
+              <Link href="/comercios">{copy.commerce}</Link>
               <Link href="/ar">AR</Link>
               <Link href="/twin">Twin</Link>
               <Link href="/studio">Studio</Link>
@@ -1926,7 +1938,7 @@ export default function NaviboriMap({
             </nav>
 
             <small className="full-map-menu-foot">
-              Activa “Recibir especiales” para recibir promociones LIVE en la aplicación instalada.
+              {copy.specialsHint}
             </small>
           </aside>
         )}
@@ -1982,11 +1994,11 @@ export default function NaviboriMap({
                           type="button"
                           key={travel.value}
                           onClick={()=>navigateToNearbyBusiness(business,travel.value)}
-                          aria-label={"Navegar en "+travel.ariaLabel+" a "+business.name}
-                          title={travel.label}
+                          aria-label={(deviceLocale.language==="en" ? "Navigate by " : "Navegar en ")+copy.modeShort[travel.value]+" · "+business.name}
+                          title={copy.modeShort[travel.value]}
                         >
                           <span aria-hidden="true">{travel.icon}</span>
-                          <small>{travel.label}</small>
+                          <small>{copy.modeShort[travel.value]}</small>
                         </button>
                       ))}
                     </div>
@@ -2023,7 +2035,7 @@ export default function NaviboriMap({
               <div className="business-route-address-row">
                 <span>{selected.mapLocation?.address ?? selected.locationLabel}</span>
                 <button type="button" onClick={copySelectedAddress}>
-                  {addressCopied ? "✓ Copiada" : "Copiar dirección"}
+                  {addressCopied ? copy.copied : copy.copyAddress}
                 </button>
               </div>
 
@@ -2031,8 +2043,8 @@ export default function NaviboriMap({
                 <>
                   <div className="business-route-launch">
                     <div>
-                      <span>¿Cómo quieres llegar?</span>
-                      <small>Un toque inicia la ruta y el GPS.</small>
+                      <span>{copy.howToGetThere}</span>
+                      <small>{copy.oneTapStarts}</small>
                     </div>
                     <div className="business-route-mode-actions">
                       {travelModes.map((travel)=>(
@@ -2045,7 +2057,7 @@ export default function NaviboriMap({
                             setMenuOpen(false);
                             startGpsNavigation(travel.value);
                           }}
-                          aria-label={"Iniciar GPS en "+travel.ariaLabel+" hacia "+selected.name}
+                          aria-label={(deviceLocale.language==="en" ? "Start GPS by " : "Iniciar GPS en ")+copy.modeShort[travel.value]+" · "+selected.name}
                         >
                           <span aria-hidden="true">{travel.icon}</span>
                           <strong>
@@ -2108,9 +2120,9 @@ export default function NaviboriMap({
                         <span>{deviceLocale.language==="en" ? "Route directions" : "Indicaciones de la ruta"}</span>
                         <strong>
                           {directionsOpen
-                            ? deviceLocale.language==="en" ? "Hide" : "Ocultar"
+                            ? copy.hide
                             : routeResult.steps.length+" "+(
-                                deviceLocale.language==="en" ? "steps" : "pasos"
+                                copy.steps
                               )}
                         </strong>
                       </button>
@@ -2128,8 +2140,8 @@ export default function NaviboriMap({
                                   {step.distanceMeters>0
                                     ? formatDistance(step.distanceMeters)
                                     : step.type==="arrive"
-                                      ? deviceLocale.language==="en" ? "Destination" : "Destino"
-                                      : deviceLocale.language==="en" ? "Continue" : "Continúa"}
+                                      ? copy.destination
+                                      : copy.continue}
                                   {step.name ? " · "+step.name : ""}
                                 </small>
                               </div>
