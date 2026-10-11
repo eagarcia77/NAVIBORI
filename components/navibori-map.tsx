@@ -28,6 +28,10 @@ import {chooseNavigationBearing} from "@/lib/commerce/navigation-sensor-fusion";
 import {buildPhotonRouteGradient} from "@/lib/commerce/photon-corridor";
 import {buildOrbitalLookahead} from "@/lib/commerce/orbital-lookahead";
 import {
+  deriveLagrangeCockpitPhase,
+  lagrangePhaseLabel
+} from "@/lib/commerce/lagrange-cockpit";
+import {
   adaptiveCameraProfile,
   buildTrajectoryPrediction,
   type TrajectoryPrediction,
@@ -450,6 +454,23 @@ export default function NaviboriMap({
       navigationProgress?.traveledMeters,
       nextCue?.distanceMeters,
       routeResult
+    ]
+  );
+
+  const lagrangePhase=useMemo(
+    ()=>deriveLagrangeCockpitPhase({
+      gpsActive,
+      arrived,
+      nextManeuverMeters:nextCue?.distanceMeters ?? null,
+      remainingMeters:navigationProgress?.remainingMeters ?? null,
+      trajectoryRisk:trajectoryPrediction?.risk ?? "stable"
+    }),
+    [
+      arrived,
+      gpsActive,
+      navigationProgress?.remainingMeters,
+      nextCue?.distanceMeters,
+      trajectoryPrediction?.risk
     ]
   );
 
@@ -2102,6 +2123,7 @@ export default function NaviboriMap({
   return (
     <section
       className="map-panel spatial-cockpit full-map-cockpit"
+      data-cockpit-phase={lagrangePhase}
       aria-label={tr("Mapa de comercios NAVIBORI","NAVIBORI business map")}
     >
       <div className="map-stage full-map-stage">
@@ -2159,8 +2181,29 @@ export default function NaviboriMap({
         )}
 
         {gpsActive && routeResult && selected && (
-          <aside className="navibori-navigation-hud" aria-live="polite">
+          <aside
+            className={
+              "navibori-navigation-hud lagrange-phase-"+lagrangePhase
+            }
+            data-lagrange-phase={lagrangePhase}
+            aria-live="polite"
+          >
             <div className={"navibori-navigation-maneuver vector-gate-"+vectorGateState}>
+              <div
+                className={"lagrange-cockpit-chip "+lagrangePhase}
+                aria-label={tr(
+                  "Fase adaptativa Lagrange",
+                  "Lagrange adaptive phase"
+                )}
+              >
+                <span>◈ LAGRANGE</span>
+                <strong>
+                  {lagrangePhaseLabel(
+                    lagrangePhase,
+                    deviceLocale.language
+                  )}
+                </strong>
+              </div>
               <span>
                 {nextCue
                   ? formatManeuverDistance(nextCue.distanceMeters)
