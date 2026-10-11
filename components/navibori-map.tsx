@@ -379,6 +379,7 @@ export default function NaviboriMap({
   const [locationStatus,setLocationStatus]=useState("");
   const [routeResult,setRouteResult]=useState<InMapRouteResult|null>(null);
   const [routeStatus,setRouteStatus]=useState("");
+  const [routeVisualStatus,setRouteVisualStatus]=useState<"idle"|"visible"|"error">("idle");
   const [routeBusy,setRouteBusy]=useState<InMapRouteMode|null>(null);
   const [lastRouteMode,setLastRouteMode]=useState<InMapRouteMode>("driving");
   const [gpsActive,setGpsActive]=useState(false);
@@ -1337,6 +1338,7 @@ export default function NaviboriMap({
       };
       const source=map.getSource(ROUTE_SOURCE_ID) as maplibregl.GeoJSONSource|undefined;
       source?.setData(empty);
+      setRouteVisualStatus("idle");
       return;
     }
 
@@ -1345,10 +1347,12 @@ export default function NaviboriMap({
 
     const renderRoute=()=>{
       if(cancelled) return true;
-      return drawRouteOnMap(
+      const ok=drawRouteOnMap(
         routeResult,
         navigationProgress?.progressRatio ?? 0
       );
+      setRouteVisualStatus(ok ? "visible" : "error");
+      return ok;
     };
 
     const rendered=renderRoute();
@@ -2968,6 +2972,7 @@ export default function NaviboriMap({
                 <div><dt>{tr("Precisión","Accuracy")}</dt><dd>{gpsAccuracy===null ? "—" : "±"+Math.round(gpsAccuracy)+" m"}</dd></div>
                 <div><dt>{tr("Seguimiento","Follow mode")}</dt><dd>{followGps ? tr("Activado","On") : tr("Pausado","Paused")}</dd></div>
                 <div><dt>{tr("Ruta","Route")}</dt><dd>{routeResult ? tr("Calculada","Calculated") : tr("Sin ruta","No route")}</dd></div>
+                <div><dt>{tr("Dibujo de ruta","Route rendering")}</dt><dd>{routeVisualStatus==="visible" ? tr("Capa instalada","Layer installed") : routeVisualStatus==="error" ? tr("Error de dibujo","Render error") : "—"}</dd></div>
                 <div><dt>{tr("Navegación","Navigation")}</dt><dd>{navigationPhase}</dd></div>
                 <div><dt>{tr("Comercios","Businesses")}</dt><dd>{source==="live" ? "LIVE" : "DEMO"} · {mappedBusinesses.length}</dd></div>
                 <div><dt>{tr("Sitio seguro","Secure origin")}</dt><dd>{gpsDiagnostics.secure===null ? "—" : gpsDiagnostics.secure ? "HTTPS" : tr("No seguro","Insecure")}</dd></div>
