@@ -12,3 +12,5 @@ test("rejects expired promotions",()=>assert.equal(eligibleOffer(merchant,Date.p
 test("ignores inaccurate GPS fixes",()=>{const {service}=setup();service.setConsent(true);assert.equal(service.updatePosition({...position,accuracyMeters:90}).length,0);});
 test("requires physical proximity",()=>{const {service}=setup();service.setConsent(true);assert.equal(service.updatePosition({...position,lat:18.01}).length,0);});
 test("consent revocation disables alerts",()=>{const {service}=setup();service.setConsent(true);service.setConsent(false);assert.equal(service.updatePosition(position).length,0);});
+
+test("new promotion can alert during same store visit",()=>{const {service}=setup();service.setConsent(true);assert.equal(service.updatePosition(position).length,1);service.setMerchants([{...merchant,promotion:{...merchant.promotion,id:"deal2",title:"New deal"}}]);assert.equal(service.updatePosition(position).length,1);});
