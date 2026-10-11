@@ -55,6 +55,11 @@ import {
   type FlightDirectorPhase
 } from "@/lib/commerce/astra-flight-director";
 import {
+  applyGravityLensToCamera,
+  buildGravityLens,
+  type GravityLensPhase
+} from "@/lib/commerce/gravity-lens";
+import {
   NAVIBORI_LOCALE_CHANGE_EVENT,
   browserNaviboriLocale,
   naviboriCopy,
@@ -350,6 +355,7 @@ export default function NaviboriMap({
   const [gpsSpeedKph,setGpsSpeedKph]=useState<number|null>(null);
   const [navigationBearingDegrees,setNavigationBearingDegrees]=useState<number|null>(null);
   const [trajectoryPrediction,setTrajectoryPrediction]=useState<TrajectoryPrediction|null>(null);
+  const [gravityLensPhase,setGravityLensPhase]=useState<GravityLensPhase>("cruise");
   const [astraCompassState,setAstraCompassState]=useState<
     "idle"|"active"|"blocked"|"unsupported"
   >("idle");
@@ -1825,6 +1831,7 @@ export default function NaviboriMap({
     setGpsAccuracy(null);
     setGpsSpeedKph(null);
     setTrajectoryPrediction(null);
+    setGravityLensPhase("cruise");
     lastTrajectoryRiskRef.current="stable";
     if(!options.preservePhase){
       setNavigationPhase("idle");
@@ -2002,7 +2009,37 @@ export default function NaviboriMap({
               cameraCue?.distanceMeters ?? null
             )
           : null;
-      const cameraCenter=cameraLookahead?.coordinate ?? next;
+
+      const liveDockState=deriveExoDockState({
+        gpsActive:true,
+        arrived:false,
+        remainingMeters:cameraProgress?.remainingMeters ?? null
+      });
+
+      const gravityLens=
+        liveDockState==="inactive"
+          ? buildGravityLens({
+              baseCoordinate:cameraLookahead?.coordinate ?? next,
+              maneuverCoordinate:cameraCue?.step.location ?? null,
+              maneuverDistanceMeters:cameraCue?.distanceMeters ?? null,
+              mode:activeMode,
+              speedKph:speedKphNow,
+              reducedMotion:
+                document.documentElement.dataset.motion==="reduced"
+            })
+          : buildGravityLens({
+              baseCoordinate:cameraLookahead?.coordinate ?? next,
+              maneuverCoordinate:null,
+              maneuverDistanceMeters:null,
+              mode:activeMode,
+              speedKph:speedKphNow,
+              reducedMotion:
+                document.documentElement.dataset.motion==="reduced"
+            });
+
+      setGravityLensPhase(gravityLens.phase);
+
+      const cameraCenter=gravityLens.center;
       const routeBearingPoint=cameraLookahead?.coordinate ?? next;
       const routeHeading=
         cameraRoute
@@ -2050,15 +2087,7 @@ export default function NaviboriMap({
       }
       lastTrajectoryRiskRef.current=risk;
 
-      const liveDockState=deriveExoDockState({
-        gpsActive:true,
-        arrived:false,
-        remainingMeters:
-          cameraRoute
-            ? getNavigationProgress(cameraRoute,next)?.remainingMeters ?? null
-            : null
-      });
-      const cameraProfile=
+      const baseCameraProfile=
         exoDockCameraProfile(liveDockState,activeMode) ??
         adaptiveCameraProfile(
           activeMode,
@@ -2066,6 +2095,11 @@ export default function NaviboriMap({
           cameraCue?.distanceMeters ?? null,
           risk
         );
+
+      const cameraProfile=
+        liveDockState==="inactive"
+          ? applyGravityLensToCamera(baseCameraProfile,gravityLens)
+          : baseCameraProfile;
 
       if(followGpsRef.current){
         const map=mapRef.current;
@@ -2291,6 +2325,7 @@ export default function NaviboriMap({
       className="map-panel spatial-cockpit full-map-cockpit"
       data-cockpit-phase={lagrangePhase}
       data-exodock-state={exoDockState}
+      data-gravity-lens={gravityLensPhase}
       aria-label={tr("Mapa de comercios NAVIBORI","NAVIBORI business map")}
     >
       <div className="map-stage full-map-stage">

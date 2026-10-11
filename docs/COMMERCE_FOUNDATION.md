@@ -134,6 +134,14 @@ A submitted request still requires merchant confirmation. Requests in new, accep
 - The Flight Director automatically follows the active device/peripheral language for Spanish/English guidance labels.
 - Control sizing follows the existing peripheral profile: touch/gamepad/XR receive larger guidance controls than fine-pointer desktop input.
 
+## Gravity Lens adaptive intersection focus
+- Gravity Lens is an aerospace-inspired camera guidance layer that gradually shifts visual focus from the route corridor toward the real coordinate of the next maneuver.
+- The deterministic phases are CRUISE, ACQUIRE, FOCUS and COMMIT. Thresholds vary by driving, walking, cycling and scooter modes.
+- During ACQUIRE/FOCUS/COMMIT, Gravity Lens blends the camera center toward the maneuver coordinate, increases zoom, reduces pitch and lowers forward offset so the intersection becomes easier to read.
+- EXODOCK retains priority during final arrival, preventing the intersection lens from competing with destination docking.
+- Reduced-motion preference decreases focus blending and camera changes.
+- Gravity Lens never changes routing geometry, GPS tracking, rerouting rules or turn instructions; it only improves how the already-calculated route is framed.
+
 ## High-visibility navigation route
 - The route overlay now uses four visual layers: route glow, dark casing, high-contrast primary line, and repeated directional arrows.
 - Route layers are explicitly moved to the top of the MapLibre layer stack so the raster basemap cannot cover them.
