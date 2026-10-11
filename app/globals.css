@@ -2623,3 +2623,13 @@ html[data-motion="reduced"] .navibori-drift-bridge-marker i{
     display: none;
   }
 }
+
+/* Always-visible deployment verification, including installed iPhone PWAs. */
+.full-map-brand-pill > small {
+  display: inline-block;
+  font-size: .57rem;
+  font-weight: 800;
+  letter-spacing: .02em;
+  opacity: .78;
+  white-space: nowrap;
+}
