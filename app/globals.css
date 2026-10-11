@@ -2652,3 +2652,20 @@ html[data-motion="reduced"] .navibori-drift-bridge-marker i{
 .navibori-health-panel dt {color: var(--muted);}
 .navibori-health-panel dd {margin: 0; font-weight: 750; text-align: right; overflow-wrap: anywhere;}
 .navibori-health-panel > small {display: block; font-size: .67rem; line-height: 1.35;}
+
+.navibori-diagnostics-copy {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 36px;
+  margin: 8px 0;
+  padding: 7px 12px;
+  border: 1px solid rgba(0, 95, 143, .25);
+  border-radius: 9px;
+  background: #fff;
+  color: var(--ocean);
+  font-size: .75rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+.navibori-diagnostics-copy:focus-visible {outline: 3px solid #0878f9; outline-offset: 2px;}
