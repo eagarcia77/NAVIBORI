@@ -1235,3 +1235,58 @@ body{overflow:hidden}
   }
   .navibori-navigation-maneuver{left:62px}
 }
+
+
+/* NAVIBORI peripheral-adaptive interaction */
+html[data-controls="comfortable"] .full-map-menu-button,
+html[data-controls="comfortable"] .full-map-gps-button{
+  min-width:52px;
+  height:52px;
+}
+html[data-controls="comfortable"] .full-map-menu button,
+html[data-controls="comfortable"] .navibori-navigation-footer>button,
+html[data-controls="comfortable"] .business-route-mode-actions>button{
+  min-height:44px;
+}
+html[data-input="touch"] .full-map-menu button,
+html[data-input="touch"] .navibori-navigation-footer>button{
+  touch-action:manipulation;
+}
+html[data-input="gamepad"] button:focus-visible,
+html[data-input="gamepad"] a:focus-visible,
+html[data-input="keyboard"] button:focus-visible,
+html[data-input="keyboard"] a:focus-visible{
+  outline:3px solid #0a84ff;
+  outline-offset:3px;
+  box-shadow:0 0 0 5px rgba(10,132,255,.16);
+}
+html[data-density="compact"] .full-map-menu{
+  gap:9px;
+  padding:10px;
+}
+html[data-density="compact"] .full-map-menu-section{
+  gap:5px;
+}
+html[data-density="compact"] .full-map-menu-grid button,
+html[data-density="compact"] .full-map-category-grid button{
+  min-height:36px;
+}
+html[data-motion="reduced"] *,
+html[data-motion="reduced"] *::before,
+html[data-motion="reduced"] *::after{
+  scroll-behavior:auto!important;
+  animation-duration:.001ms!important;
+  animation-iteration-count:1!important;
+  transition-duration:.001ms!important;
+}
+@media(pointer:coarse){
+  .full-map-menu-button,
+  .full-map-gps-button{
+    min-width:52px;
+    height:52px;
+  }
+  .full-map-menu button,
+  .navibori-navigation-footer>button{
+    min-height:44px;
+  }
+}
