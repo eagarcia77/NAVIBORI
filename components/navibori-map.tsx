@@ -156,6 +156,10 @@ function formatManeuverDistance(
 ){
   if(meters<30) return language==="en" ? "Now" : "Ahora";
   const prefix=language==="en" ? "In " : "En ";
+  if(language==="es"){
+    if(meters<1000) return prefix+Math.max(10,Math.round(meters/10)*10)+" m";
+    return prefix+(meters/1000).toFixed(1)+" km";
+  }
   if(meters<1000){
     return prefix+Math.max(25,Math.round(meters*3.28084/25)*25)+" ft";
   }
