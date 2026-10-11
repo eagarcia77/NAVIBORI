@@ -30,7 +30,6 @@ import {
   shouldRefreshCommerceMap
 } from "@/lib/commerce/live-map-refresh";
 import {chooseNavigationBearing} from "@/lib/commerce/navigation-sensor-fusion";
-import {buildPhotonRouteGradient} from "@/lib/commerce/photon-corridor";
 import {buildOrbitalLookahead} from "@/lib/commerce/orbital-lookahead";
 import {
   deriveLagrangeCockpitPhase,
@@ -1529,14 +1528,13 @@ export default function NaviboriMap({
         "line-opacity",
         gpsActiveRef.current ? 0.42 : 0.28
       );
-      map.setPaintProperty(
-        ROUTE_LINE_ID,
-        "line-gradient",
-        buildPhotonRouteGradient(
-          progressRatio,
-          color
-        ) as maplibregl.ExpressionSpecification
-      );
+      // A single solid, high-contrast route is easier to follow than a
+      // progress gradient on detailed streets and satellite-style basemaps.
+      map.setPaintProperty(ROUTE_LINE_ID,"line-gradient",null);
+      map.setPaintProperty(ROUTE_LINE_ID,"line-color",color);
+      map.setPaintProperty(ROUTE_LINE_ID,"line-opacity",1);
+      map.setPaintProperty(ROUTE_LINE_ID,"line-width",13);
+      map.setPaintProperty(ROUTE_CASING_ID,"line-width",19);
 
       for(const layerId of [
         ROUTE_GLOW_ID,
