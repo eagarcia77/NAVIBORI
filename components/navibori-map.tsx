@@ -25,6 +25,7 @@ import {
 import {commerceMatchesSearch} from "@/lib/commerce/map-search";
 import {canNavigateCommerce} from "@/lib/commerce/navigation-eligibility";
 import {chooseNavigationBearing} from "@/lib/commerce/navigation-sensor-fusion";
+import {buildPhotonRouteGradient} from "@/lib/commerce/photon-corridor";
 import {
   NAVIBORI_LOCALE_CHANGE_EVENT,
   browserNaviboriLocale,
@@ -150,6 +151,110 @@ function ensureRouteArrowImage(map:maplibregl.Map){
   map.addImage(ROUTE_ARROW_IMAGE_ID,image,{pixelRatio:2});
 }
 
+function ensureRouteInfrastructure(map:maplibregl.Map){
+  if(!map.isStyleLoaded()) return false;
+
+  try{
+    ensureRouteArrowImage(map);
+
+    if(!map.getSource(ROUTE_SOURCE_ID)){
+      map.addSource(ROUTE_SOURCE_ID,{
+        type:"geojson",
+        data:{
+          type:"FeatureCollection",
+          features:[]
+        },
+        lineMetrics:true
+      });
+    }
+
+    if(!map.getLayer(ROUTE_GLOW_ID)){
+      map.addLayer({
+        id:ROUTE_GLOW_ID,
+        type:"line",
+        source:ROUTE_SOURCE_ID,
+        layout:{
+          "line-cap":"round",
+          "line-join":"round"
+        },
+        paint:{
+          "line-color":"#0a84ff",
+          "line-width":20,
+          "line-opacity":0.3,
+          "line-blur":4
+        }
+      });
+    }
+
+    if(!map.getLayer(ROUTE_CASING_ID)){
+      map.addLayer({
+        id:ROUTE_CASING_ID,
+        type:"line",
+        source:ROUTE_SOURCE_ID,
+        layout:{
+          "line-cap":"round",
+          "line-join":"round"
+        },
+        paint:{
+          "line-color":"#10263b",
+          "line-width":14,
+          "line-opacity":0.98
+        }
+      });
+    }
+
+    if(!map.getLayer(ROUTE_LINE_ID)){
+      map.addLayer({
+        id:ROUTE_LINE_ID,
+        type:"line",
+        source:ROUTE_SOURCE_ID,
+        layout:{
+          "line-cap":"round",
+          "line-join":"round"
+        },
+        paint:{
+          "line-color":"#0a84ff",
+          "line-width":9,
+          "line-opacity":1
+        }
+      });
+    }
+
+    if(map.hasImage(ROUTE_ARROW_IMAGE_ID) && !map.getLayer(ROUTE_ARROW_ID)){
+      map.addLayer({
+        id:ROUTE_ARROW_ID,
+        type:"symbol",
+        source:ROUTE_SOURCE_ID,
+        layout:{
+          "symbol-placement":"line",
+          "symbol-spacing":64,
+          "icon-image":ROUTE_ARROW_IMAGE_ID,
+          "icon-size":0.78,
+          "icon-rotation-alignment":"map",
+          "icon-pitch-alignment":"map",
+          "icon-allow-overlap":true,
+          "icon-ignore-placement":true
+        }
+      });
+    }
+
+    for(const layerId of [
+      ROUTE_GLOW_ID,
+      ROUTE_CASING_ID,
+      ROUTE_LINE_ID,
+      ROUTE_ARROW_ID
+    ]){
+      if(map.getLayer(layerId)){
+        map.moveLayer(layerId);
+      }
+    }
+
+    return true;
+  }catch{
+    return false;
+  }
+}
+
 export default function NaviboriMap({
   businesses,
   source
@@ -163,6 +268,7 @@ export default function NaviboriMap({
   const userMarkerRef=useRef<maplibregl.Marker|null>(null);
   const nextTurnMarkerRef=useRef<maplibregl.Marker|null>(null);
   const destinationBeaconRef=useRef<maplibregl.Marker|null>(null);
+  const photonCursorRef=useRef<maplibregl.Marker|null>(null);
   const deviceHeadingRef=useRef<number|null>(null);
   const orientationHandlerRef=useRef<((event:DeviceOrientationEvent)=>void)|null>(null);
   const routeAbortRef=useRef<AbortController|null>(null);
@@ -311,6 +417,13 @@ export default function NaviboriMap({
     [routeResult,navigationProgress]
   );
 
+  const vectorGateState=
+    nextCue && nextCue.distanceMeters<=75
+      ? "critical"
+      : nextCue && nextCue.distanceMeters<=250
+        ? "near"
+        : "cruise";
+
   useEffect(()=>{
     const applyLocale=()=>{
       const locale=browserNaviboriLocale();
@@ -387,6 +500,8 @@ export default function NaviboriMap({
     nextTurnMarkerRef.current=null;
     destinationBeaconRef.current?.remove();
     destinationBeaconRef.current=null;
+    photonCursorRef.current?.remove();
+    photonCursorRef.current=null;
 
     if(routeResult && selected?.mapLocation){
       const element=document.createElement("div");
@@ -427,17 +542,40 @@ export default function NaviboriMap({
         .addTo(map);
     }
 
+    if(gpsActive && navigationProgress){
+      const element=document.createElement("div");
+      element.className="navibori-photon-cursor";
+      element.setAttribute(
+        "aria-label",
+        tr("Posición sobre Photon Corridor","Position on Photon Corridor")
+      );
+      element.innerHTML="<span></span><i></i>";
+      photonCursorRef.current=new maplibregl.Marker({
+        element,
+        anchor:"center"
+      })
+        .setLngLat([
+          navigationProgress.snapped.longitude,
+          navigationProgress.snapped.latitude
+        ])
+        .addTo(map);
+    }
+
     return ()=>{
       nextTurnMarkerRef.current?.remove();
       nextTurnMarkerRef.current=null;
       destinationBeaconRef.current?.remove();
       destinationBeaconRef.current=null;
+      photonCursorRef.current?.remove();
+      photonCursorRef.current=null;
     };
   },[
     gpsActive,
     mapReady,
     nextCue?.step.location?.latitude,
     nextCue?.step.location?.longitude,
+    navigationProgress?.snapped.latitude,
+    navigationProgress?.snapped.longitude,
     routeResult,
     selected?.mapLocation?.latitude,
     selected?.mapLocation?.longitude
@@ -542,8 +680,21 @@ export default function NaviboriMap({
     });
 
     map.on("load",()=>{
+      ensureRouteInfrastructure(map);
       setBasemapState("ready");
       setMapReady(true);
+    });
+
+    map.on("styledata",()=>{
+      if(
+        map.isStyleLoaded() &&
+        (
+          !map.getSource(ROUTE_SOURCE_ID) ||
+          !map.getLayer(ROUTE_LINE_ID)
+        )
+      ){
+        ensureRouteInfrastructure(map);
+      }
     });
     map.on("error",(event)=>{
       if(event?.error) setBasemapState("error");
@@ -589,6 +740,7 @@ export default function NaviboriMap({
       userMarkerRef.current?.remove();
       nextTurnMarkerRef.current?.remove();
       destinationBeaconRef.current?.remove();
+      photonCursorRef.current?.remove();
       map.remove();
       mapRef.current=null;
     };
@@ -672,6 +824,7 @@ export default function NaviboriMap({
     if(!map || !mapReady) return;
 
     if(!routeResult){
+      ensureRouteInfrastructure(map);
       const empty={
         type:"FeatureCollection" as const,
         features:[]
@@ -686,7 +839,10 @@ export default function NaviboriMap({
 
     const renderRoute=()=>{
       if(cancelled) return true;
-      return drawRouteOnMap(routeResult);
+      return drawRouteOnMap(
+        routeResult,
+        navigationProgress?.progressRatio ?? 0
+      );
     };
 
     const rendered=renderRoute();
@@ -734,7 +890,14 @@ export default function NaviboriMap({
     }
 
     return cleanup;
-  },[followGps,gpsActive,mapReady,routeResult,userLocation]);
+  },[
+    followGps,
+    gpsActive,
+    mapReady,
+    navigationProgress?.progressRatio,
+    routeResult,
+    userLocation
+  ]);
 
   function activateMapMode(next:RealityMode){
     const map=mapRef.current;
@@ -821,7 +984,10 @@ export default function NaviboriMap({
       .addTo(map);
   }
 
-  function drawRouteOnMap(route:InMapRouteResult){
+  function drawRouteOnMap(
+    route:InMapRouteResult,
+    progressRatio=0
+  ){
     const map=mapRef.current;
     if(
       !map ||
@@ -838,93 +1004,30 @@ export default function NaviboriMap({
     };
 
     try{
-      const existing=map.getSource(ROUTE_SOURCE_ID) as maplibregl.GeoJSONSource|undefined;
-
-      if(existing){
-        existing.setData(feature);
-      }else{
-        map.addSource(ROUTE_SOURCE_ID,{
-          type:"geojson",
-          data:feature,
-          lineMetrics:true
-        });
+      if(!ensureRouteInfrastructure(map)){
+        return false;
       }
 
-      for(const layerId of [
-        ROUTE_ARROW_ID,
+      const source=map.getSource(ROUTE_SOURCE_ID) as maplibregl.GeoJSONSource|undefined;
+      if(!source) return false;
+
+      source.setData(feature);
+
+      const color=routeLineColor(route.mode);
+      map.setPaintProperty(ROUTE_GLOW_ID,"line-color",color);
+      map.setPaintProperty(
+        ROUTE_GLOW_ID,
+        "line-opacity",
+        gpsActiveRef.current ? 0.42 : 0.28
+      );
+      map.setPaintProperty(
         ROUTE_LINE_ID,
-        ROUTE_CASING_ID,
-        ROUTE_GLOW_ID
-      ]){
-        if(map.getLayer(layerId)){
-          map.removeLayer(layerId);
-        }
-      }
-
-      map.addLayer({
-        id:ROUTE_GLOW_ID,
-        type:"line",
-        source:ROUTE_SOURCE_ID,
-        layout:{
-          "line-cap":"round",
-          "line-join":"round"
-        },
-        paint:{
-          "line-color":routeLineColor(route.mode),
-          "line-width":18,
-          "line-opacity":0.28,
-          "line-blur":3
-        }
-      });
-
-      map.addLayer({
-        id:ROUTE_CASING_ID,
-        type:"line",
-        source:ROUTE_SOURCE_ID,
-        layout:{
-          "line-cap":"round",
-          "line-join":"round"
-        },
-        paint:{
-          "line-color":"#17324d",
-          "line-width":13,
-          "line-opacity":0.98
-        }
-      });
-
-      map.addLayer({
-        id:ROUTE_LINE_ID,
-        type:"line",
-        source:ROUTE_SOURCE_ID,
-        layout:{
-          "line-cap":"round",
-          "line-join":"round"
-        },
-        paint:{
-          "line-color":routeLineColor(route.mode),
-          "line-width":8.5,
-          "line-opacity":1
-        }
-      });
-
-      ensureRouteArrowImage(map);
-      if(map.hasImage(ROUTE_ARROW_IMAGE_ID)){
-        map.addLayer({
-          id:ROUTE_ARROW_ID,
-          type:"symbol",
-          source:ROUTE_SOURCE_ID,
-          layout:{
-            "symbol-placement":"line",
-            "symbol-spacing":70,
-            "icon-image":ROUTE_ARROW_IMAGE_ID,
-            "icon-size":0.72,
-            "icon-rotation-alignment":"map",
-            "icon-pitch-alignment":"map",
-            "icon-allow-overlap":true,
-            "icon-ignore-placement":true
-          }
-        });
-      }
+        "line-gradient",
+        buildPhotonRouteGradient(
+          progressRatio,
+          color
+        ) as maplibregl.ExpressionSpecification
+      );
 
       for(const layerId of [
         ROUTE_GLOW_ID,
@@ -1895,7 +1998,7 @@ export default function NaviboriMap({
 
         {gpsActive && routeResult && selected && (
           <aside className="navibori-navigation-hud" aria-live="polite">
-            <div className="navibori-navigation-maneuver">
+            <div className={"navibori-navigation-maneuver vector-gate-"+vectorGateState}>
               <span>
                 {nextCue
                   ? formatManeuverDistance(nextCue.distanceMeters)
@@ -1916,6 +2019,31 @@ export default function NaviboriMap({
                     ? tr("FUSIÓN DE SENSORES","SENSOR FUSION")
                     : tr("FUSIÓN DE RUTA","ROUTE FUSION")}
                 </strong>
+              </div>
+
+              <div
+                className="photon-corridor-meter"
+                aria-label={tr(
+                  "Progreso de Photon Corridor",
+                  "Photon Corridor progress"
+                )}
+              >
+                <div>
+                  <span>PHOTON CORRIDOR</span>
+                  <strong>
+                    {Math.round((navigationProgress?.progressRatio ?? 0)*100)}%
+                  </strong>
+                </div>
+                <i aria-hidden="true">
+                  <b
+                    style={{
+                      width:
+                        Math.round(
+                          (navigationProgress?.progressRatio ?? 0)*100
+                        )+"%"
+                    }}
+                  />
+                </i>
               </div>
             </div>
 
