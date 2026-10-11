@@ -1530,7 +1530,7 @@ export default function NaviboriMap({
       );
       // A single solid, high-contrast route is easier to follow than a
       // progress gradient on detailed streets and satellite-style basemaps.
-      map.setPaintProperty(ROUTE_LINE_ID,"line-gradient",["interpolate",["linear"],["line-progress"],0,routeLineColor(route.mode),1,routeLineColor(route.mode)]);
+      // A plain line-color is more compatible than line-gradient across map styles.
       map.setPaintProperty(ROUTE_LINE_ID,"line-color",color);
       map.setPaintProperty(ROUTE_LINE_ID,"line-opacity",1);
       map.setPaintProperty(ROUTE_LINE_ID,"line-width",13);
