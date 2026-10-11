@@ -8,7 +8,9 @@ export class NavigationTracker {
     this.onPosition = onPosition;
     this.onStatus = onStatus;
     this.onDeviation = onDeviation;
-    this.route = route;
+    this.route = [];
+    this.setRoute(route);
+    if (!Number.isFinite(deviationMeters) || deviationMeters <= 0) throw new RangeError("deviationMeters must be positive");
     this.deviationMeters = deviationMeters;
     this.watchId = null;
     this.lastPosition = null;
@@ -29,7 +31,7 @@ export class NavigationTracker {
     return Math.hypot(ax + t * dx, ay + t * dy);
   }
   setRoute(points) {
-    if (!Array.isArray(points) || !points.every(p => Number.isFinite(p.lat) && Number.isFinite(p.lng))) {
+    if (!Array.isArray(points) || !points.every(p => p && Number.isFinite(p.lat) && Number.isFinite(p.lng) && Math.abs(p.lat) <= 90 && Math.abs(p.lng) <= 180)) {
       throw new TypeError("Route must be an array of {lat,lng} coordinates");
     }
     this.route = points;
@@ -49,6 +51,14 @@ export class NavigationTracker {
           headingDegrees: Number.isFinite(c.heading) ? c.heading : null,
           speedMps: Number.isFinite(c.speed) ? c.speed : null, timestamp: pos.timestamp };
         this.lastPosition = point;
+        if (!Number.isFinite(point.lat) || !Number.isFinite(point.lng) || Math.abs(point.lat) > 90 || Math.abs(point.lng) > 180 || !Number.isFinite(point.accuracyMeters) || point.accuracyMeters < 0) {
+          this.onStatus({ type: "invalid-fix" });
+          return;
+        }
+        if (Date.now() - point.timestamp > 15000) {
+          this.onStatus({ type: "stale-fix" });
+          return;
+        }
         this.onPosition(point);
         this.onStatus({ type: "tracking", accuracyMeters: c.accuracy });
         if (this.route.length < 2 || c.accuracy > 45) return;
