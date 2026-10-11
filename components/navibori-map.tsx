@@ -43,6 +43,12 @@ import {
   type TrajectoryRisk
 } from "@/lib/commerce/trajectory-shield";
 import {
+  deriveVectorGatePhase,
+  vectorGateGlyph,
+  vectorGateHapticPattern,
+  vectorGateLabel
+} from "@/lib/commerce/vector-gate";
+import {
   NAVIBORI_LOCALE_CHANGE_EVENT,
   browserNaviboriLocale,
   naviboriCopy,
@@ -303,6 +309,7 @@ export default function NaviboriMap({
   const lastSpokenInstructionRef=useRef("");
   const wakeLockRef=useRef<WakeLockSentinel|null>(null);
   const lastTrajectoryRiskRef=useRef<TrajectoryRisk>("stable");
+  const lastVectorGatePhaseRef=useRef<ReturnType<typeof deriveVectorGatePhase>>("cruise");
 
   const [deviceLocale,setDeviceLocale]=useState<NaviboriLocale>({
     language:"es",
@@ -437,12 +444,9 @@ export default function NaviboriMap({
     [routeResult,navigationProgress]
   );
 
-  const vectorGateState=
-    nextCue && nextCue.distanceMeters<=75
-      ? "critical"
-      : nextCue && nextCue.distanceMeters<=250
-        ? "near"
-        : "cruise";
+  const vectorGateState=deriveVectorGatePhase(
+    nextCue?.distanceMeters ?? null
+  );
 
   const orbitalLookahead=useMemo(
     ()=>routeResult && navigationProgress
@@ -507,6 +511,20 @@ export default function NaviboriMap({
       haptics.vibrate?.([55,35,85]);
     }
   },[exoDockState]);
+
+  useEffect(()=>{
+    if(!gpsActive) return;
+    if(lastVectorGatePhaseRef.current===vectorGateState) return;
+
+    lastVectorGatePhaseRef.current=vectorGateState;
+    const pattern=vectorGateHapticPattern(vectorGateState);
+    if(pattern===null) return;
+
+    const haptics=navigator as Navigator & {
+      vibrate?:(pattern:number|number[])=>boolean;
+    };
+    haptics.vibrate?.(pattern);
+  },[gpsActive,vectorGateState]);
 
   useEffect(()=>{
     const applyLocale=()=>{
@@ -613,12 +631,44 @@ export default function NaviboriMap({
     const turnLocation=nextCue?.step.location;
     if(gpsActive && turnLocation){
       const element=document.createElement("div");
-      element.className="navibori-holo-turn";
+      element.className=
+        "navibori-holo-turn vector-gate-map "+vectorGateState;
+      element.dataset.phase=vectorGateState;
+
+      const phaseLabel=vectorGateLabel(
+        vectorGateState,
+        deviceLocale.language
+      );
+      const distanceLabel=formatManeuverDistance(
+        nextCue?.distanceMeters ?? 0,
+        deviceLocale.language
+      );
+
       element.setAttribute(
         "aria-label",
-        tr("Próximo giro","Next turn")
+        tr(
+          "Próximo giro · "+phaseLabel+" · "+distanceLabel,
+          "Next turn · "+phaseLabel+" · "+distanceLabel
+        )
       );
-      element.innerHTML="<span></span><i></i>";
+
+      const frame=document.createElement("span");
+      frame.className="vector-gate-frame";
+
+      const glyph=document.createElement("i");
+      glyph.className="vector-gate-glyph";
+      glyph.textContent=vectorGateGlyph(nextCue?.step.modifier);
+
+      const phase=document.createElement("em");
+      phase.className="vector-gate-phase";
+      phase.textContent=phaseLabel;
+
+      const distance=document.createElement("b");
+      distance.className="vector-gate-distance";
+      distance.textContent=distanceLabel;
+
+      element.append(frame,glyph,phase,distance);
+
       nextTurnMarkerRef.current=new maplibregl.Marker({
         element,
         anchor:"center"
@@ -715,6 +765,10 @@ export default function NaviboriMap({
     mapReady,
     nextCue?.step.location?.latitude,
     nextCue?.step.location?.longitude,
+    nextCue?.step.modifier,
+    nextCue?.distanceMeters,
+    vectorGateState,
+    deviceLocale.language,
     navigationProgress?.snapped.latitude,
     navigationProgress?.snapped.longitude,
     orbitalLookahead?.coordinate.latitude,
