@@ -17,6 +17,7 @@ export class NavigationSession {
   }
   async start({origin,destination,mode="driving"}) {
     this.stop();
+    this.lastRerouteAt=0;
     this.destination=destination;this.mode=mode;this.active=true;
     const id=++this.generation;
     const controller=new AbortController();this.controller=controller;
@@ -30,6 +31,7 @@ export class NavigationSession {
     } catch(error) {
       if(!this.active || id!==this.generation) return;
       this.active=false;
+      this.destination=null;
       this.onState({type:"error",message:error.message});
     }
   }
