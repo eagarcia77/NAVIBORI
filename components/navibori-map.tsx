@@ -186,6 +186,7 @@ export default function NaviboriMap({
   const tr=(es:string,en:string)=>
     deviceLocale.language==="en" ? en : es;
 
+  const [languageSource,setLanguageSource]=useState<"device"|"peripheral">("device");
   const [mapReady,setMapReady]=useState(false);
   const [mode,setMode]=useState<RealityMode>("2d");
   const [timeOpen,setTimeOpen]=useState(false);
@@ -306,6 +307,11 @@ export default function NaviboriMap({
       const locale=browserNaviboriLocale();
       setDeviceLocale(locale);
       document.documentElement.lang=locale.locale;
+      setLanguageSource(
+        document.documentElement.dataset.peripheralLocale
+          ? "peripheral"
+          : "device"
+      );
     };
 
     applyLocale();
@@ -1978,6 +1984,13 @@ export default function NaviboriMap({
               <Link href="/xeno">XENO</Link>
             </nav>
 
+            <small className="full-map-menu-locale">
+              {deviceLocale.language==="en" ? "Language" : "Idioma"} · {deviceLocale.locale} · {
+                languageSource==="peripheral"
+                  ? deviceLocale.language==="en" ? "Peripheral" : "Periférico"
+                  : deviceLocale.language==="en" ? "Device" : "Dispositivo"
+              }
+            </small>
             <small className="full-map-menu-foot">
               {copy.specialsHint}
             </small>
