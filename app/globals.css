@@ -2441,3 +2441,127 @@ html[data-motion="reduced"] .astra-flight-director-reticle b{transition:none}
   transition:none!important;
   animation:none!important;
 }
+
+
+/* NAVIBORI ASTRA Drift Bridge */
+.astra-drift-bridge-chip{
+  display:inline-flex;
+  align-items:center;
+  gap:7px;
+  width:max-content;
+  max-width:100%;
+  margin-top:3px;
+  padding:4px 7px;
+  border:1px solid rgba(14,165,233,.28);
+  border-radius:999px;
+  background:linear-gradient(135deg,rgba(248,250,252,.90),rgba(14,165,233,.09));
+  color:#0369a1;
+  box-shadow:0 4px 14px rgba(15,23,42,.07);
+  backdrop-filter:blur(14px) saturate(150%);
+  -webkit-backdrop-filter:blur(14px) saturate(150%);
+  text-transform:uppercase;
+}
+.astra-drift-bridge-chip span{
+  font-size:.39rem;
+  font-weight:950;
+  letter-spacing:.09em;
+}
+.astra-drift-bridge-chip strong{
+  font-size:.43rem;
+  font-weight:950;
+  letter-spacing:.055em;
+}
+.astra-drift-bridge-chip small{
+  font-size:.38rem;
+  color:#64748b;
+}
+.astra-drift-bridge-chip.expired{
+  border-color:rgba(239,68,68,.30);
+  background:rgba(254,242,242,.92);
+  color:#b91c1c;
+}
+.navibori-drift-bridge-marker{
+  position:relative;
+  width:32px;
+  height:32px;
+  display:grid;
+  place-items:center;
+  pointer-events:none;
+}
+.navibori-drift-bridge-marker span{
+  position:relative;
+  z-index:2;
+  display:grid;
+  place-items:center;
+  width:24px;
+  height:24px;
+  border-radius:50%;
+  border:2px solid rgba(255,255,255,.98);
+  background:#0f172a;
+  color:#e0f2fe;
+  box-shadow:0 0 0 4px rgba(14,165,233,.18),0 0 18px rgba(14,165,233,.38);
+  font-size:.38rem;
+  font-weight:950;
+  letter-spacing:.04em;
+}
+.navibori-drift-bridge-marker i{
+  position:absolute;
+  inset:0;
+  border-radius:50%;
+  border:1px solid rgba(14,165,233,.44);
+  animation:navibori-drift-bridge-pulse 1.25s ease-out infinite;
+}
+@keyframes navibori-drift-bridge-pulse{
+  0%{transform:scale(.78);opacity:.82}
+  80%{transform:scale(1.38);opacity:.08}
+  100%{transform:scale(1.48);opacity:0}
+}
+
+/* Peripheral-adaptive cockpit */
+html[data-controls="comfortable"] .full-map-menu-button,
+html[data-controls="comfortable"] .full-map-gps-button{
+  min-width:52px;
+  min-height:52px;
+}
+html[data-controls="comfortable"] .navibori-navigation-footer>button{
+  min-height:44px;
+}
+html[data-controls="compact"] .full-map-menu-button,
+html[data-controls="compact"] .full-map-gps-button{
+  min-width:42px;
+  min-height:42px;
+}
+html[data-density="compact"] .navibori-navigation-maneuver{
+  padding-block:8px;
+}
+html[data-density="compact"] .navibori-navigation-footer{
+  gap:4px;
+  padding:5px;
+}
+html[data-input="gamepad"] .full-map-menu-button,
+html[data-input="gamepad"] .full-map-gps-button,
+html[data-input="xr"] .full-map-menu-button,
+html[data-input="xr"] .full-map-gps-button{
+  min-width:58px;
+  min-height:58px;
+  box-shadow:0 0 0 2px rgba(14,165,233,.12),0 10px 28px rgba(15,23,42,.16);
+}
+html[data-input="xr"] .astra-drift-bridge-chip{
+  box-shadow:0 0 22px rgba(14,165,233,.14);
+}
+html[data-motion="reduced"] .navibori-drift-bridge-marker i{
+  animation:none!important;
+}
+@media(prefers-reduced-motion:reduce){
+  .navibori-drift-bridge-marker i{animation:none!important}
+}
+@media(max-width:760px){
+  .astra-drift-bridge-chip{
+    padding:3px 6px;
+  }
+  .astra-drift-bridge-chip span{font-size:.35rem}
+  .astra-drift-bridge-chip strong{font-size:.38rem}
+  .astra-drift-bridge-chip small{font-size:.34rem}
+  .navibori-drift-bridge-marker{width:28px;height:28px}
+  .navibori-drift-bridge-marker span{width:21px;height:21px}
+}
