@@ -2,7 +2,10 @@
 
 import {useEffect,useState} from "react";
 import {createClient} from "@/lib/supabase/client";
-import {browserNaviboriLocale} from "@/lib/i18n/device-locale";
+import {
+  NAVIBORI_LOCALE_CHANGE_EVENT,
+  browserNaviboriLocale
+} from "@/lib/i18n/device-locale";
 
 type PushState="checking"|"unsupported"|"default"|"enabled"|"denied"|"error";
 
@@ -38,11 +41,25 @@ export default function SpecialAlertsControl(){
   const [language,setLanguage]=useState<"es"|"en">("es");
 
   useEffect(()=>{
+    const syncLanguage=()=>{
+      setLanguage(browserNaviboriLocale().language);
+    };
+
+    syncLanguage();
+    window.addEventListener("languagechange",syncLanguage);
+    window.addEventListener(NAVIBORI_LOCALE_CHANGE_EVENT,syncLanguage);
+
+    return ()=>{
+      window.removeEventListener("languagechange",syncLanguage);
+      window.removeEventListener(NAVIBORI_LOCALE_CHANGE_EVENT,syncLanguage);
+    };
+  },[]);
+
+  useEffect(()=>{
     let active=true;
 
     (async()=>{
       setStandalone(installedStandalone());
-      setLanguage(browserNaviboriLocale().language);
 
       if(
         !("serviceWorker" in navigator) ||
