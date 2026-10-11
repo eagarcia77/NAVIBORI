@@ -2751,3 +2751,8 @@ html[data-motion="reduced"] .navibori-drift-bridge-marker i{
     padding:7px;
   }
 }
+
+.navibori-language-choice {display:flex;flex-wrap:wrap;align-items:center;gap:6px;padding:9px;border:1px solid var(--line);border-radius:12px;background:#f7fafb;}
+.navibori-language-choice>span {flex-basis:100%;font-size:.7rem;font-weight:800;}
+.navibori-language-choice>button {min-height:35px;padding:6px 10px;border:1px solid var(--line);border-radius:9px;background:white;color:var(--ink);font-size:.72rem;font-weight:750;cursor:pointer;}
+.navibori-language-choice>button[aria-pressed="true"] {background:#e7f4ff;border-color:#0878f9;color:#07539d;}
