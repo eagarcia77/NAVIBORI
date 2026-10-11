@@ -686,7 +686,13 @@ export default function NaviboriMap({
     });
 
     map.on("styledata",()=>{
-      if(map.isStyleLoaded()){
+      if(
+        map.isStyleLoaded() &&
+        (
+          !map.getSource(ROUTE_SOURCE_ID) ||
+          !map.getLayer(ROUTE_LINE_ID)
+        )
+      ){
         ensureRouteInfrastructure(map);
       }
     });
