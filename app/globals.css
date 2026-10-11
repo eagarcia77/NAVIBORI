@@ -2669,3 +2669,13 @@ html[data-motion="reduced"] .navibori-drift-bridge-marker i{
   cursor: pointer;
 }
 .navibori-diagnostics-copy:focus-visible {outline: 3px solid #0878f9; outline-offset: 2px;}
+
+.navibori-health-summary {
+  margin-top: 9px;
+  padding: 9px 10px;
+  border-radius: 9px;
+  background: rgba(0, 95, 143, .08);
+  font-size: .76rem;
+  line-height: 1.45;
+  font-weight: 650;
+}
