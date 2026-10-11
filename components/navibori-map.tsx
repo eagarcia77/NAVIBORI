@@ -1641,14 +1641,21 @@ export default function NaviboriMap({
   }
 
   return (
-    <section className="map-panel spatial-cockpit full-map-cockpit" aria-label=tr("Mapa de comercios NAVIBORI","NAVIBORI business map")>
+    <section
+      className="map-panel spatial-cockpit full-map-cockpit"
+      aria-label={tr("Mapa de comercios NAVIBORI","NAVIBORI business map")}
+    >
       <div className="map-stage full-map-stage">
         <div ref={mapNode} className="map-canvas full-map-canvas" />
 
         <button
           type="button"
           className={"full-map-gps-button "+(gpsActive ? "active" : "")}
-          aria-label={gpsActive ? "Recentrar GPS" : "Probar GPS"}
+          aria-label={
+            gpsActive
+              ? tr("Recentrar GPS","Recenter GPS")
+              : tr("Probar GPS","Test GPS")
+          }
           onClick={()=>{
             if(gpsActive && userLocation){
               recenterGpsCamera();
@@ -1664,7 +1671,11 @@ export default function NaviboriMap({
         <button
           type="button"
           className="full-map-menu-button"
-          aria-label={menuOpen ? "Cerrar menú" : "Abrir menú"}
+          aria-label={
+            menuOpen
+              ? tr("Cerrar menú","Close menu")
+              : tr("Abrir menú","Open menu")
+          }
           aria-expanded={menuOpen}
           onClick={()=>setMenuOpen((open)=>!open)}
         >
