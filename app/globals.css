@@ -1831,3 +1831,169 @@ html[data-input="xr"] .navibori-trajectory-ghost{
 html[data-motion="reduced"] .navibori-trajectory-ghost span{
   animation:none!important;
 }
+
+
+/* NAVIBORI Lagrange adaptive cockpit */
+.lagrange-cockpit-chip{
+  position:absolute;
+  right:10px;
+  bottom:10px;
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  max-width:calc(100% - 20px);
+  padding:4px 7px;
+  border:1px solid rgba(10,132,255,.18);
+  border-radius:999px;
+  background:rgba(248,250,252,.82);
+  color:#0a84ff;
+  box-shadow:0 4px 14px rgba(15,23,42,.08);
+  backdrop-filter:blur(14px) saturate(150%);
+  -webkit-backdrop-filter:blur(14px) saturate(150%);
+  text-transform:uppercase;
+}
+.lagrange-cockpit-chip span{
+  font-size:.39rem;
+  font-weight:950;
+  letter-spacing:.09em;
+}
+.lagrange-cockpit-chip strong{
+  font-size:.42rem;
+  font-weight:950;
+  letter-spacing:.055em;
+}
+.lagrange-cockpit-chip.approach,
+.lagrange-cockpit-chip.vector{
+  border-color:rgba(14,165,233,.28);
+  background:linear-gradient(135deg,rgba(248,250,252,.86),rgba(14,165,233,.10));
+}
+.lagrange-cockpit-chip.correction{
+  border-color:rgba(245,158,11,.38);
+  background:linear-gradient(135deg,rgba(255,251,235,.92),rgba(245,158,11,.14));
+  color:#b45309;
+}
+.lagrange-cockpit-chip.arrival{
+  border-color:rgba(16,185,129,.34);
+  background:linear-gradient(135deg,rgba(236,253,245,.92),rgba(16,185,129,.12));
+  color:#047857;
+}
+
+.full-map-cockpit[data-cockpit-phase="cruise"] .business-map-marker:not(.selected-destination),
+.full-map-cockpit[data-cockpit-phase="approach"] .business-map-marker:not(.selected-destination),
+.full-map-cockpit[data-cockpit-phase="vector"] .business-map-marker:not(.selected-destination),
+.full-map-cockpit[data-cockpit-phase="correction"] .business-map-marker:not(.selected-destination){
+  opacity:.24;
+  filter:grayscale(.35) saturate(.5) drop-shadow(0 3px 5px rgba(0,0,0,.12));
+  transition:opacity .22s ease,filter .22s ease;
+}
+
+.navibori-navigation-hud.lagrange-phase-cruise .navibori-navigation-maneuver{
+  max-width:620px;
+}
+.navibori-navigation-hud.lagrange-phase-cruise .orbital-lookahead-chip,
+.navibori-navigation-hud.lagrange-phase-cruise .astranav-chip{
+  opacity:.72;
+}
+.navibori-navigation-hud.lagrange-phase-cruise .trajectory-shield-chip{
+  display:none;
+}
+
+.navibori-navigation-hud.lagrange-phase-approach .navibori-navigation-maneuver{
+  border-color:rgba(14,165,233,.28);
+  box-shadow:
+    0 12px 36px rgba(22,38,46,.20),
+    0 0 0 1px rgba(14,165,233,.07);
+}
+.navibori-navigation-hud.lagrange-phase-approach .navibori-navigation-maneuver>strong{
+  font-size:1.22rem;
+}
+
+.navibori-navigation-hud.lagrange-phase-vector .navibori-navigation-maneuver{
+  border-color:rgba(10,132,255,.38);
+  box-shadow:
+    0 14px 40px rgba(10,132,255,.16),
+    0 0 0 1px rgba(10,132,255,.08);
+}
+.navibori-navigation-hud.lagrange-phase-vector .navibori-navigation-maneuver>strong{
+  font-size:1.32rem;
+}
+.navibori-navigation-hud.lagrange-phase-vector .orbital-lookahead-chip,
+.navibori-navigation-hud.lagrange-phase-vector .photon-corridor-meter{
+  opacity:.46;
+}
+
+.navibori-navigation-hud.lagrange-phase-correction .navibori-navigation-maneuver{
+  border-color:rgba(245,158,11,.48);
+  background:rgba(255,251,235,.94);
+  box-shadow:
+    0 16px 42px rgba(245,158,11,.16),
+    0 0 0 1px rgba(245,158,11,.10);
+}
+.navibori-navigation-hud.lagrange-phase-correction .navibori-navigation-maneuver>strong{
+  color:#92400e;
+}
+.navibori-navigation-hud.lagrange-phase-correction .astranav-chip,
+.navibori-navigation-hud.lagrange-phase-correction .orbital-lookahead-chip,
+.navibori-navigation-hud.lagrange-phase-correction .photon-corridor-meter{
+  opacity:.36;
+}
+.navibori-navigation-hud.lagrange-phase-correction .trajectory-shield-chip{
+  transform:scale(1.04);
+  transform-origin:left center;
+}
+
+.navibori-navigation-hud.lagrange-phase-arrival .navibori-navigation-maneuver{
+  border-color:rgba(16,185,129,.34);
+  background:rgba(236,253,245,.94);
+  box-shadow:
+    0 14px 38px rgba(16,185,129,.14),
+    0 0 0 1px rgba(16,185,129,.08);
+}
+
+@media(max-width:760px){
+  .lagrange-cockpit-chip{
+    right:8px;
+    bottom:8px;
+    padding:3px 6px;
+  }
+  .lagrange-cockpit-chip span{font-size:.35rem}
+  .lagrange-cockpit-chip strong{font-size:.38rem}
+
+  .navibori-navigation-hud.lagrange-phase-cruise .navibori-navigation-maneuver{
+    padding-block:8px;
+  }
+  .navibori-navigation-hud.lagrange-phase-cruise .astranav-chip,
+  .navibori-navigation-hud.lagrange-phase-cruise .orbital-lookahead-chip{
+    display:none;
+  }
+  .navibori-navigation-hud.lagrange-phase-vector .navibori-navigation-maneuver>strong,
+  .navibori-navigation-hud.lagrange-phase-correction .navibori-navigation-maneuver>strong{
+    font-size:1.05rem;
+  }
+  .navibori-navigation-hud.lagrange-phase-vector .photon-corridor-meter{
+    display:none;
+  }
+}
+
+html[data-controls="comfortable"] .lagrange-cockpit-chip{
+  min-height:30px;
+}
+html[data-input="xr"] .lagrange-cockpit-chip,
+html[data-input="gamepad"] .lagrange-cockpit-chip{
+  box-shadow:
+    0 0 0 1px rgba(103,232,249,.08),
+    0 0 18px rgba(103,232,249,.12);
+}
+
+@media(prefers-reduced-motion:reduce){
+  .full-map-cockpit[data-cockpit-phase] .business-map-marker,
+  .trajectory-shield-chip{
+    transition:none!important;
+    transform:none!important;
+  }
+}
+html[data-motion="reduced"] .full-map-cockpit[data-cockpit-phase] .business-map-marker,
+html[data-motion="reduced"] .trajectory-shield-chip{
+  transition:none!important;
+  transform:none!important;
+}
