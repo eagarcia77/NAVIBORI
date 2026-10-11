@@ -1,5 +1,8 @@
 export type NaviboriLanguage="es"|"en";
 
+export const NAVIBORI_PERIPHERAL_LOCALE_EVENT="navibori:peripheral-locale";
+export const NAVIBORI_LOCALE_CHANGE_EVENT="navibori:localechange";
+
 export interface NaviboriLocale{
   language:NaviboriLanguage;
   locale:string;
@@ -46,6 +49,27 @@ export function resolveNaviboriLocale(
   };
 }
 
+export function normalizeLocaleCandidate(value:unknown){
+  if(typeof value!=="string" || !value.trim()) return null;
+
+  try{
+    return new Intl.Locale(value.trim()).toString();
+  }catch{
+    return null;
+  }
+}
+
+export function resolveActiveNaviboriLocale(
+  browserLanguages:readonly string[]|undefined|null,
+  peripheralLocale?:string|null
+){
+  const peripheral=normalizeLocaleCandidate(peripheralLocale);
+  if(peripheral){
+    return resolveNaviboriLocale([peripheral]);
+  }
+  return resolveNaviboriLocale(browserLanguages);
+}
+
 export function browserNaviboriLocale(){
   if(typeof navigator==="undefined"){
     return resolveNaviboriLocale(["es-PR"]);
@@ -56,7 +80,12 @@ export function browserNaviboriLocale(){
       ? navigator.languages
       : [navigator.language || "es-PR"];
 
-  return resolveNaviboriLocale(languages);
+  const peripheralLocale=
+    typeof document!=="undefined"
+      ? document.documentElement.dataset.peripheralLocale
+      : undefined;
+
+  return resolveActiveNaviboriLocale(languages,peripheralLocale);
 }
 
 const ES={
