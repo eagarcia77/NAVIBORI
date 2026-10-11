@@ -770,6 +770,7 @@ export default function NaviboriMap({
 
   function testGps(){
     if(!window.isSecureContext){
+      setNavigationPhase("error");
       setLocationStatus("El GPS requiere una conexión HTTPS segura.");
       return;
     }
@@ -1023,7 +1024,7 @@ export default function NaviboriMap({
     }
   }
 
-  function stopGpsNavigation(){
+  function stopGpsNavigation(options:{preservePhase?:boolean}={}){
     if(gpsBootstrapTimerRef.current!==null){
       clearTimeout(gpsBootstrapTimerRef.current);
       gpsBootstrapTimerRef.current=null;
@@ -1044,7 +1045,9 @@ export default function NaviboriMap({
     setGpsActive(false);
     setGpsAccuracy(null);
     setGpsSpeedKph(null);
-    setNavigationPhase("idle");
+    if(!options.preservePhase){
+      setNavigationPhase("idle");
+    }
 
     if(wakeLockRef.current){
       void wakeLockRef.current.release().catch(()=>{});
@@ -1066,6 +1069,7 @@ export default function NaviboriMap({
     }
 
     if(!navigator.geolocation){
+      setNavigationPhase("error");
       setLocationStatus("Este dispositivo o navegador no ofrece GPS/geolocalización.");
       return;
     }
@@ -1290,7 +1294,7 @@ export default function NaviboriMap({
           if(!receivedFix && error.code===error.PERMISSION_DENIED){
             setRouteBusy(null);
             setLocationStatus(geolocationErrorMessage(error));
-            stopGpsNavigation();
+            stopGpsNavigation({preservePhase:true});
           }
         },
         {
@@ -1308,7 +1312,7 @@ export default function NaviboriMap({
         setRouteBusy(null);
         setNavigationPhase("error");
         setLocationStatus(geolocationErrorMessage(error));
-        stopGpsNavigation();
+        stopGpsNavigation({preservePhase:true});
         return;
       }
 
@@ -1330,8 +1334,9 @@ export default function NaviboriMap({
       (error)=>{
         if(error.code===error.PERMISSION_DENIED){
           setRouteBusy(null);
+          setNavigationPhase("error");
           setLocationStatus(geolocationErrorMessage(error));
-          stopGpsNavigation();
+          stopGpsNavigation({preservePhase:true});
           return;
         }
         requestLowAccuracyFallback();
@@ -1350,7 +1355,7 @@ export default function NaviboriMap({
       setLocationStatus(
         "No llegó una posición GPS. Pulsa “Reintentar GPS” o abre ☰ > Diagnosticar GPS y rutas."
       );
-      stopGpsNavigation();
+      stopGpsNavigation({preservePhase:true});
     },25000);
   }
 
