@@ -49,6 +49,12 @@ import {
   vectorGateLabel
 } from "@/lib/commerce/vector-gate";
 import {
+  deriveFlightDirectorState,
+  flightDirectorHapticPattern,
+  flightDirectorLabel,
+  type FlightDirectorPhase
+} from "@/lib/commerce/astra-flight-director";
+import {
   NAVIBORI_LOCALE_CHANGE_EVENT,
   browserNaviboriLocale,
   naviboriCopy,
@@ -310,6 +316,7 @@ export default function NaviboriMap({
   const wakeLockRef=useRef<WakeLockSentinel|null>(null);
   const lastTrajectoryRiskRef=useRef<TrajectoryRisk>("stable");
   const lastVectorGatePhaseRef=useRef<ReturnType<typeof deriveVectorGatePhase>>("cruise");
+  const lastFlightDirectorPhaseRef=useRef<FlightDirectorPhase|null>(null);
 
   const [deviceLocale,setDeviceLocale]=useState<NaviboriLocale>({
     language:"es",
@@ -341,6 +348,7 @@ export default function NaviboriMap({
   const [gpsActive,setGpsActive]=useState(false);
   const [gpsAccuracy,setGpsAccuracy]=useState<number|null>(null);
   const [gpsSpeedKph,setGpsSpeedKph]=useState<number|null>(null);
+  const [navigationBearingDegrees,setNavigationBearingDegrees]=useState<number|null>(null);
   const [trajectoryPrediction,setTrajectoryPrediction]=useState<TrajectoryPrediction|null>(null);
   const [astraCompassState,setAstraCompassState]=useState<
     "idle"|"active"|"blocked"|"unsupported"
@@ -466,6 +474,44 @@ export default function NaviboriMap({
     ]
   );
 
+  const flightDirectorRouteBearing=useMemo(
+    ()=>routeResult
+      ? getRouteBearingNearPoint(
+          routeResult,
+          orbitalLookahead?.coordinate ?? userLocation ?? navigationProgress?.snapped ?? {
+            latitude:routeResult.geometry.coordinates[0]?.[1] ?? 0,
+            longitude:routeResult.geometry.coordinates[0]?.[0] ?? 0
+          }
+        )
+      : null,
+    [
+      navigationProgress?.snapped.latitude,
+      navigationProgress?.snapped.longitude,
+      orbitalLookahead?.coordinate.latitude,
+      orbitalLookahead?.coordinate.longitude,
+      routeResult,
+      userLocation?.latitude,
+      userLocation?.longitude
+    ]
+  );
+
+  const flightDirectorState=useMemo(
+    ()=>deriveFlightDirectorState({
+      routeBearing:flightDirectorRouteBearing,
+      navigationBearing:navigationBearingDegrees,
+      routeDeviationMeters:navigationProgress?.distanceFromRouteMeters ?? null,
+      gpsAccuracyMeters:gpsAccuracy,
+      speedKph:gpsSpeedKph
+    }),
+    [
+      flightDirectorRouteBearing,
+      gpsAccuracy,
+      gpsSpeedKph,
+      navigationBearingDegrees,
+      navigationProgress?.distanceFromRouteMeters
+    ]
+  );
+
   const lagrangePhase=useMemo(
     ()=>deriveLagrangeCockpitPhase({
       gpsActive,
@@ -525,6 +571,27 @@ export default function NaviboriMap({
     };
     haptics.vibrate?.(pattern);
   },[gpsActive,vectorGateState]);
+
+  useEffect(()=>{
+    if(!gpsActive){
+      lastFlightDirectorPhaseRef.current=null;
+      return;
+    }
+
+    const previous=lastFlightDirectorPhaseRef.current;
+    const next=flightDirectorState.phase;
+    lastFlightDirectorPhaseRef.current=next;
+
+    if(document.documentElement.dataset.motion==="reduced") return;
+
+    const pattern=flightDirectorHapticPattern(previous,next);
+    if(pattern===null) return;
+
+    const haptics=navigator as Navigator & {
+      vibrate?:(pattern:number|number[])=>boolean;
+    };
+    haptics.vibrate?.(pattern);
+  },[flightDirectorState.phase,gpsActive]);
 
   useEffect(()=>{
     const applyLocale=()=>{
@@ -1950,6 +2017,7 @@ export default function NaviboriMap({
         deviceHeading:deviceHeadingRef.current,
         routeHeading
       });
+      setNavigationBearingDegrees(navigationBearing);
 
       const prediction=
         cameraRoute
@@ -2348,6 +2416,55 @@ export default function NaviboriMap({
                     : tr("FUSIÓN DE RUTA","ROUTE FUSION")}
                 </strong>
               </div>
+
+              {gpsActive && (
+                <div
+                  className={"astra-flight-director "+flightDirectorState.phase}
+                  aria-label={tr(
+                    "Director de vuelo Astra · "+
+                      flightDirectorLabel(flightDirectorState,"es"),
+                    "Astra Flight Director · "+
+                      flightDirectorLabel(flightDirectorState,"en")
+                  )}
+                >
+                  <div>
+                    <span>ASTRA FD</span>
+                    <strong>
+                      {flightDirectorLabel(
+                        flightDirectorState,
+                        deviceLocale.language
+                      )}
+                    </strong>
+                    <small>
+                      {flightDirectorState.bearingErrorDegrees!==null
+                        ? "Δ "+
+                          Math.round(
+                            Math.abs(flightDirectorState.bearingErrorDegrees)
+                          )+
+                          "°"
+                        : "Δ —"}
+                      {" · "}
+                      XTE ~
+                      {flightDirectorState.deviationMeters!==null
+                        ? Math.round(flightDirectorState.deviationMeters)
+                        : "—"}
+                      {" m · "}
+                      {flightDirectorState.confidence}%
+                    </small>
+                  </div>
+                  <div className="astra-flight-director-reticle" aria-hidden="true">
+                    <i />
+                    <b
+                      style={{
+                        transform:
+                          "translateX("+
+                          Math.round(flightDirectorState.cueOffset*34)+
+                          "px)"
+                      }}
+                    />
+                  </div>
+                </div>
+              )}
 
               {orbitalLookahead && (
                 <div

@@ -125,6 +125,15 @@ A submitted request still requires merchant confirmation. Requests in new, accep
 - XR and gamepad profiles automatically scale the gate up, while reduced-motion profiles disable its lock animation.
 - Vector Gate is intentionally a situational-awareness layer; it does not change route geometry, GPS truth, or routing-provider decisions.
 
+## Astra Flight Director
+- Astra Flight Director is an aerospace-inspired guidance layer built from real NAVIBORI route and sensor data; it is not a separate routing provider.
+- It compares the fused navigation bearing against the bearing of the active route corridor and combines that angular error with cross-track route deviation, GPS accuracy and speed.
+- Guidance phases are ACQUIRE, LOCKED, ALIGN and CORRECT. The reticle moves left/right to show the needed course correction while keeping the main map visible.
+- A compact confidence percentage and approximate cross-track error (XTE) are displayed for diagnostics.
+- Haptics are restrained to state transitions into CORRECT or LOCKED and are disabled when reduced-motion mode is active.
+- The Flight Director automatically follows the active device/peripheral language for Spanish/English guidance labels.
+- Control sizing follows the existing peripheral profile: touch/gamepad/XR receive larger guidance controls than fine-pointer desktop input.
+
 ## High-visibility navigation route
 - The route overlay now uses four visual layers: route glow, dark casing, high-contrast primary line, and repeated directional arrows.
 - Route layers are explicitly moved to the top of the MapLibre layer stack so the raster basemap cannot cover them.
