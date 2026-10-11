@@ -76,6 +76,17 @@ A submitted request still requires merchant confirmation. Requests in new, accep
 - HoloRoute markers are presentation-only: the route geometry remains the authoritative OSRM/Valhalla path and the beacon does not change routing.
 - The adaptive cockpit uses the existing peripheral profile to optimize touch, pointer, gamepad and XR presentation while respecting reduced-motion preferences.
 
+## AstraNav Photon Corridor
+- Photon Corridor is a NAVIBORI aerospace-inspired guidance layer built on the real OSRM/Valhalla route geometry; it is a product concept, not claimed extraterrestrial technology.
+- Route source and visual layers are initialized when MapLibre loads and remain resident for the session. Recalculation updates data and paint properties instead of removing/recreating the route stack.
+- The visible corridor combines glow, dark casing, high-contrast route color and directional arrows.
+- Live progress uses a line-progress gradient: completed route is muted, the current route edge flashes white, and the remaining route stays bright.
+- Photon Cursor snaps to the nearest point on the active route so customers can distinguish GPS position from the actual navigable corridor.
+- Vector Gate changes maneuver-card emphasis as the next maneuver enters 250 m and 75 m proximity bands.
+- Existing AstraNav sensor fusion continues to choose heading from GPS, device orientation and route bearing in that priority/fallback model.
+- HoloRoute destination and next-turn beacons remain spatial overlays on the map.
+- Motion effects respect reduced-motion preferences and peripheral-adaptive presentation rules.
+
 ## High-visibility navigation route
 - The route overlay now uses four visual layers: route glow, dark casing, high-contrast primary line, and repeated directional arrows.
 - Route layers are explicitly moved to the top of the MapLibre layer stack so the raster basemap cannot cover them.
