@@ -20,6 +20,10 @@ export function localizeManeuver(instruction:string,language:"es"|"en"){
  for(const [pattern,variants] of rules){
    const match=instruction.match(pattern);
    if(match){
+     if(pattern.source.startsWith("^At the roundabout")){
+       const order:Record<string,string>={first:"primera",second:"segunda",third:"tercera",fourth:"cuarta",fifth:"quinta"};
+       return instruction.replace(pattern,"En la rotonda, toma la "+(order[match[1].toLowerCase()]||"siguiente")+" salida hacia ");
+     }
      const replacement=variants.length===2?(match[1]?variants[0]:variants[1]):variants[0];
      return instruction.replace(pattern,replacement);
    }
