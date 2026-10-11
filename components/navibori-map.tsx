@@ -98,10 +98,10 @@ function routeModeIcon(mode:InMapRouteMode){
 
 function routeLineColor(mode:InMapRouteMode){
   switch(mode){
-    case "walking": return "#136f63";
-    case "cycling": return "#087a67";
-    case "scooter": return "#b85f24";
-    default: return "#2463eb";
+    case "walking": return "#00a884";
+    case "cycling": return "#00a884";
+    case "scooter": return "#ff8a34";
+    default: return "#0a84ff";
   }
 }
 
