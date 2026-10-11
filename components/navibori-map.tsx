@@ -1058,6 +1058,8 @@ export default function NaviboriMap({
   ){
     if(!canRoute) return;
 
+    void runGpsDiagnostics();
+
     if(!window.isSecureContext){
       setLocationStatus("El GPS requiere una conexión HTTPS segura.");
       return;
@@ -1346,7 +1348,7 @@ export default function NaviboriMap({
       setRouteBusy(null);
       setNavigationPhase("error");
       setLocationStatus(
-        "No llegó una posición GPS. Usa “Probar GPS”; si falla, revisa el permiso de Localización del dispositivo."
+        "No llegó una posición GPS. Pulsa “Reintentar GPS” o abre ☰ > Diagnosticar GPS y rutas."
       );
       stopGpsNavigation();
     },25000);
@@ -1432,6 +1434,14 @@ export default function NaviboriMap({
             <span className={navigationPhase==="gps"||navigationPhase==="routing"||navigationPhase==="navigating" ? "done" : ""}>2 GPS</span>
             <span className={navigationPhase==="routing"||navigationPhase==="navigating" ? "done" : ""}>3 Ruta</span>
             <span className={navigationPhase==="navigating" ? "done" : ""}>4 Navegando</span>
+            {navigationPhase==="error" && (
+              <button
+                type="button"
+                onClick={()=>startGpsNavigation(lastRouteMode)}
+              >
+                Reintentar GPS
+              </button>
+            )}
           </div>
         )}
 
@@ -1776,7 +1786,7 @@ export default function NaviboriMap({
                     </small>
                   </button>
 
-                  {business.verifiedLocation && business.mapLocation?.verified ? (
+                  {canNavigateCommerce(business,source) ? (
                     <div className="nearby-business-route-buttons">
                       {travelModes.map((travel)=>(
                         <button
