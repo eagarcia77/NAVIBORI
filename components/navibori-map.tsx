@@ -456,6 +456,24 @@ export default function NaviboriMap({
     nextCue?.distanceMeters ?? null
   );
 
+  const orbitalLookahead=useMemo(
+    ()=>routeResult && navigationProgress
+      ? buildOrbitalLookahead(
+          routeResult,
+          navigationProgress.traveledMeters,
+          routeResult.mode,
+          gpsSpeedKph,
+          nextCue?.distanceMeters ?? null
+        )
+      : null,
+    [
+      gpsSpeedKph,
+      navigationProgress?.traveledMeters,
+      nextCue?.distanceMeters,
+      routeResult
+    ]
+  );
+
   const flightDirectorRouteBearing=useMemo(
     ()=>routeResult
       ? getRouteBearingNearPoint(
@@ -491,24 +509,6 @@ export default function NaviboriMap({
       gpsSpeedKph,
       navigationBearingDegrees,
       navigationProgress?.distanceFromRouteMeters
-    ]
-  );
-
-  const orbitalLookahead=useMemo(
-    ()=>routeResult && navigationProgress
-      ? buildOrbitalLookahead(
-          routeResult,
-          navigationProgress.traveledMeters,
-          routeResult.mode,
-          gpsSpeedKph,
-          nextCue?.distanceMeters ?? null
-        )
-      : null,
-    [
-      gpsSpeedKph,
-      navigationProgress?.traveledMeters,
-      nextCue?.distanceMeters,
-      routeResult
     ]
   );
 
