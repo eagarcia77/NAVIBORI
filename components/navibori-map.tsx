@@ -60,6 +60,10 @@ import {
   type GravityLensPhase
 } from "@/lib/commerce/gravity-lens";
 import {
+  buildDriftBridgeEstimate,
+  type DriftBridgeEstimate
+} from "@/lib/commerce/astra-drift-bridge";
+import {
   NAVIBORI_LOCALE_CHANGE_EVENT,
   browserNaviboriLocale,
   naviboriCopy,
@@ -304,6 +308,7 @@ export default function NaviboriMap({
   const photonCursorRef=useRef<maplibregl.Marker|null>(null);
   const orbitalTargetRef=useRef<maplibregl.Marker|null>(null);
   const trajectoryGhostRef=useRef<maplibregl.Marker|null>(null);
+  const driftBridgeMarkerRef=useRef<maplibregl.Marker|null>(null);
   const deviceHeadingRef=useRef<number|null>(null);
   const orientationHandlerRef=useRef<((event:DeviceOrientationEvent)=>void)|null>(null);
   const routeAbortRef=useRef<AbortController|null>(null);
@@ -322,6 +327,12 @@ export default function NaviboriMap({
   const lastTrajectoryRiskRef=useRef<TrajectoryRisk>("stable");
   const lastVectorGatePhaseRef=useRef<ReturnType<typeof deriveVectorGatePhase>>("cruise");
   const lastFlightDirectorPhaseRef=useRef<FlightDirectorPhase|null>(null);
+  const lastGpsFixRef=useRef<{
+    at:number;
+    traveledMeters:number;
+    speedKph:number|null;
+    accuracyMeters:number|null;
+  }|null>(null);
 
   const [deviceLocale,setDeviceLocale]=useState<NaviboriLocale>({
     language:"es",
@@ -356,6 +367,7 @@ export default function NaviboriMap({
   const [navigationBearingDegrees,setNavigationBearingDegrees]=useState<number|null>(null);
   const [trajectoryPrediction,setTrajectoryPrediction]=useState<TrajectoryPrediction|null>(null);
   const [gravityLensPhase,setGravityLensPhase]=useState<GravityLensPhase>("cruise");
+  const [driftBridgeEstimate,setDriftBridgeEstimate]=useState<DriftBridgeEstimate|null>(null);
   const [astraCompassState,setAstraCompassState]=useState<
     "idle"|"active"|"blocked"|"unsupported"
   >("idle");
@@ -598,6 +610,98 @@ export default function NaviboriMap({
     };
     haptics.vibrate?.(pattern);
   },[flightDirectorState.phase,gpsActive]);
+
+  useEffect(()=>{
+    const clearEstimate=()=>{
+      setDriftBridgeEstimate(null);
+      driftBridgeMarkerRef.current?.remove();
+      driftBridgeMarkerRef.current=null;
+    };
+
+    if(!gpsActive || !routeResult){
+      clearEstimate();
+      return;
+    }
+
+    const tick=()=>{
+      const route=routeResultRef.current;
+      const fix=lastGpsFixRef.current;
+      if(!route || !fix){
+        clearEstimate();
+        return;
+      }
+
+      const estimate=buildDriftBridgeEstimate(
+        route,
+        fix.traveledMeters,
+        fix.speedKph,
+        Date.now()-fix.at,
+        fix.accuracyMeters
+      );
+
+      if(estimate.phase==="inactive"){
+        clearEstimate();
+        return;
+      }
+
+      setDriftBridgeEstimate(estimate);
+
+      if(estimate.phase!=="holding" || !estimate.coordinate){
+        driftBridgeMarkerRef.current?.remove();
+        driftBridgeMarkerRef.current=null;
+        return;
+      }
+
+      const map=mapRef.current;
+      if(!map) return;
+
+      if(!driftBridgeMarkerRef.current){
+        const element=document.createElement("div");
+        element.className="navibori-drift-bridge-marker";
+        element.setAttribute(
+          "aria-label",
+          tr(
+            "Posición estimada temporalmente por ASTRA Drift Bridge",
+            "Position temporarily estimated by ASTRA Drift Bridge"
+          )
+        );
+        element.innerHTML="<span>DR</span><i></i>";
+        driftBridgeMarkerRef.current=new maplibregl.Marker({
+          element,
+          anchor:"center"
+        }).addTo(map);
+      }
+
+      driftBridgeMarkerRef.current.setLngLat([
+        estimate.coordinate.longitude,
+        estimate.coordinate.latitude
+      ]);
+
+      if(
+        followGpsRef.current &&
+        document.documentElement.dataset.motion!=="reduced"
+      ){
+        const bearing=getRouteBearingNearPoint(route,estimate.coordinate);
+        map.easeTo({
+          center:[
+            estimate.coordinate.longitude,
+            estimate.coordinate.latitude
+          ],
+          bearing:bearing ?? map.getBearing(),
+          duration:420,
+          essential:false
+        });
+      }
+    };
+
+    tick();
+    const interval=window.setInterval(tick,500);
+
+    return ()=>{
+      window.clearInterval(interval);
+      clearEstimate();
+    };
+  },[gpsActive,routeResult]);
 
   useEffect(()=>{
     const applyLocale=()=>{
@@ -1015,6 +1119,9 @@ export default function NaviboriMap({
       destinationBeaconRef.current?.remove();
       photonCursorRef.current?.remove();
       orbitalTargetRef.current?.remove();
+      trajectoryGhostRef.current?.remove();
+      driftBridgeMarkerRef.current?.remove();
+      driftBridgeMarkerRef.current=null;
       map.remove();
       mapRef.current=null;
     };
@@ -1832,6 +1939,10 @@ export default function NaviboriMap({
     setGpsSpeedKph(null);
     setTrajectoryPrediction(null);
     setGravityLensPhase("cruise");
+    setDriftBridgeEstimate(null);
+    lastGpsFixRef.current=null;
+    driftBridgeMarkerRef.current?.remove();
+    driftBridgeMarkerRef.current=null;
     lastTrajectoryRiskRef.current="stable";
     if(!options.preservePhase){
       setNavigationPhase("idle");
@@ -1992,6 +2103,21 @@ export default function NaviboriMap({
         cameraRoute
           ? getNavigationProgress(cameraRoute,next)
           : null;
+
+      setDriftBridgeEstimate(null);
+      driftBridgeMarkerRef.current?.remove();
+      driftBridgeMarkerRef.current=null;
+
+      if(cameraRoute && cameraProgress){
+        lastGpsFixRef.current={
+          at:Date.now(),
+          traveledMeters:cameraProgress.traveledMeters,
+          speedKph:speedKphNow,
+          accuracyMeters:accuracy
+        };
+      }else{
+        lastGpsFixRef.current=null;
+      }
       const cameraCue=
         cameraRoute && cameraProgress
           ? getNavigationCueAtProgress(
@@ -2498,6 +2624,31 @@ export default function NaviboriMap({
                       }}
                     />
                   </div>
+                </div>
+              )}
+
+              {driftBridgeEstimate && driftBridgeEstimate.phase!=="inactive" && (
+                <div
+                  className={"astra-drift-bridge-chip "+driftBridgeEstimate.phase}
+                  aria-live="polite"
+                  aria-label={tr(
+                    "Puente inercial ASTRA",
+                    "ASTRA inertial bridge"
+                  )}
+                >
+                  <span>ASTRA DRIFT BRIDGE</span>
+                  <strong>
+                    {driftBridgeEstimate.phase==="holding"
+                      ? tr("DR HOLD","DR HOLD")
+                      : tr("FIX GPS PERDIDO","GPS FIX LOST")}
+                  </strong>
+                  <small>
+                    {(driftBridgeEstimate.elapsedMs/1000).toFixed(1)} s
+                    {" · "}
+                    {driftBridgeEstimate.phase==="holding"
+                      ? driftBridgeEstimate.confidence+"%"
+                      : "0%"}
+                  </small>
                 </div>
               )}
 
