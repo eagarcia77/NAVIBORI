@@ -51,6 +51,13 @@ A submitted request still requires merchant confirmation. Requests in new, accep
 - /api/routing/health validates routing availability from the NAVIBORI server using fixed Puerto Rico test coordinates; it never uses or stores customer GPS data.
 - Diagnostic output separates device/browser permission problems from routing-provider problems.
 
+## Live route progress
+- Active navigation projects the current GPS fix onto the route geometry to estimate traveled distance and remaining distance.
+- ETA is recalculated from the remaining route fraction and displayed as an arrival clock time.
+- The next maneuver advances as the user passes maneuver points instead of remaining fixed on the first instruction.
+- Voice guidance may repeat the same instruction at far, near and now distance bands.
+- Route progress remains session-only and is not persisted.
+
 ## GPS dual acquisition and routing fallback
 - GPS startup now runs getCurrentPosition and watchPosition in parallel and uses the first valid fix received.
 - If high-accuracy positioning fails without a permission denial, NAVIBORI retries with lower-accuracy cached positioning before giving up.
