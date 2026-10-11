@@ -104,6 +104,17 @@ A submitted request still requires merchant confirmation. Requests in new, accep
 - Mobile navigation hides redundant zoom/globe controls, keeps familiar map gestures, and reduces the permanent HUD height so more of the route stays visible.
 - The mobile HUD prioritizes next maneuver, ETA, remaining distance, speed, follow/recenter, voice, and end-navigation controls; GPS diagnostics remain available from the menu.
 
+## Trajectory Shield
+- Trajectory Shield is an aerospace-inspired predictive drift layer that runs locally during active GPS navigation.
+- It fuses the current navigation bearing, speed, GPS accuracy and active route geometry to project the customer position several seconds into the future.
+- The projection horizon adapts by transport mode and speed: longer for driving, shorter for walking/cycling/scooter.
+- The future position is compared against the Photon Corridor before the normal off-route threshold is reached.
+- Stable motion stays visually silent. A watch state exposes a subtle amber indicator; a likely divergence exposes a red correction cue and a projected ghost target on the map.
+- On devices that implement the Vibration API, the first transition into warning state produces a short haptic pulse. Unsupported devices simply skip haptics.
+- The navigation camera now uses adaptive cruise/approach/correction profiles instead of fixed zoom values. It zooms closer before maneuvers or predicted drift and opens the horizon at higher driving speeds.
+- Trajectory Shield does not persist GPS positions or predicted coordinates; it operates only in the active navigation session.
+- Reduced-motion preferences disable the projected target animation while preserving the risk signal.
+
 ## Route arrows and device language
 - Active navigation draws a high-contrast route from the current origin to the selected commerce destination and overlays repeated directional arrow symbols along the route.
 - Route arrows use the same route geometry returned by OSRM/Valhalla, so they indicate the path the customer should follow rather than a straight-line bearing.
