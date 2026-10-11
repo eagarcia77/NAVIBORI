@@ -2679,3 +2679,26 @@ html[data-motion="reduced"] .navibori-drift-bridge-marker i{
   line-height: 1.45;
   font-weight: 650;
 }
+
+/* Navigation-first promotional controls: compact until explicitly opened. */
+.special-alert-control.collapsed {
+  width: auto;
+  max-width: min(210px, 45vw);
+  min-height: 36px;
+  padding: 5px 7px;
+  gap: 6px;
+}
+.special-alert-control.collapsed > div:first-child > span {display:none;}
+.special-alert-control.collapsed > div:first-child > strong {font-size:.68rem;}
+.special-alert-control .special-alert-toggle {
+  flex: 0 0 auto;
+  min-width: 30px;
+  min-height: 30px;
+  padding: 4px 7px;
+}
+@media(max-width:640px){
+  .special-alert-control.collapsed {
+    max-width: 135px;
+    opacity: .9;
+  }
+}
