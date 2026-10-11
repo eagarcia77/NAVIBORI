@@ -142,6 +142,16 @@ A submitted request still requires merchant confirmation. Requests in new, accep
 - Reduced-motion preference decreases focus blending and camera changes.
 - Gravity Lens never changes routing geometry, GPS tracking, rerouting rules or turn instructions; it only improves how the already-calculated route is framed.
 
+## ASTRA Drift Bridge
+- ASTRA Drift Bridge is a short-duration route-aligned dead-reckoning layer inspired by aerospace GPS/INS integration principles.
+- It activates only after a real GPS fix has become stale and only while the customer is moving above a mode-specific minimum speed.
+- During the hold window, NAVIBORI projects progress along the already-calculated route geometry; it does not invent a new route and does not use the estimate for rerouting or arrival detection.
+- The estimate is visibly labeled DR and includes elapsed hold time plus a decaying confidence percentage.
+- A real GPS fix immediately clears the estimated position and restores normal GPS guidance.
+- The maximum hold is 8 seconds. After that, the estimate expires rather than presenting false precision.
+- The DR marker and camera motion respect reduced-motion preferences.
+- Controls now consume the existing peripheral profile: touch/gamepad/XR get comfortable targets, fine-pointer interfaces can stay compact, and language supplied by a connected host/peripheral continues to override browser language.
+
 ## High-visibility navigation route
 - The route overlay now uses four visual layers: route glow, dark casing, high-contrast primary line, and repeated directional arrows.
 - Route layers are explicitly moved to the top of the MapLibre layer stack so the raster basemap cannot cover them.
