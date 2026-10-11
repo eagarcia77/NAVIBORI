@@ -3252,6 +3252,21 @@ export default function NaviboriMap({
               </small>
             </section>
 
+            <div className="navibori-language-choice" role="group" aria-label={tr("Idioma de navegación","Navigation language")}>
+              <span>{tr("Idioma","Language")}</span>
+              <button type="button" aria-pressed={deviceLocale.language==="es"} onClick={()=>{
+                document.documentElement.dataset.peripheralLocale="es-PR";
+                window.dispatchEvent(new Event(NAVIBORI_LOCALE_CHANGE_EVENT));
+              }}>Español</button>
+              <button type="button" aria-pressed={deviceLocale.language==="en"} onClick={()=>{
+                document.documentElement.dataset.peripheralLocale="en-US";
+                window.dispatchEvent(new Event(NAVIBORI_LOCALE_CHANGE_EVENT));
+              }}>English</button>
+              <button type="button" onClick={()=>{
+                delete document.documentElement.dataset.peripheralLocale;
+                window.dispatchEvent(new Event(NAVIBORI_LOCALE_CHANGE_EVENT));
+              }}>{tr("Automático","Auto")}</button>
+            </div>
             <small className="full-map-menu-locale">
               {deviceLocale.language==="en" ? "Language" : "Idioma"} · {deviceLocale.locale} · {
                 languageSource==="peripheral"
