@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import {useEffect,useMemo,useRef,useState} from "react";
+import {useCallback,useEffect,useMemo,useRef,useState} from "react";
 import * as maplibregl from "maplibre-gl";
 import {
   buildAppleMapsDirectionsUrl,
@@ -24,6 +24,10 @@ import {
 } from "@/lib/commerce/in-map-routing";
 import {commerceMatchesSearch} from "@/lib/commerce/map-search";
 import {canNavigateCommerce} from "@/lib/commerce/navigation-eligibility";
+import {
+  COMMERCE_MAP_REFRESH_MS,
+  shouldRefreshCommerceMap
+} from "@/lib/commerce/live-map-refresh";
 import {chooseNavigationBearing} from "@/lib/commerce/navigation-sensor-fusion";
 import {buildPhotonRouteGradient} from "@/lib/commerce/photon-corridor";
 import {buildOrbitalLookahead} from "@/lib/commerce/orbital-lookahead";
@@ -293,8 +297,8 @@ function ensureRouteInfrastructure(map:maplibregl.Map){
 }
 
 export default function NaviboriMap({
-  businesses,
-  source
+  businesses:initialBusinesses,
+  source:initialSource
 }:{
   businesses:CommerceProfile[];
   source:"live"|"demo";
@@ -333,6 +337,11 @@ export default function NaviboriMap({
     speedKph:number|null;
     accuracyMeters:number|null;
   }|null>(null);
+  const commerceRefreshInFlightRef=useRef(false);
+  const deferredCommerceRefreshRef=useRef(false);
+  const initialDemoBusinessesRef=useRef<CommerceProfile[]>(
+    initialSource==="demo" ? initialBusinesses : []
+  );
 
   const [deviceLocale,setDeviceLocale]=useState<NaviboriLocale>({
     language:"es",
@@ -348,6 +357,12 @@ export default function NaviboriMap({
     deviceLocale.language==="en" ? en : es;
 
   const [languageSource,setLanguageSource]=useState<"device"|"peripheral">("device");
+  const [businesses,setBusinesses]=useState<CommerceProfile[]>(initialBusinesses);
+  const [source,setSource]=useState<"live"|"demo">(initialSource);
+  const [commerceRefreshState,setCommerceRefreshState]=useState<
+    "idle"|"refreshing"|"updated"|"error"|"deferred"
+  >("idle");
+  const [lastCommerceRefreshAt,setLastCommerceRefreshAt]=useState<Date|null>(null);
   const [mapReady,setMapReady]=useState(false);
   const [mode,setMode]=useState<RealityMode>("2d");
   const [timeOpen,setTimeOpen]=useState(false);
@@ -398,6 +413,78 @@ export default function NaviboriMap({
     slug:string;
     mode:InMapRouteMode;
   }|null>(null);
+
+  const refreshCommerce=useCallback(async(
+    reason:"interval"|"foreground"|"manual"|"navigation-ended"="interval"
+  )=>{
+    if(typeof document==="undefined") return;
+
+    if(gpsActiveRef.current){
+      deferredCommerceRefreshRef.current=true;
+      setCommerceRefreshState("deferred");
+      return;
+    }
+
+    if(!shouldRefreshCommerceMap({
+      visibility:document.visibilityState,
+      gpsActive:gpsActiveRef.current,
+      inFlight:commerceRefreshInFlightRef.current
+    })){
+      return;
+    }
+
+    commerceRefreshInFlightRef.current=true;
+    setCommerceRefreshState("refreshing");
+
+    try{
+      const response=await fetch(
+        "/api/commerce/public?reason="+encodeURIComponent(reason),
+        {
+          method:"GET",
+          cache:"no-store",
+          headers:{"Accept":"application/json"}
+        }
+      );
+
+      if(!response.ok){
+        throw new Error("commerce_refresh_failed");
+      }
+
+      const payload=await response.json() as {
+        businesses?:CommerceProfile[];
+        fetchedAt?:string;
+      };
+
+      const liveBusinesses=Array.isArray(payload.businesses)
+        ? payload.businesses
+        : [];
+
+      if(liveBusinesses.length>0){
+        setBusinesses(liveBusinesses);
+        setSource("live");
+      }else if(initialDemoBusinessesRef.current.length>0){
+        setBusinesses(initialDemoBusinessesRef.current);
+        setSource("demo");
+      }else{
+        setBusinesses([]);
+        setSource("live");
+      }
+
+      const fetchedAt=payload.fetchedAt
+        ? new Date(payload.fetchedAt)
+        : new Date();
+
+      setLastCommerceRefreshAt(
+        Number.isNaN(fetchedAt.getTime()) ? new Date() : fetchedAt
+      );
+      deferredCommerceRefreshRef.current=false;
+      setCommerceRefreshState("updated");
+    }catch{
+      setCommerceRefreshState("error");
+    }finally{
+      commerceRefreshInFlightRef.current=false;
+    }
+  },[]);
 
   const mappedBusinesses=useMemo(
     ()=>businesses.filter((business)=>
@@ -702,6 +789,38 @@ export default function NaviboriMap({
       clearEstimate();
     };
   },[gpsActive,routeResult]);
+
+  useEffect(()=>{
+    const handleForeground=()=>{
+      if(document.visibilityState==="visible"){
+        void refreshCommerce("foreground");
+      }
+    };
+
+    const interval=window.setInterval(()=>{
+      void refreshCommerce("interval");
+    },COMMERCE_MAP_REFRESH_MS);
+
+    document.addEventListener("visibilitychange",handleForeground);
+    window.addEventListener("pageshow",handleForeground);
+
+    return ()=>{
+      window.clearInterval(interval);
+      document.removeEventListener("visibilitychange",handleForeground);
+      window.removeEventListener("pageshow",handleForeground);
+    };
+  },[refreshCommerce]);
+
+  useEffect(()=>{
+    if(
+      !gpsActive &&
+      deferredCommerceRefreshRef.current &&
+      document.visibilityState==="visible"
+    ){
+      deferredCommerceRefreshRef.current=false;
+      void refreshCommerce("navigation-ended");
+    }
+  },[gpsActive,refreshCommerce]);
 
   useEffect(()=>{
     const applyLocale=()=>{
@@ -3000,6 +3119,52 @@ export default function NaviboriMap({
               <Link href="/nova">NOVA</Link>
               <Link href="/xeno">XENO</Link>
             </nav>
+
+            <section className="full-map-menu-section full-map-refresh-section">
+              <span>
+                {deviceLocale.language==="en" ? "Live map" : "Mapa en vivo"}
+              </span>
+              <div className="full-map-refresh-row">
+                <div>
+                  <strong>
+                    {commerceRefreshState==="refreshing"
+                      ? deviceLocale.language==="en" ? "Updating…" : "Actualizando…"
+                      : commerceRefreshState==="deferred"
+                        ? deviceLocale.language==="en" ? "Update queued" : "Actualización pendiente"
+                        : commerceRefreshState==="error"
+                          ? deviceLocale.language==="en" ? "Last update failed" : "Falló la última actualización"
+                          : deviceLocale.language==="en" ? "Auto · 60 s" : "Auto · 60 s"}
+                  </strong>
+                  <small>
+                    {lastCommerceRefreshAt
+                      ? (deviceLocale.language==="en" ? "Updated " : "Actualizado ")+
+                        new Intl.DateTimeFormat(deviceLocale.locale,{
+                          hour:"numeric",
+                          minute:"2-digit"
+                        }).format(lastCommerceRefreshAt)
+                      : deviceLocale.language==="en"
+                        ? "Background refresh enabled"
+                        : "Actualización en segundo plano activa"}
+                  </small>
+                </div>
+                <button
+                  type="button"
+                  onClick={()=>void refreshCommerce("manual")}
+                  disabled={commerceRefreshState==="refreshing"}
+                >
+                  {deviceLocale.language==="en" ? "Refresh now" : "Actualizar ahora"}
+                </button>
+              </div>
+              <small className="full-map-menu-status">
+                {gpsActive
+                  ? deviceLocale.language==="en"
+                    ? "Map data refresh waits until navigation ends so the active route and destination never jump."
+                    : "La actualización espera a que termine la navegación para que la ruta y el destino activos no cambien."
+                  : deviceLocale.language==="en"
+                    ? "Businesses, locations and promotions refresh every minute while NAVIBORI is visible."
+                    : "Comercios, ubicaciones y promociones se actualizan cada minuto mientras NAVIBORI está visible."}
+              </small>
+            </section>
 
             <small className="full-map-menu-locale">
               {deviceLocale.language==="en" ? "Language" : "Idioma"} · {deviceLocale.locale} · {
