@@ -456,75 +456,22 @@ export default function NaviboriMap({
     const map=mapRef.current;
     if(!map || !mapReady) return;
 
-    const empty={
-      type:"FeatureCollection" as const,
-      features:[]
-    };
-
     if(!routeResult){
+      const empty={
+        type:"FeatureCollection" as const,
+        features:[]
+      };
       const source=map.getSource(ROUTE_SOURCE_ID) as maplibregl.GeoJSONSource|undefined;
       source?.setData(empty);
       return;
     }
 
-    const feature={
-      type:"Feature" as const,
-      properties:{mode:routeResult.mode},
-      geometry:routeResult.geometry
-    };
-
-    const existing=map.getSource(ROUTE_SOURCE_ID) as maplibregl.GeoJSONSource|undefined;
-
-    if(existing){
-      existing.setData(feature);
-    }else{
-      map.addSource(ROUTE_SOURCE_ID,{
-        type:"geojson",
-        data:feature
-      });
-
-      map.addLayer({
-        id:ROUTE_CASING_ID,
-        type:"line",
-        source:ROUTE_SOURCE_ID,
-        layout:{
-          "line-cap":"round",
-          "line-join":"round"
-        },
-        paint:{
-          "line-color":"#ffffff",
-          "line-width":9,
-          "line-opacity":0.92
-        }
-      });
-
-      map.addLayer({
-        id:ROUTE_LINE_ID,
-        type:"line",
-        source:ROUTE_SOURCE_ID,
-        layout:{
-          "line-cap":"round",
-          "line-join":"round"
-        },
-        paint:{
-          "line-color":routeLineColor(routeResult.mode),
-          "line-width":5,
-          "line-opacity":0.96
-        }
-      });
-    }
-
-    if(map.getLayer(ROUTE_LINE_ID)){
-      map.setPaintProperty(
-        ROUTE_LINE_ID,
-        "line-color",
-        routeLineColor(routeResult.mode)
-      );
-      map.setPaintProperty(
-        ROUTE_LINE_ID,
-        "line-dasharray",
-        routeResult.mode==="walking" ? [1.2,1.2] : [1,0]
-      );
+    const rendered=drawRouteOnMap(routeResult);
+    if(!rendered){
+      const retry=window.setTimeout(()=>{
+        drawRouteOnMap(routeResult);
+      },120);
+      return ()=>window.clearTimeout(retry);
     }
 
     if(gpsActive && followGps && userLocation){
@@ -625,6 +572,71 @@ export default function NaviboriMap({
     userMarkerRef.current=new maplibregl.Marker({element})
       .setLngLat([next.longitude,next.latitude])
       .addTo(map);
+  }
+
+  function drawRouteOnMap(route:InMapRouteResult){
+    const map=mapRef.current;
+    if(!map || !map.isStyleLoaded()) return false;
+
+    const feature={
+      type:"Feature" as const,
+      properties:{mode:route.mode},
+      geometry:route.geometry
+    };
+
+    try{
+      const existing=map.getSource(ROUTE_SOURCE_ID) as maplibregl.GeoJSONSource|undefined;
+
+      if(existing){
+        existing.setData(feature);
+      }else{
+        map.addSource(ROUTE_SOURCE_ID,{
+          type:"geojson",
+          data:feature
+        });
+      }
+
+      if(map.getLayer(ROUTE_LINE_ID)){
+        map.removeLayer(ROUTE_LINE_ID);
+      }
+      if(map.getLayer(ROUTE_CASING_ID)){
+        map.removeLayer(ROUTE_CASING_ID);
+      }
+
+      map.addLayer({
+        id:ROUTE_CASING_ID,
+        type:"line",
+        source:ROUTE_SOURCE_ID,
+        layout:{
+          "line-cap":"round",
+          "line-join":"round"
+        },
+        paint:{
+          "line-color":"#ffffff",
+          "line-width":10,
+          "line-opacity":0.96
+        }
+      });
+
+      map.addLayer({
+        id:ROUTE_LINE_ID,
+        type:"line",
+        source:ROUTE_SOURCE_ID,
+        layout:{
+          "line-cap":"round",
+          "line-join":"round"
+        },
+        paint:{
+          "line-color":routeLineColor(route.mode),
+          "line-width":6,
+          "line-opacity":1
+        }
+      });
+
+      return true;
+    }catch{
+      return false;
+    }
   }
 
   function showFullRoute(){
@@ -800,9 +812,15 @@ export default function NaviboriMap({
       });
       setGpsTestBusy(false);
       setLocationStatus(
-        "✓ GPS funcionando"+
+        (selected && canRoute ? "✓ GPS funcionando · iniciando ruta" : "✓ GPS funcionando · selecciona un comercio")+
         (accuracy!==null ? " · precisión aproximada ±"+Math.round(accuracy)+" m" : "")
       );
+
+      if(selected && canRoute){
+        window.setTimeout(()=>{
+          startGpsNavigation(lastRouteMode,next);
+        },0);
+      }
     };
 
     const fallbackError=(error:GeolocationPositionError)=>{
@@ -961,6 +979,12 @@ export default function NaviboriMap({
 
       routeResultRef.current=data;
       setRouteResult(data);
+      const routeDrawn=drawRouteOnMap(data);
+      if(!routeDrawn){
+        window.requestAnimationFrame(()=>{
+          drawRouteOnMap(data);
+        });
+      }
       if(activeNavigationModeRef.current){
         setNavigationPhase("navigating");
       }
@@ -1033,7 +1057,10 @@ export default function NaviboriMap({
     }
   }
 
-  function startGpsNavigation(routeMode:InMapRouteMode){
+  function startGpsNavigation(
+    routeMode:InMapRouteMode,
+    initialOrigin?:RouteCoordinate
+  ){
     if(!canRoute) return;
 
     if(!window.isSecureContext){
@@ -1067,9 +1094,11 @@ export default function NaviboriMap({
     }
 
     const cachedOrigin=
-      userLocation && validRouteCoordinate(userLocation)
-        ? userLocation
-        : null;
+      initialOrigin && validRouteCoordinate(initialOrigin)
+        ? initialOrigin
+        : userLocation && validRouteCoordinate(userLocation)
+          ? userLocation
+          : null;
 
     let firstFix=cachedOrigin===null;
     let receivedFix=cachedOrigin!==null;
@@ -1586,7 +1615,11 @@ export default function NaviboriMap({
                   }}
                   disabled={gpsTestBusy}
                 >
-                  {gpsTestBusy ? "Probando…" : "◎ Probar GPS"}
+                  {gpsTestBusy
+  ? "Probando…"
+  : selected && canRoute
+    ? "◎ Probar GPS e iniciar ruta"
+    : "◎ Probar GPS"}
                 </button>
                 <button
                   type="button"
