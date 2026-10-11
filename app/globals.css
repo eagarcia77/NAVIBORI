@@ -2576,3 +2576,24 @@ html[data-motion="reduced"] .navibori-drift-bridge-marker i{
 .full-map-refresh-row>button{flex:0 0 auto;min-height:36px;padding:0 10px;border:1px solid var(--ocean);border-radius:9px;background:white;color:var(--ocean);font-size:.58rem;font-weight:900}
 .full-map-refresh-row>button:disabled{opacity:.55}
 @media(max-width:420px){.full-map-refresh-row{align-items:stretch}.full-map-refresh-row>button{min-height:40px}}
+
+/* NAVIBORI iPhone navigation: protect the route view and long street names. */
+@media (max-width: 640px) {
+  .navibori-navigation-maneuver {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+  .navibori-navigation-maneuver strong {
+    display: block;
+    max-width: 100%;
+    overflow-wrap: anywhere;
+    line-height: 1.18;
+    font-size: clamp(1.05rem, 4.2vw, 1.4rem);
+  }
+  .navibori-navigation-footer {
+    padding-bottom: max(8px, env(safe-area-inset-bottom));
+  }
+  .navibori-navigation-footer button {
+    min-height: 44px;
+  }
+}
