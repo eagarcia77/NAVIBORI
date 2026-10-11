@@ -4,6 +4,7 @@ import Link from "next/link";
 import {useEffect,useMemo,useRef,useState} from "react";
 import * as maplibregl from "maplibre-gl";
 import {
+  buildAppleMapsDirectionsUrl,
   buildGoogleDirectionsUrl,
   validRouteCoordinate,
   type RouteCoordinate
@@ -1241,6 +1242,15 @@ export default function NaviboriMap({
     );
   }
 
+  function appleDirectionUrl(routeMode:InMapRouteMode){
+    if(!selected?.mapLocation) return "#";
+    return buildAppleMapsDirectionsUrl(
+      selected.mapLocation,
+      routeMode,
+      userLocation ?? undefined
+    );
+  }
+
   async function copySelectedAddress(){
     const address=selected?.mapLocation?.address ?? selected?.locationLabel;
     if(!address) return;
@@ -1813,13 +1823,22 @@ export default function NaviboriMap({
                       </button>
                     )}
                     {!demoRoute && (
-                      <a
-                        href={directionUrl(routeResult?.mode ?? lastRouteMode)}
-                        target="_blank"
-                        rel="noreferrer"
-                      >
-                        Abrir en Google Maps
-                      </a>
+                      <>
+                        <a
+                          href={appleDirectionUrl(routeResult?.mode ?? lastRouteMode)}
+                          target="_blank"
+                          rel="noreferrer"
+                        >
+                           Apple Maps / CarPlay
+                        </a>
+                        <a
+                          href={directionUrl(routeResult?.mode ?? lastRouteMode)}
+                          target="_blank"
+                          rel="noreferrer"
+                        >
+                          Google Maps / Android Auto
+                        </a>
+                      </>
                     )}
                     <Link href={"/comercios/"+selected.slug}>Ver comercio</Link>
                   </div>
@@ -1840,6 +1859,14 @@ export default function NaviboriMap({
                     basado en rutas de bicicleta; verifica señalización y condiciones locales.
                     Tu ubicación no se guarda en Supabase.
                   </small>
+                  {!demoRoute && (
+                    <small>
+                      Para vehículos conectados, usa Apple Maps / CarPlay o Google Maps / Android Auto
+                      como transferencia inmediata de la ruta. La integración nativa propia de NAVIBORI
+                      con CarPlay y Android Auto requiere los clientes móviles nativos y las autorizaciones
+                      de cada plataforma.
+                    </small>
+                  )}
                   <small>
                     <a
                       href="https://www.openstreetmap.org/fixthemap"
