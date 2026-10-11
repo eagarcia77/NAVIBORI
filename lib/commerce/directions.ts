@@ -27,6 +27,24 @@ export function buildGoogleDirectionsUrl(
   return "https://www.google.com/maps/dir/?"+params.toString();
 }
 
+export function buildAppleMapsDirectionsUrl(
+  destination:RouteCoordinate,
+  mode:DirectionsMode,
+  origin?:RouteCoordinate
+){
+  const params=new URLSearchParams({
+    destination:destination.latitude+","+destination.longitude,
+    mode:mode==="scooter" ? "cycling" : mode,
+    start:"0"
+  });
+
+  if(origin){
+    params.set("source",origin.latitude+","+origin.longitude);
+  }
+
+  return "https://maps.apple.com/directions?"+params.toString();
+}
+
 export function validRouteCoordinate(value:RouteCoordinate|undefined|null){
   return Boolean(
     value &&
