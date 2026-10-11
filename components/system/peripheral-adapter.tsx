@@ -2,6 +2,11 @@
 
 import { useEffect } from "react";
 import { resolvePeripheralProfile } from "@/lib/interaction/peripheral-profile";
+import {
+  NAVIBORI_LOCALE_CHANGE_EVENT,
+  NAVIBORI_PERIPHERAL_LOCALE_EVENT,
+  normalizeLocaleCandidate
+} from "@/lib/i18n/device-locale";
 
 export default function PeripheralAdapter() {
   useEffect(() => {
@@ -13,6 +18,21 @@ export default function PeripheralAdapter() {
     const hover = window.matchMedia("(hover: hover)");
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)");
     const compact = window.matchMedia("(max-width: 760px)");
+
+    function applyPeripheralLocale(value:unknown) {
+      const root = document.documentElement;
+      const locale = normalizeLocaleCandidate(value);
+
+      if (locale) {
+        root.dataset.peripheralLocale = locale;
+        root.dataset.languageSource = "peripheral";
+      } else {
+        delete root.dataset.peripheralLocale;
+        root.dataset.languageSource = "device";
+      }
+
+      window.dispatchEvent(new Event(NAVIBORI_LOCALE_CHANGE_EVENT));
+    }
 
     function apply() {
       const nav = navigator as Navigator & { xr?: unknown };
@@ -53,11 +73,29 @@ export default function PeripheralAdapter() {
       apply();
     }
 
+    function onPeripheralLocale(event:Event) {
+      const custom=event as CustomEvent<{locale?:string|null}>;
+      applyPeripheralLocale(custom.detail?.locale ?? null);
+    }
+
+    const hostWindow=window as Window & {
+      __NAVIBORI_PERIPHERAL_LOCALE__?:string;
+    };
+    if(hostWindow.__NAVIBORI_PERIPHERAL_LOCALE__){
+      applyPeripheralLocale(hostWindow.__NAVIBORI_PERIPHERAL_LOCALE__);
+    }else if(!document.documentElement.dataset.peripheralLocale){
+      document.documentElement.dataset.languageSource="device";
+    }
+
     const media = [coarse, fine, hover, reduced, compact];
     media.forEach((query) => query.addEventListener?.("change", apply));
     window.addEventListener("pointerdown", onPointer, { passive: true });
     window.addEventListener("gamepadconnected", onGamepadConnected);
     window.addEventListener("gamepaddisconnected", onGamepadDisconnected);
+    window.addEventListener(
+      NAVIBORI_PERIPHERAL_LOCALE_EVENT,
+      onPeripheralLocale as EventListener
+    );
 
     apply();
 
@@ -66,6 +104,10 @@ export default function PeripheralAdapter() {
       window.removeEventListener("pointerdown", onPointer);
       window.removeEventListener("gamepadconnected", onGamepadConnected);
       window.removeEventListener("gamepaddisconnected", onGamepadDisconnected);
+      window.removeEventListener(
+        NAVIBORI_PERIPHERAL_LOCALE_EVENT,
+        onPeripheralLocale as EventListener
+      );
     };
   }, []);
 
