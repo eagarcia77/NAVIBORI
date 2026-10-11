@@ -2114,3 +2114,173 @@ html[data-motion="reduced"] .trajectory-shield-chip{
   .exodock-chip span{font-size:.43rem}
   .exodock-chip strong{font-size:.56rem}
 }
+
+
+/* NAVIBORI Vector Gate 2.0 */
+.vector-gate-map{
+  position:relative;
+  width:62px;
+  height:62px;
+  display:grid;
+  place-items:center;
+  pointer-events:none;
+  transform:translateZ(0);
+  filter:drop-shadow(0 8px 18px rgba(15,23,42,.18));
+}
+.vector-gate-map .vector-gate-frame{
+  position:absolute;
+  inset:8px;
+  border:1.5px solid rgba(103,232,249,.84);
+  border-radius:15px;
+  background:
+    linear-gradient(135deg,rgba(255,255,255,.68),rgba(10,132,255,.06));
+  box-shadow:
+    0 0 0 4px rgba(10,132,255,.07),
+    0 0 22px rgba(10,132,255,.18),
+    inset 0 0 18px rgba(103,232,249,.08);
+  transform:rotate(45deg);
+}
+.vector-gate-map .vector-gate-frame:before,
+.vector-gate-map .vector-gate-frame:after{
+  content:"";
+  position:absolute;
+  inset:50% auto auto 50%;
+  background:rgba(10,132,255,.36);
+  transform:translate(-50%,-50%);
+}
+.vector-gate-map .vector-gate-frame:before{
+  width:1px;
+  height:78%;
+}
+.vector-gate-map .vector-gate-frame:after{
+  width:78%;
+  height:1px;
+}
+.vector-gate-map .vector-gate-glyph{
+  position:relative;
+  z-index:3;
+  display:grid;
+  place-items:center;
+  width:30px;
+  height:30px;
+  border-radius:50%;
+  background:rgba(255,255,255,.94);
+  color:#0a84ff;
+  box-shadow:
+    0 0 0 2px rgba(10,132,255,.8),
+    0 0 16px rgba(10,132,255,.3);
+  font-style:normal;
+  font-size:1rem;
+  font-weight:950;
+  line-height:1;
+}
+.vector-gate-map .vector-gate-phase,
+.vector-gate-map .vector-gate-distance{
+  position:absolute;
+  left:50%;
+  z-index:4;
+  transform:translateX(-50%);
+  white-space:nowrap;
+  border:1px solid rgba(255,255,255,.72);
+  border-radius:999px;
+  background:rgba(248,250,252,.9);
+  box-shadow:0 5px 16px rgba(15,23,42,.12);
+  backdrop-filter:blur(14px) saturate(150%);
+  -webkit-backdrop-filter:blur(14px) saturate(150%);
+  color:#15364d;
+  font-style:normal;
+  font-weight:950;
+}
+.vector-gate-map .vector-gate-phase{
+  top:-13px;
+  padding:2px 6px;
+  font-size:.36rem;
+  letter-spacing:.11em;
+}
+.vector-gate-map .vector-gate-distance{
+  bottom:-14px;
+  padding:2px 7px;
+  font-size:.42rem;
+}
+.vector-gate-map.near .vector-gate-frame{
+  border-color:rgba(10,132,255,.92);
+  box-shadow:
+    0 0 0 5px rgba(10,132,255,.08),
+    0 0 28px rgba(10,132,255,.24),
+    inset 0 0 18px rgba(10,132,255,.10);
+}
+.vector-gate-map.critical .vector-gate-frame{
+  border-color:rgba(103,232,249,.98);
+  box-shadow:
+    0 0 0 7px rgba(103,232,249,.08),
+    0 0 34px rgba(10,132,255,.34),
+    inset 0 0 20px rgba(103,232,249,.12);
+  animation:navibori-vector-gate-lock 1.05s ease-in-out infinite alternate;
+}
+.vector-gate-map.commit .vector-gate-frame{
+  border-color:rgba(16,185,129,.96);
+  background:
+    linear-gradient(135deg,rgba(236,253,245,.86),rgba(16,185,129,.10));
+  box-shadow:
+    0 0 0 8px rgba(16,185,129,.08),
+    0 0 36px rgba(16,185,129,.34),
+    inset 0 0 22px rgba(16,185,129,.12);
+  animation:navibori-vector-gate-lock .72s ease-in-out infinite alternate;
+}
+.vector-gate-map.commit .vector-gate-glyph{
+  color:#047857;
+  box-shadow:
+    0 0 0 2px rgba(16,185,129,.88),
+    0 0 18px rgba(16,185,129,.34);
+}
+.vector-gate-map.commit .vector-gate-phase{
+  color:#047857;
+}
+@keyframes navibori-vector-gate-lock{
+  from{transform:rotate(45deg) scale(.96);opacity:.82}
+  to{transform:rotate(45deg) scale(1.05);opacity:1}
+}
+:root[data-input="gamepad"] .vector-gate-map{
+  width:70px;
+  height:70px;
+}
+:root[data-input="xr"] .vector-gate-map{
+  width:80px;
+  height:80px;
+}
+:root[data-input="xr"] .vector-gate-map .vector-gate-glyph{
+  width:36px;
+  height:36px;
+  font-size:1.12rem;
+}
+@media(max-width:760px){
+  .vector-gate-map{
+    width:54px;
+    height:54px;
+  }
+  .vector-gate-map .vector-gate-frame{
+    inset:7px;
+    border-radius:13px;
+  }
+  .vector-gate-map .vector-gate-glyph{
+    width:27px;
+    height:27px;
+    font-size:.92rem;
+  }
+  .vector-gate-map .vector-gate-phase{
+    top:-11px;
+    font-size:.33rem;
+  }
+  .vector-gate-map .vector-gate-distance{
+    bottom:-12px;
+    font-size:.39rem;
+  }
+}
+@media(prefers-reduced-motion:reduce){
+  .vector-gate-map .vector-gate-frame{
+    animation:none!important;
+  }
+}
+:root[data-motion="reduced"] .vector-gate-map .vector-gate-frame{
+  animation:none!important;
+}
