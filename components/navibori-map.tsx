@@ -1082,7 +1082,7 @@ export default function NaviboriMap({
       }
 
       setRouteStatus(
-        (activeNavigationModeRef.current ? "GPS activo · " : "")+
+        (activeNavigationModeRef.current ? copy.gpsActive+" · " : "")+
         routeModeLabel(routeMode,deviceLocale.locale)+
         " · "+formatDistance(data.distanceMeters)+
         " · "+formatDuration(data.durationSeconds)
@@ -1101,7 +1101,9 @@ export default function NaviboriMap({
       }
       setRouteStatus(
         quiet
-          ? "GPS activo · no se pudo actualizar la ruta; se conserva la última ruta."
+          ? (deviceLocale.language==="en"
+              ? "GPS active · route refresh failed; keeping the last route."
+              : "GPS activo · no se pudo actualizar la ruta; se conserva la última ruta.")
           : error instanceof Error
             ? error.message
             : "No se pudo calcular la ruta."
@@ -1200,8 +1202,10 @@ export default function NaviboriMap({
       followGpsRef.current=false;
       setFollowGps(false);
       setRouteStatus(
-        (demoRoute ? "Ruta DEMO · " : "")+
-        "Calculando y dibujando ruta…"
+        (demoRoute
+          ? deviceLocale.language==="en" ? "DEMO route · " : "Ruta DEMO · "
+          : "")+
+        copy.routeCalculating
       );
 
       const route=await calculateRoute(routeMode,origin);
@@ -1209,8 +1213,8 @@ export default function NaviboriMap({
 
       showFullRoute();
       setRouteStatus(
-        routeModeLabel(routeMode)+
-        " · ruta lista · "+formatDistance(route.distanceMeters)+
+        routeModeLabel(routeMode,deviceLocale.locale)+
+        " · "+copy.routeReady+" · "+formatDistance(route.distanceMeters)+
         " · "+formatDuration(route.durationSeconds)
       );
 
@@ -1359,7 +1363,7 @@ export default function NaviboriMap({
         setArrived(true);
         setRouteStatus("Has llegado a "+selected.name+".");
         setLocationStatus("Destino alcanzado · GPS detenido.");
-        speakNavigation("Has llegado a tu destino.",0,true);
+        speakNavigation(copy.destinationReached,0,true);
         stopGpsNavigation();
         mapRef.current?.easeTo({
           center:[
@@ -1374,7 +1378,7 @@ export default function NaviboriMap({
       }
 
       setLocationStatus(
-        (demoRoute ? "GPS DEMO activo" : "GPS activo")+
+        (demoRoute ? copy.gpsDemoActive : copy.gpsActive)+
         (accuracy!==null ? " · precisión ±"+Math.round(accuracy)+" m" : "")
       );
     };
@@ -1554,7 +1558,11 @@ export default function NaviboriMap({
                   : routeModeIcon(routeResult.mode)}
               </span>
               <strong>
-                {nextCue?.instruction ?? "Sigue la ruta marcada."}
+                {nextCue?.instruction ?? (
+                  deviceLocale.language==="en"
+                    ? "Follow the highlighted route."
+                    : "Sigue la ruta marcada."
+                )}
               </strong>
               <small>{selected.name}</small>
             </div>
@@ -1565,12 +1573,13 @@ export default function NaviboriMap({
                 <strong>
                   {formatArrivalTime(
                     navigationProgress?.remainingSeconds ??
-                    routeResult.durationSeconds
+                    routeResult.durationSeconds,
+                    deviceLocale.locale
                   )}
                 </strong>
               </div>
               <div>
-                <span>Restante</span>
+                <span>{deviceLocale.language==="en" ? "Remaining" : "Restante"}</span>
                 <strong>
                   {formatDistance(
                     navigationProgress?.remainingMeters ??
@@ -1976,7 +1985,7 @@ export default function NaviboriMap({
 
                   {routeResult && nextCue && !arrived && (
                     <div className="navibori-turn-card" aria-live="polite">
-                      <span>{formatManeuverDistance(nextCue.distanceMeters)}</span>
+                      <span>{formatManeuverDistance(nextCue.distanceMeters,deviceLocale.language)}</span>
                       <strong>{nextCue.instruction}</strong>
                     </div>
                   )}
@@ -1984,16 +1993,16 @@ export default function NaviboriMap({
                   {routeResult && (
                     <div className="navibori-route-summary">
                       <div>
-                        <span>Distancia restante</span>
+                        <span>{deviceLocale.language==="en" ? "Remaining distance" : "Distancia restante"}</span>
                         <strong>{formatDistance(routeResult.distanceMeters)}</strong>
                       </div>
                       <div>
-                        <span>Tiempo estimado</span>
+                        <span>{deviceLocale.language==="en" ? "Estimated time" : "Tiempo estimado"}</span>
                         <strong>{formatDuration(routeResult.durationSeconds)}</strong>
                       </div>
                       <div>
-                        <span>Modo</span>
-                        <strong>{routeModeIcon(routeResult.mode)} {routeModeLabel(routeResult.mode)}</strong>
+                        <span>{deviceLocale.language==="en" ? "Mode" : "Modo"}</span>
+                        <strong>{routeModeIcon(routeResult.mode)} {routeModeLabel(routeResult.mode,deviceLocale.locale)}</strong>
                       </div>
                       {gpsActive && (
                         <div>
@@ -2001,7 +2010,7 @@ export default function NaviboriMap({
                           <strong>
                             {gpsAccuracy!==null
                               ? "±"+Math.round(gpsAccuracy)+" m"
-                              : "Activo"}
+                              : deviceLocale.language==="en" ? "Active" : "Activo"}
                           </strong>
                         </div>
                       )}
@@ -2016,9 +2025,13 @@ export default function NaviboriMap({
                         aria-expanded={directionsOpen}
                         onClick={()=>setDirectionsOpen((open)=>!open)}
                       >
-                        <span>Indicaciones de la ruta</span>
+                        <span>{deviceLocale.language==="en" ? "Route directions" : "Indicaciones de la ruta"}</span>
                         <strong>
-                          {directionsOpen ? "Ocultar" : routeResult.steps.length+" pasos"}
+                          {directionsOpen
+                            ? deviceLocale.language==="en" ? "Hide" : "Ocultar"
+                            : routeResult.steps.length+" "+(
+                                deviceLocale.language==="en" ? "steps" : "pasos"
+                              )}
                         </strong>
                       </button>
 
@@ -2035,8 +2048,8 @@ export default function NaviboriMap({
                                   {step.distanceMeters>0
                                     ? formatDistance(step.distanceMeters)
                                     : step.type==="arrive"
-                                      ? "Destino"
-                                      : "Continúa"}
+                                      ? deviceLocale.language==="en" ? "Destination" : "Destino"
+                                      : deviceLocale.language==="en" ? "Continue" : "Continúa"}
                                   {step.name ? " · "+step.name : ""}
                                 </small>
                               </div>
