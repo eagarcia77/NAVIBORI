@@ -302,10 +302,12 @@ function ensureRouteInfrastructure(map:maplibregl.Map){
 
 export default function NaviboriMap({
   businesses:initialBusinesses,
-  source:initialSource
+  source:initialSource,
+  buildRevision
 }:{
   businesses:CommerceProfile[];
   source:"live"|"demo";
+  buildRevision:string;
 }){
   const mapNode=useRef<HTMLDivElement|null>(null);
   const mapRef=useRef<maplibregl.Map|null>(null);
@@ -2933,6 +2935,7 @@ export default function NaviboriMap({
               <div>
                 <span>{copy.menu}</span>
                 <strong>{copy.exploreNavigate}</strong>
+                <small title={tr("Versión publicada en Render","Deployed Render version")}>Build {buildRevision}</small>
               </div>
               <button
                 type="button"
