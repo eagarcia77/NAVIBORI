@@ -152,6 +152,16 @@ A submitted request still requires merchant confirmation. Requests in new, accep
 - The DR marker and camera motion respect reduced-motion preferences.
 - Controls now consume the existing peripheral profile: touch/gamepad/XR get comfortable targets, fine-pointer interfaces can stay compact, and language supplied by a connected host/peripheral continues to override browser language.
 
+## Automatic live map refresh
+- Public commerce data is exposed through a no-store `/api/commerce/public` endpoint for live map refresh.
+- While NAVIBORI is visible and not actively navigating, businesses, verified map locations, offers and promotions refresh automatically every 60 seconds.
+- Returning to the app triggers an immediate foreground refresh instead of waiting for the next interval.
+- Background/hidden tabs do not poll.
+- Active GPS navigation defers commerce-map refresh so the selected destination, route geometry and camera never jump mid-route.
+- Any deferred refresh is applied immediately after navigation ends.
+- The map menu shows refresh state, last refresh time and an explicit “Actualizar ahora / Refresh now” action.
+- If no LIVE commerce is available and the session started in DEMO mode, NAVIBORI preserves the DEMO dataset until LIVE data appears.
+
 ## High-visibility navigation route
 - The route overlay now uses four visual layers: route glow, dark casing, high-contrast primary line, and repeated directional arrows.
 - Route layers are explicitly moved to the top of the MapLibre layer stack so the raster basemap cannot cover them.
