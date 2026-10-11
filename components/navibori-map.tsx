@@ -24,12 +24,19 @@ import {
 } from "@/lib/commerce/in-map-routing";
 import {commerceMatchesSearch} from "@/lib/commerce/map-search";
 import {canNavigateCommerce} from "@/lib/commerce/navigation-eligibility";
+import {
+  browserNaviboriLocale,
+  naviboriCopy,
+  type NaviboriLocale
+} from "@/lib/i18n/device-locale";
 import type {CommerceCategory,CommerceProfile} from "@/lib/commerce/types";
 
 const JUANA_DIAZ_REFERENCE:[number,number]=[-66.506,18.052];
 const ROUTE_SOURCE_ID="navibori-commerce-route";
 const ROUTE_CASING_ID="navibori-commerce-route-casing";
 const ROUTE_LINE_ID="navibori-commerce-route-line";
+const ROUTE_ARROW_ID="navibori-commerce-route-arrows";
+const ROUTE_ARROW_IMAGE_ID="navibori-route-arrow-image";
 
 type RealityMode="2d"|"globe"|"time";
 type MapCategory="all"|CommerceCategory;
@@ -71,9 +78,9 @@ function formatDuration(seconds:number){
   return hours+" h"+(remainder ? " "+remainder+" min" : "");
 }
 
-function formatArrivalTime(seconds:number){
+function formatArrivalTime(seconds:number,locale:string){
   const arrival=new Date(Date.now()+Math.max(0,seconds)*1000);
-  return new Intl.DateTimeFormat("es-PR",{
+  return new Intl.DateTimeFormat(locale,{
     hour:"numeric",
     minute:"2-digit"
   }).format(arrival);
@@ -97,10 +104,46 @@ function routeLineColor(mode:InMapRouteMode){
   }
 }
 
-function formatManeuverDistance(meters:number){
-  if(meters<30) return "Ahora";
-  if(meters<1000) return "En "+Math.max(25,Math.round(meters*3.28084/25)*25)+" ft";
-  return "En "+(meters/1609.344).toFixed(1)+" mi";
+function formatManeuverDistance(
+  meters:number,
+  language:"es"|"en"="es"
+){
+  if(meters<30) return language==="en" ? "Now" : "Ahora";
+  const prefix=language==="en" ? "In " : "En ";
+  if(meters<1000){
+    return prefix+Math.max(25,Math.round(meters*3.28084/25)*25)+" ft";
+  }
+  return prefix+(meters/1609.344).toFixed(1)+" mi";
+}
+
+function ensureRouteArrowImage(map:maplibregl.Map){
+  if(map.hasImage(ROUTE_ARROW_IMAGE_ID)) return;
+
+  const size=36;
+  const canvas=document.createElement("canvas");
+  canvas.width=size;
+  canvas.height=size;
+  const context=canvas.getContext("2d");
+  if(!context) return;
+
+  context.clearRect(0,0,size,size);
+  context.save();
+  context.translate(size/2,size/2);
+  context.fillStyle="#ffffff";
+  context.strokeStyle="rgba(15,23,42,.72)";
+  context.lineWidth=2;
+  context.beginPath();
+  context.moveTo(-10,-8);
+  context.lineTo(11,0);
+  context.lineTo(-10,8);
+  context.lineTo(-5,0);
+  context.closePath();
+  context.fill();
+  context.stroke();
+  context.restore();
+
+  const image=context.getImageData(0,0,size,size);
+  map.addImage(ROUTE_ARROW_IMAGE_ID,image,{pixelRatio:2});
 }
 
 export default function NaviboriMap({
@@ -127,6 +170,17 @@ export default function NaviboriMap({
   const voiceEnabledRef=useRef(false);
   const lastSpokenInstructionRef=useRef("");
   const wakeLockRef=useRef<WakeLockSentinel|null>(null);
+
+  const [deviceLocale,setDeviceLocale]=useState<NaviboriLocale>({
+    language:"es",
+    locale:"es-PR",
+    speechLocale:"es-PR",
+    valhallaLocale:"es-ES"
+  });
+  const copy=useMemo(
+    ()=>naviboriCopy(deviceLocale.language),
+    [deviceLocale.language]
+  );
 
   const [mapReady,setMapReady]=useState(false);
   const [mode,setMode]=useState<RealityMode>("2d");
@@ -242,6 +296,12 @@ export default function NaviboriMap({
     },
     [routeResult,navigationProgress]
   );
+
+  useEffect(()=>{
+    const locale=browserNaviboriLocale();
+    setDeviceLocale(locale);
+    document.documentElement.lang=locale.locale;
+  },[]);
 
   useEffect(()=>{
     routeResultRef.current=routeResult;
@@ -592,6 +652,9 @@ export default function NaviboriMap({
         });
       }
 
+      if(map.getLayer(ROUTE_ARROW_ID)){
+        map.removeLayer(ROUTE_ARROW_ID);
+      }
       if(map.getLayer(ROUTE_LINE_ID)){
         map.removeLayer(ROUTE_LINE_ID);
       }
@@ -624,10 +687,29 @@ export default function NaviboriMap({
         },
         paint:{
           "line-color":routeLineColor(route.mode),
-          "line-width":6,
+          "line-width":7,
           "line-opacity":1
         }
       });
+
+      ensureRouteArrowImage(map);
+      if(map.hasImage(ROUTE_ARROW_IMAGE_ID)){
+        map.addLayer({
+          id:ROUTE_ARROW_ID,
+          type:"symbol",
+          source:ROUTE_SOURCE_ID,
+          layout:{
+            "symbol-placement":"line",
+            "symbol-spacing":85,
+            "icon-image":ROUTE_ARROW_IMAGE_ID,
+            "icon-size":0.62,
+            "icon-rotation-alignment":"map",
+            "icon-pitch-alignment":"map",
+            "icon-allow-overlap":true,
+            "icon-ignore-placement":true
+          }
+        });
+      }
 
       return true;
     }catch{
@@ -910,20 +992,23 @@ export default function NaviboriMap({
 
     const prefix=
       distanceMeters>=30
-        ? formatManeuverDistance(distanceMeters)+". "
+        ? formatManeuverDistance(distanceMeters,deviceLocale.language)+". "
         : "";
 
     const utterance=new SpeechSynthesisUtterance(prefix+instruction);
     const voices=window.speechSynthesis.getVoices();
-    const spanishVoice=voices.find((voice)=>
-      /^es(-|_)/i.test(voice.lang)
+    const preferredVoice=voices.find((voice)=>
+      voice.lang.toLowerCase()===deviceLocale.speechLocale.toLowerCase()
+    ) ?? voices.find((voice)=>
+      voice.lang.toLowerCase().startsWith(deviceLocale.language+"-") ||
+      voice.lang.toLowerCase()===deviceLocale.language
     );
 
-    if(spanishVoice){
-      utterance.voice=spanishVoice;
-      utterance.lang=spanishVoice.lang;
+    if(preferredVoice){
+      utterance.voice=preferredVoice;
+      utterance.lang=preferredVoice.lang;
     }else{
-      utterance.lang="es-US";
+      utterance.lang=deviceLocale.speechLocale;
     }
 
     utterance.rate=0.96;
@@ -949,7 +1034,11 @@ export default function NaviboriMap({
     if(!quiet){
       setRouteBusy(routeMode);
       setNavigationPhase("routing");
-      setRouteStatus("Calculando ruta · "+routeModeLabel(routeMode)+"…");
+      setRouteStatus(
+        (deviceLocale.language==="en" ? "Calculating route · " : "Calculando ruta · ")+
+        routeModeLabel(routeMode,deviceLocale.locale)+
+        "…"
+      );
     }
 
     try{
@@ -962,7 +1051,8 @@ export default function NaviboriMap({
           destination:{
             latitude:selected.mapLocation.latitude,
             longitude:selected.mapLocation.longitude
-          }
+          },
+          locale:deviceLocale.valhallaLocale
         }),
         cache:"no-store",
         signal:controller.signal
@@ -993,7 +1083,7 @@ export default function NaviboriMap({
 
       setRouteStatus(
         (activeNavigationModeRef.current ? "GPS activo · " : "")+
-        routeModeLabel(routeMode)+
+        routeModeLabel(routeMode,deviceLocale.locale)+
         " · "+formatDistance(data.distanceMeters)+
         " · "+formatDuration(data.durationSeconds)
       );
