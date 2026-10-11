@@ -1,5 +1,5 @@
 /** Translate common routing-engine maneuver prefixes while preserving street names. */
-const rules=[
+const rules:Array<[RegExp,string[]]>=[
  [/^Turn (slightly )?left onto /i,["Gira ligeramente a la izquierda en ","Gira a la izquierda en "]],
  [/^Turn (slightly )?right onto /i,["Gira ligeramente a la derecha en ","Gira a la derecha en "]],
  [/^Turn left onto /i,["Gira a la izquierda en "]],
