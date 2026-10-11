@@ -23,6 +23,7 @@ import {
   type InMapRouteResult
 } from "@/lib/commerce/in-map-routing";
 import {commerceMatchesSearch} from "@/lib/commerce/map-search";
+import {localizeManeuver} from "@/lib/commerce/maneuver-localization";
 import {canNavigateCommerce} from "@/lib/commerce/navigation-eligibility";
 import {
   COMMERCE_MAP_REFRESH_MS,
@@ -2684,7 +2685,7 @@ export default function NaviboriMap({
                   : routeModeIcon(routeResult.mode)}
               </span>
               <strong>
-                {nextCue?.instruction ?? (
+                {(nextCue?.instruction ? localizeManeuver(nextCue.instruction,deviceLocale.language) : null) ?? (
                   deviceLocale.language==="en"
                     ? "Follow the highlighted route."
                     : "Sigue la ruta marcada."
@@ -2892,7 +2893,7 @@ export default function NaviboriMap({
                     lastSpokenInstructionRef.current="";
                   }else if(nextCue){
                     speakNavigation(
-                      nextCue.instruction,
+                      localizeManeuver(nextCue.instruction,deviceLocale.language),
                       nextCue.distanceMeters,
                       true
                     );
@@ -3323,7 +3324,7 @@ export default function NaviboriMap({
                   {routeResult && nextCue && !arrived && (
                     <div className="navibori-turn-card" aria-live="polite">
                       <span>{formatManeuverDistance(nextCue.distanceMeters,deviceLocale.language)}</span>
-                      <strong>{nextCue.instruction}</strong>
+                      <strong>{localizeManeuver(nextCue.instruction,deviceLocale.language)}</strong>
                     </div>
                   )}
 
@@ -3414,7 +3415,7 @@ export default function NaviboriMap({
                             lastSpokenInstructionRef.current="";
                           }else if(nextCue){
                             speakNavigation(
-                              nextCue.instruction,
+                              localizeManeuver(nextCue.instruction,deviceLocale.language),
                               nextCue.distanceMeters,
                               true
                             );
