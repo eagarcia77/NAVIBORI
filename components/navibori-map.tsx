@@ -26,6 +26,7 @@ import {commerceMatchesSearch} from "@/lib/commerce/map-search";
 import {canNavigateCommerce} from "@/lib/commerce/navigation-eligibility";
 import {chooseNavigationBearing} from "@/lib/commerce/navigation-sensor-fusion";
 import {buildPhotonRouteGradient} from "@/lib/commerce/photon-corridor";
+import {buildOrbitalLookahead} from "@/lib/commerce/orbital-lookahead";
 import {
   NAVIBORI_LOCALE_CHANGE_EVENT,
   browserNaviboriLocale,
@@ -269,6 +270,7 @@ export default function NaviboriMap({
   const nextTurnMarkerRef=useRef<maplibregl.Marker|null>(null);
   const destinationBeaconRef=useRef<maplibregl.Marker|null>(null);
   const photonCursorRef=useRef<maplibregl.Marker|null>(null);
+  const orbitalTargetRef=useRef<maplibregl.Marker|null>(null);
   const deviceHeadingRef=useRef<number|null>(null);
   const orientationHandlerRef=useRef<((event:DeviceOrientationEvent)=>void)|null>(null);
   const routeAbortRef=useRef<AbortController|null>(null);
@@ -424,6 +426,24 @@ export default function NaviboriMap({
         ? "near"
         : "cruise";
 
+  const orbitalLookahead=useMemo(
+    ()=>routeResult && navigationProgress
+      ? buildOrbitalLookahead(
+          routeResult,
+          navigationProgress.traveledMeters,
+          routeResult.mode,
+          gpsSpeedKph,
+          nextCue?.distanceMeters ?? null
+        )
+      : null,
+    [
+      gpsSpeedKph,
+      navigationProgress?.traveledMeters,
+      nextCue?.distanceMeters,
+      routeResult
+    ]
+  );
+
   useEffect(()=>{
     const applyLocale=()=>{
       const locale=browserNaviboriLocale();
@@ -502,6 +522,8 @@ export default function NaviboriMap({
     destinationBeaconRef.current=null;
     photonCursorRef.current?.remove();
     photonCursorRef.current=null;
+    orbitalTargetRef.current?.remove();
+    orbitalTargetRef.current=null;
 
     if(routeResult && selected?.mapLocation){
       const element=document.createElement("div");
@@ -561,6 +583,28 @@ export default function NaviboriMap({
         .addTo(map);
     }
 
+    if(gpsActive && orbitalLookahead){
+      const element=document.createElement("div");
+      element.className="navibori-orbital-target";
+      element.setAttribute(
+        "aria-label",
+        tr(
+          "Punto de anticipación Orbital Lookahead",
+          "Orbital Lookahead guidance target"
+        )
+      );
+      element.innerHTML="<span></span><i></i>";
+      orbitalTargetRef.current=new maplibregl.Marker({
+        element,
+        anchor:"center"
+      })
+        .setLngLat([
+          orbitalLookahead.coordinate.longitude,
+          orbitalLookahead.coordinate.latitude
+        ])
+        .addTo(map);
+    }
+
     return ()=>{
       nextTurnMarkerRef.current?.remove();
       nextTurnMarkerRef.current=null;
@@ -568,6 +612,8 @@ export default function NaviboriMap({
       destinationBeaconRef.current=null;
       photonCursorRef.current?.remove();
       photonCursorRef.current=null;
+      orbitalTargetRef.current?.remove();
+      orbitalTargetRef.current=null;
     };
   },[
     gpsActive,
@@ -576,6 +622,8 @@ export default function NaviboriMap({
     nextCue?.step.location?.longitude,
     navigationProgress?.snapped.latitude,
     navigationProgress?.snapped.longitude,
+    orbitalLookahead?.coordinate.latitude,
+    orbitalLookahead?.coordinate.longitude,
     routeResult,
     selected?.mapLocation?.latitude,
     selected?.mapLocation?.longitude
@@ -741,6 +789,7 @@ export default function NaviboriMap({
       nextTurnMarkerRef.current?.remove();
       destinationBeaconRef.current?.remove();
       photonCursorRef.current?.remove();
+      orbitalTargetRef.current?.remove();
       map.remove();
       mapRef.current=null;
     };
@@ -1164,10 +1213,11 @@ export default function NaviboriMap({
     setFollowGps(true);
 
     const activeMode=activeNavigationModeRef.current;
+    const target=orbitalLookahead?.coordinate ?? userLocation;
     mapRef.current?.easeTo({
-      center:[userLocation.longitude,userLocation.latitude],
+      center:[target.longitude,target.latitude],
       zoom:Math.max(mapRef.current?.getZoom() ?? 16,16.8),
-      offset:[0,110],
+      offset:[0,orbitalLookahead ? 130 : 110],
       pitch:
         activeMode==="driving"
           ? 42
@@ -1698,39 +1748,83 @@ export default function NaviboriMap({
           ? position.coords.speed
           : null;
 
-      setGpsSpeedKph(
+      const speedKphNow=
         speed!==null
-          ? Math.max(0,Math.round(speed*3.6))
+          ? Math.max(0,speed*3.6)
+          : gpsSpeedKph;
+
+      setGpsSpeedKph(
+        speedKphNow!==null
+          ? Math.max(0,Math.round(speedKphNow))
           : null
       );
 
+      const cameraRoute=routeResultRef.current;
+      const cameraProgress=
+        cameraRoute
+          ? getNavigationProgress(cameraRoute,next)
+          : null;
+      const cameraCue=
+        cameraRoute && cameraProgress
+          ? getNavigationCueAtProgress(
+              cameraRoute,
+              cameraProgress.traveledMeters
+            )
+          : null;
+      const cameraLookahead=
+        cameraRoute && cameraProgress
+          ? buildOrbitalLookahead(
+              cameraRoute,
+              cameraProgress.traveledMeters,
+              activeMode,
+              speedKphNow,
+              cameraCue?.distanceMeters ?? null
+            )
+          : null;
+      const cameraCenter=cameraLookahead?.coordinate ?? next;
+      const routeBearingPoint=cameraLookahead?.coordinate ?? next;
+
       if(followGpsRef.current){
         const map=mapRef.current;
+        const nearTurn=
+          typeof cameraCue?.distanceMeters==="number" &&
+          cameraCue.distanceMeters<=120;
+        const fast=
+          typeof speedKphNow==="number" &&
+          speedKphNow>=55;
+
         map?.easeTo({
-          center:[next.longitude,next.latitude],
-          zoom:Math.max(map?.getZoom() ?? 16,16.8),
-          offset:[0,110],
+          center:[cameraCenter.longitude,cameraCenter.latitude],
+          zoom:Math.max(
+            map?.getZoom() ?? 16,
+            activeMode==="driving"
+              ? fast ? 16.45 : 16.8
+              : activeMode==="walking"
+                ? 17.2
+                : 16.9
+          ),
+          offset:[0,nearTurn ? 90 : 135],
           bearing:
             chooseNavigationBearing({
               gpsHeading:heading,
-              speedKph:
-                speed!==null
-                  ? Math.max(0,speed*3.6)
-                  : gpsSpeedKph,
+              speedKph:speedKphNow,
               deviceHeading:deviceHeadingRef.current,
               routeHeading:
-                routeResultRef.current
-                  ? getRouteBearingNearPoint(routeResultRef.current,next)
+                cameraRoute
+                  ? getRouteBearingNearPoint(
+                      cameraRoute,
+                      routeBearingPoint
+                    )
                   : null
             }) ??
             map?.getBearing() ??
             0,
           pitch:
             activeMode==="driving"
-              ? 42
+              ? nearTurn ? 38 : 48
               : activeMode==="walking"
-                ? 15
-                : 28,
+                ? 18
+                : 31,
           duration:firstFix ? 650 : 350
         });
       }
@@ -2020,6 +2114,21 @@ export default function NaviboriMap({
                     : tr("FUSIÓN DE RUTA","ROUTE FUSION")}
                 </strong>
               </div>
+
+              {orbitalLookahead && (
+                <div
+                  className="orbital-lookahead-chip"
+                  aria-label={tr(
+                    "Horizonte predictivo Orbital Lookahead",
+                    "Orbital Lookahead predictive horizon"
+                  )}
+                >
+                  <span>ORBITAL LOOKAHEAD</span>
+                  <strong>
+                    {Math.round(orbitalLookahead.lookaheadMeters)} m
+                  </strong>
+                </div>
+              )}
 
               <div
                 className="photon-corridor-meter"

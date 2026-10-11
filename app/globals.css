@@ -1538,3 +1538,175 @@ html[data-input="xr"] .photon-corridor-meter span{
     animation:none!important;
   }
 }
+
+
+/* NAVIBORI Orbital Lookahead */
+.orbital-lookahead-chip{
+  display:inline-flex;
+  align-items:center;
+  gap:7px;
+  width:max-content;
+  max-width:100%;
+  padding:3px 7px;
+  margin-top:3px;
+  border:1px solid rgba(103,232,249,.28);
+  border-radius:999px;
+  background:linear-gradient(135deg,rgba(3,7,18,.04),rgba(10,132,255,.08));
+  color:#0a84ff;
+  font-size:.42rem;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+}
+.orbital-lookahead-chip span{font-weight:950}
+.orbital-lookahead-chip strong{
+  font-size:.44rem;
+  font-weight:950;
+  color:#31546f;
+  white-space:nowrap;
+}
+.navibori-orbital-target{
+  position:relative;
+  width:32px;
+  height:32px;
+  display:grid;
+  place-items:center;
+  pointer-events:none;
+  transform:translateZ(0);
+}
+.navibori-orbital-target span{
+  position:absolute;
+  inset:2px;
+  border-radius:50%;
+  border:1px solid rgba(103,232,249,.9);
+  box-shadow:
+    0 0 0 5px rgba(10,132,255,.10),
+    0 0 24px rgba(103,232,249,.48),
+    inset 0 0 12px rgba(10,132,255,.24);
+  animation:navibori-orbital-lock 1.8s ease-out infinite;
+}
+.navibori-orbital-target i{
+  position:relative;
+  z-index:2;
+  width:8px;
+  height:8px;
+  border-radius:50%;
+  background:#e6fbff;
+  box-shadow:
+    0 0 0 2px #0a84ff,
+    0 0 14px rgba(103,232,249,.9);
+}
+@keyframes navibori-orbital-lock{
+  0%{transform:scale(.72);opacity:.88}
+  70%{transform:scale(1.18);opacity:.16}
+  100%{transform:scale(1.28);opacity:0}
+}
+html[data-input="xr"] .navibori-orbital-target{
+  width:38px;
+  height:38px;
+}
+html[data-input="xr"] .orbital-lookahead-chip{
+  background:linear-gradient(135deg,rgba(10,132,255,.12),rgba(103,232,249,.15));
+  box-shadow:0 0 18px rgba(103,232,249,.12);
+}
+@media(max-width:760px){
+  .orbital-lookahead-chip{
+    padding:2px 6px;
+    font-size:.39rem;
+  }
+  .orbital-lookahead-chip strong{font-size:.41rem}
+  .navibori-orbital-target{width:26px;height:26px}
+}
+@media(prefers-reduced-motion:reduce){
+  .navibori-orbital-target span{animation:none!important}
+}
+html[data-motion="reduced"] .navibori-orbital-target span{
+  animation:none!important;
+}
+
+
+/* NAVIBORI Mission Dock */
+@media(max-width:760px){
+  .full-map-stage .business-route-card:not(.navigation-active){
+    gap:6px;
+    max-height:36dvh;
+    padding:10px 11px;
+    border-radius:20px;
+    background:rgba(248,250,252,.90);
+    border-color:rgba(255,255,255,.78);
+    box-shadow:0 16px 38px rgba(15,23,42,.18);
+    backdrop-filter:blur(24px) saturate(160%);
+    -webkit-backdrop-filter:blur(24px) saturate(160%);
+  }
+  .full-map-stage .business-route-card:not(.navigation-active)>strong{
+    font-size:.96rem;
+    line-height:1.15;
+  }
+  .business-route-address-row{
+    display:grid;
+    grid-template-columns:minmax(0,1fr) auto;
+    align-items:center;
+    gap:6px;
+  }
+  .business-route-address-row>span{
+    min-width:0;
+    overflow:hidden;
+    white-space:nowrap;
+    text-overflow:ellipsis;
+    font-size:.66rem;
+  }
+  .business-route-address-row>button{
+    min-height:32px;
+    padding-inline:8px;
+    border-radius:10px;
+    font-size:.56rem;
+  }
+  .business-route-launch{
+    gap:6px;
+    padding:7px;
+    border-radius:14px;
+    background:rgba(255,255,255,.58);
+  }
+  .business-route-launch>div:first-child{
+    display:flex;
+    align-items:baseline;
+    justify-content:space-between;
+    gap:8px;
+  }
+  .business-route-launch>div:first-child>span{
+    font-size:.68rem;
+  }
+  .business-route-launch>div:first-child>small{
+    display:none;
+  }
+  .business-route-mode-actions{
+    grid-template-columns:repeat(4,minmax(0,1fr))!important;
+    gap:5px;
+  }
+  .business-route-mode-actions>button{
+    min-height:48px!important;
+    padding:4px 2px;
+    border-radius:12px;
+  }
+  .business-route-mode-actions>button>span{
+    font-size:.94rem;
+  }
+  .business-route-mode-actions>button>strong{
+    font-size:.49rem;
+    line-height:1.1;
+  }
+  .business-route-actions{
+    gap:5px;
+  }
+  .business-route-actions a,
+  .business-route-actions button{
+    min-height:34px;
+    padding-inline:9px;
+    border-radius:10px;
+    font-size:.58rem;
+  }
+}
+@media(max-width:390px){
+  .business-route-mode-actions>button>strong{
+    font-size:.46rem;
+  }
+}

@@ -87,6 +87,15 @@ A submitted request still requires merchant confirmation. Requests in new, accep
 - HoloRoute destination and next-turn beacons remain spatial overlays on the map.
 - Motion effects respect reduced-motion preferences and peripheral-adaptive presentation rules.
 
+## Orbital Lookahead and Mission Dock
+- Orbital Lookahead is an aerospace-inspired predictive camera system built from route geometry, navigation progress, transport mode, current speed and distance to the next maneuver.
+- The lookahead horizon expands on faster/open-road travel and contracts automatically near upcoming turns so the camera shows more useful road ahead without overshooting the maneuver.
+- A subtle orbital target beacon is placed on the future route coordinate used by the camera. It never changes the route or GPS position.
+- Recenter follows the predictive lookahead target when available, while route calculation, arrival logic and off-route detection continue using the real GPS position.
+- The feature is deterministic and testable; it does not use speculative or unverified location data.
+- Mission Dock compresses the selected-commerce sheet on mobile, keeps all four transport modes as touch-sized controls and returns more screen area to the map.
+- Peripheral/device locale and input adaptations remain authoritative for language, control size, density, hover behavior and reduced-motion presentation.
+
 ## High-visibility navigation route
 - The route overlay now uses four visual layers: route glow, dark casing, high-contrast primary line, and repeated directional arrows.
 - Route layers are explicitly moved to the top of the MapLibre layer stack so the raster basemap cannot cover them.
