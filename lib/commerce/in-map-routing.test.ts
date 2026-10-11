@@ -9,6 +9,8 @@ import {
   distanceBetweenCoordinates,
   shouldRefreshNavigationRoute,
   buildSpanishNavigationInstruction,
+  buildEnglishNavigationInstruction,
+  buildNavigationInstruction,
   getNextNavigationCue,
   getNavigationCueAtProgress,
   getNavigationProgress,
@@ -50,6 +52,15 @@ describe("in-map commerce routing",()=>{
         {lat:18.05,lon:-66.50}
       ]
     });
+
+    expect(
+      buildValhallaRouteRequest(
+        {latitude:18.01,longitude:-66.61},
+        {latitude:18.05,longitude:-66.50},
+        "driving",
+        "en-US"
+      ).language
+    ).toBe("en-US");
   });
 
   it("labels all customer navigation modes",()=>{
@@ -191,6 +202,20 @@ describe("in-map commerce routing",()=>{
     expect(
       buildSpanishNavigationInstruction("arrive",null,"",null)
     ).toBe("Has llegado a tu destino.");
+  });
+
+  it("formats English maneuvers from the device locale",()=>{
+    expect(
+      buildEnglishNavigationInstruction("continue","straight","PR-52",null)
+    ).toBe("Continue straight onto PR-52.");
+    expect(
+      buildNavigationInstruction("turn","right","Main Street",null,"en-US")
+    ).toBe("Turn right onto Main Street.");
+    expect(
+      buildNavigationInstruction("arrive",null,"",null,"en-US")
+    ).toBe("You have arrived at your destination.");
+    expect(routeModeLabel("driving","en-US")).toBe("Driving");
+    expect(routeModeLabel("walking","en-US")).toBe("Walking");
   });
 
   it("tracks live route progress and advances the maneuver cue",()=>{
