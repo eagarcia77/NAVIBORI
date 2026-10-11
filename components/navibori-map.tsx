@@ -1119,6 +1119,9 @@ export default function NaviboriMap({
       destinationBeaconRef.current?.remove();
       photonCursorRef.current?.remove();
       orbitalTargetRef.current?.remove();
+      trajectoryGhostRef.current?.remove();
+      driftBridgeMarkerRef.current?.remove();
+      driftBridgeMarkerRef.current=null;
       map.remove();
       mapRef.current=null;
     };
@@ -1936,6 +1939,10 @@ export default function NaviboriMap({
     setGpsSpeedKph(null);
     setTrajectoryPrediction(null);
     setGravityLensPhase("cruise");
+    setDriftBridgeEstimate(null);
+    lastGpsFixRef.current=null;
+    driftBridgeMarkerRef.current?.remove();
+    driftBridgeMarkerRef.current=null;
     lastTrajectoryRiskRef.current="stable";
     if(!options.preservePhase){
       setNavigationPhase("idle");
@@ -2096,6 +2103,21 @@ export default function NaviboriMap({
         cameraRoute
           ? getNavigationProgress(cameraRoute,next)
           : null;
+
+      setDriftBridgeEstimate(null);
+      driftBridgeMarkerRef.current?.remove();
+      driftBridgeMarkerRef.current=null;
+
+      if(cameraRoute && cameraProgress){
+        lastGpsFixRef.current={
+          at:Date.now(),
+          traveledMeters:cameraProgress.traveledMeters,
+          speedKph:speedKphNow,
+          accuracyMeters:accuracy
+        };
+      }else{
+        lastGpsFixRef.current=null;
+      }
       const cameraCue=
         cameraRoute && cameraProgress
           ? getNavigationCueAtProgress(
@@ -2602,6 +2624,31 @@ export default function NaviboriMap({
                       }}
                     />
                   </div>
+                </div>
+              )}
+
+              {driftBridgeEstimate && driftBridgeEstimate.phase!=="inactive" && (
+                <div
+                  className={"astra-drift-bridge-chip "+driftBridgeEstimate.phase}
+                  aria-live="polite"
+                  aria-label={tr(
+                    "Puente inercial ASTRA",
+                    "ASTRA inertial bridge"
+                  )}
+                >
+                  <span>ASTRA DRIFT BRIDGE</span>
+                  <strong>
+                    {driftBridgeEstimate.phase==="holding"
+                      ? tr("DR HOLD","DR HOLD")
+                      : tr("FIX GPS PERDIDO","GPS FIX LOST")}
+                  </strong>
+                  <small>
+                    {(driftBridgeEstimate.elapsedMs/1000).toFixed(1)} s
+                    {" · "}
+                    {driftBridgeEstimate.phase==="holding"
+                      ? driftBridgeEstimate.confidence+"%"
+                      : "0%"}
+                  </small>
                 </div>
               )}
 
