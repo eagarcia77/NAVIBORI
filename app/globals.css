@@ -1089,3 +1089,27 @@ body{overflow:hidden}
 .full-map-gps-diagnostics>span{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:7px 8px;border:1px solid var(--line);border-radius:9px;background:#fbfdfe;font-size:.56rem;color:var(--muted)}
 .full-map-gps-diagnostics strong{font-size:.58rem;color:var(--ink);text-transform:none}
 @media(max-width:700px){.full-map-gps-button{right:10px;top:max(10px,env(safe-area-inset-top))}}
+
+
+/* NAVIBORI focused turn-by-turn navigation */
+.business-route-card.navigation-active{display:none!important}
+.navibori-navigation-hud{position:absolute;inset:0;z-index:32;pointer-events:none}
+.navibori-navigation-maneuver{position:absolute;left:50%;top:max(14px,env(safe-area-inset-top));transform:translateX(-50%);display:grid;gap:3px;width:min(720px,calc(100% - 150px));padding:12px 14px;border:1px solid rgba(255,255,255,.86);border-radius:18px;background:rgba(255,255,255,.97);box-shadow:0 12px 36px rgba(22,38,46,.22);backdrop-filter:blur(14px);pointer-events:auto}
+.navibori-navigation-maneuver>span{font-size:.62rem;font-weight:900;letter-spacing:.06em;color:var(--ocean);text-transform:uppercase}
+.navibori-navigation-maneuver>strong{font-size:1.15rem;line-height:1.2;color:var(--ink)}
+.navibori-navigation-maneuver>small{font-size:.62rem;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.navibori-navigation-footer{position:absolute;left:50%;bottom:max(12px,env(safe-area-inset-bottom));transform:translateX(-50%);display:grid;grid-template-columns:repeat(3,minmax(90px,1fr)) auto auto auto;gap:7px;align-items:stretch;width:min(900px,calc(100% - 24px));padding:10px;border:1px solid rgba(255,255,255,.88);border-radius:18px;background:rgba(255,255,255,.97);box-shadow:0 14px 40px rgba(22,38,46,.23);backdrop-filter:blur(14px);pointer-events:auto}
+.navibori-navigation-footer>div{display:grid;gap:2px;min-width:0;padding:7px 9px;border-radius:11px;background:#f7fafb}
+.navibori-navigation-footer>div span{font-size:.5rem;font-weight:900;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.navibori-navigation-footer>div strong{font-size:.76rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.navibori-navigation-footer>button{min-height:42px;padding:0 10px;border:1px solid var(--line);border-radius:11px;background:white;color:var(--ink);font-size:.62rem;font-weight:900}
+.navibori-navigation-footer>button.active{border-color:var(--ocean);background:#eef7fb;color:var(--ocean)}
+.navibori-navigation-footer>button.danger{border-color:rgba(177,61,61,.3);color:#a83b3b}
+@media(max-width:760px){
+  .navibori-navigation-maneuver{left:68px;right:8px;top:max(8px,env(safe-area-inset-top));transform:none;width:auto;padding:10px 11px;border-radius:15px}
+  .navibori-navigation-maneuver>strong{font-size:.96rem}
+  .navibori-navigation-footer{grid-template-columns:repeat(3,minmax(0,1fr));gap:5px;width:calc(100% - 16px);padding:7px;border-radius:15px}
+  .navibori-navigation-footer>button{min-height:38px;padding:0 6px;font-size:.55rem}
+  .navibori-navigation-footer>div{padding:6px}
+  .navibori-navigation-footer>div strong{font-size:.66rem}
+}

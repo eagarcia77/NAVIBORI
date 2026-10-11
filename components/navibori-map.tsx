@@ -622,10 +622,10 @@ export default function NaviboriMap({
       zoom:Math.max(mapRef.current?.getZoom() ?? 16,16),
       pitch:
         activeMode==="driving"
-          ? 35
+          ? 42
           : activeMode==="walking"
-            ? 12
-            : 24,
+            ? 15
+            : 28,
       duration:450
     });
 
@@ -975,9 +975,33 @@ export default function NaviboriMap({
     setRouteBusy(routeMode);
     setLocationStatus("Conectando con tu GPS…");
 
-    let firstFix=true;
-    let receivedFix=false;
+    const cachedOrigin=
+      userLocation && validRouteCoordinate(userLocation)
+        ? userLocation
+        : null;
+
+    let firstFix=cachedOrigin===null;
+    let receivedFix=cachedOrigin!==null;
     let fallbackRequested=false;
+
+    if(cachedOrigin){
+      setGpsActive(true);
+      setRouteBusy(null);
+      showUserLocation(cachedOrigin);
+      setRouteStatus(
+        (demoRoute ? "Ruta DEMO · " : "")+
+        "Usando tu última ubicación · calculando ruta…"
+      );
+
+      mapRef.current?.easeTo({
+        center:[cachedOrigin.longitude,cachedOrigin.latitude],
+        zoom:Math.max(mapRef.current?.getZoom() ?? 16,16),
+        pitch:routeMode==="driving" ? 42 : routeMode==="walking" ? 15 : 28,
+        duration:500
+      });
+
+      void calculateRoute(routeMode,cachedOrigin);
+    }
 
     const handlePosition=(position:GeolocationPosition)=>{
       const next={
@@ -1031,10 +1055,10 @@ export default function NaviboriMap({
               : map?.getBearing() ?? 0,
           pitch:
             activeMode==="driving"
-              ? 35
+              ? 42
               : activeMode==="walking"
-                ? 12
-                : 24,
+                ? 15
+                : 28,
           duration:firstFix ? 650 : 350
         });
       }
@@ -1240,6 +1264,73 @@ export default function NaviboriMap({
         >
           {menuOpen ? "×" : "☰"}
         </button>
+
+        {gpsActive && routeResult && selected && (
+          <aside className="navibori-navigation-hud" aria-live="polite">
+            <div className="navibori-navigation-maneuver">
+              <span>
+                {nextCue
+                  ? formatManeuverDistance(nextCue.distanceMeters)
+                  : routeModeIcon(routeResult.mode)}
+              </span>
+              <strong>
+                {nextCue?.instruction ?? "Sigue la ruta marcada."}
+              </strong>
+              <small>{selected.name}</small>
+            </div>
+
+            <div className="navibori-navigation-footer">
+              <div>
+                <span>ETA</span>
+                <strong>{formatDuration(routeResult.durationSeconds)}</strong>
+              </div>
+              <div>
+                <span>Restante</span>
+                <strong>{formatDistance(routeResult.distanceMeters)}</strong>
+              </div>
+              <div>
+                <span>Modo</span>
+                <strong>{routeModeIcon(routeResult.mode)} {routeModeLabel(routeResult.mode)}</strong>
+              </div>
+              <button type="button" onClick={recenterGpsCamera}>
+                ◎ Recentrar
+              </button>
+              <button
+                type="button"
+                className={voiceEnabled ? "active" : ""}
+                onClick={()=>{
+                  const next=!voiceEnabled;
+                  voiceEnabledRef.current=next;
+                  setVoiceEnabled(next);
+                  if(!next){
+                    if("speechSynthesis" in window){
+                      window.speechSynthesis.cancel();
+                    }
+                    lastSpokenInstructionRef.current="";
+                  }else if(nextCue){
+                    speakNavigation(
+                      nextCue.instruction,
+                      nextCue.distanceMeters,
+                      true
+                    );
+                  }
+                }}
+              >
+                {voiceEnabled ? "🔊 Voz" : "🔇 Voz"}
+              </button>
+              <button
+                type="button"
+                className="danger"
+                onClick={()=>{
+                  stopGpsNavigation();
+                  setLocationStatus("GPS detenido. La ruta permanece visible.");
+                }}
+              >
+                Finalizar
+              </button>
+            </div>
+          </aside>
+        )}
 
         <div className="full-map-brand-pill" aria-label="Estado de NAVIBORI">
           <strong>NAVIBORI</strong>
@@ -1508,7 +1599,12 @@ export default function NaviboriMap({
         )}
 
 
-        <aside className="business-route-card" aria-live="polite">
+        <aside
+          className={"business-route-card "+(
+            gpsActive && routeResult ? "navigation-active" : ""
+          )}
+          aria-live="polite"
+        >
           {selected ? (
             <>
               <div className="business-route-title-row">
