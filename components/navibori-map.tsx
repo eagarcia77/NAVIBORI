@@ -133,6 +133,9 @@ export default function NaviboriMap({
   const [gpsAccuracy,setGpsAccuracy]=useState<number|null>(null);
   const [gpsSpeedKph,setGpsSpeedKph]=useState<number|null>(null);
   const [gpsTestBusy,setGpsTestBusy]=useState(false);
+  const [navigationPhase,setNavigationPhase]=useState<
+    "idle"|"permission"|"gps"|"routing"|"navigating"|"error"
+  >("idle");
   const [gpsDiagnostics,setGpsDiagnostics]=useState<{
     secure:boolean|null;
     geolocation:boolean|null;
@@ -898,6 +901,7 @@ export default function NaviboriMap({
 
     if(!quiet){
       setRouteBusy(routeMode);
+      setNavigationPhase("routing");
       setRouteStatus("Calculando ruta · "+routeModeLabel(routeMode)+"…");
     }
 
@@ -925,6 +929,9 @@ export default function NaviboriMap({
 
       routeResultRef.current=data;
       setRouteResult(data);
+      if(activeNavigationModeRef.current){
+        setNavigationPhase("navigating");
+      }
 
       const cue=getNextNavigationCue(data);
       if(cue){
@@ -946,6 +953,9 @@ export default function NaviboriMap({
         setRouteResult(null);
       }
 
+      if(!quiet){
+        setNavigationPhase("error");
+      }
       setRouteStatus(
         quiet
           ? "GPS activo · no se pudo actualizar la ruta; se conserva la última ruta."
@@ -983,6 +993,7 @@ export default function NaviboriMap({
     setGpsActive(false);
     setGpsAccuracy(null);
     setGpsSpeedKph(null);
+    setNavigationPhase("idle");
 
     if(wakeLockRef.current){
       void wakeLockRef.current.release().catch(()=>{});
@@ -1012,6 +1023,7 @@ export default function NaviboriMap({
     setFollowGps(true);
     followGpsRef.current=true;
     setRouteBusy(routeMode);
+    setNavigationPhase("permission");
     setLocationStatus("Conectando con tu GPS…");
 
     if("wakeLock" in navigator){
@@ -1087,6 +1099,7 @@ export default function NaviboriMap({
 
       setGpsActive(true);
       setRouteBusy(null);
+      setNavigationPhase("gps");
       setUserLocation(next);
       setGpsAccuracy(accuracy);
       showUserLocation(next);
@@ -1218,6 +1231,7 @@ export default function NaviboriMap({
 
       if(error.code===error.PERMISSION_DENIED){
         setRouteBusy(null);
+        setNavigationPhase("error");
         setLocationStatus(geolocationErrorMessage(error));
         stopGpsNavigation();
         return;
@@ -1257,6 +1271,7 @@ export default function NaviboriMap({
     gpsBootstrapTimerRef.current=setTimeout(()=>{
       if(receivedFix) return;
       setRouteBusy(null);
+      setNavigationPhase("error");
       setLocationStatus(
         "No llegó una posición GPS. Usa “Probar GPS”; si falla, revisa el permiso de Localización del dispositivo."
       );
@@ -1337,6 +1352,15 @@ export default function NaviboriMap({
         >
           {menuOpen ? "×" : "☰"}
         </button>
+
+        {navigationPhase!=="idle" && selected && (
+          <div className={"navibori-navigation-phase "+navigationPhase} aria-live="polite">
+            <span className={navigationPhase==="permission"||navigationPhase==="gps"||navigationPhase==="routing"||navigationPhase==="navigating" ? "done" : ""}>1 Permiso</span>
+            <span className={navigationPhase==="gps"||navigationPhase==="routing"||navigationPhase==="navigating" ? "done" : ""}>2 GPS</span>
+            <span className={navigationPhase==="routing"||navigationPhase==="navigating" ? "done" : ""}>3 Ruta</span>
+            <span className={navigationPhase==="navigating" ? "done" : ""}>4 Navegando</span>
+          </div>
+        )}
 
         {gpsActive && routeResult && selected && (
           <aside className="navibori-navigation-hud" aria-live="polite">
