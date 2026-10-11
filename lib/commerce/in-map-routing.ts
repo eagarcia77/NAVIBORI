@@ -27,6 +27,15 @@ export interface NavigationCue{
   step:NavigationStep;
 }
 
+export interface NavigationProgress{
+  traveledMeters:number;
+  remainingMeters:number;
+  remainingSeconds:number;
+  progressRatio:number;
+  distanceFromRouteMeters:number;
+  snapped:RoutingCoordinate;
+}
+
 export interface InMapRouteResult{
   mode:InMapRouteMode;
   distanceMeters:number;
@@ -322,6 +331,126 @@ export function normalizeOsrmRoute(
     },
     steps:normalizeSteps(route),
     provider
+  };
+}
+
+export function getNavigationProgress(
+  route:InMapRouteResult,
+  point:RoutingCoordinate
+):NavigationProgress|null{
+  const coordinates=route.geometry.coordinates;
+  if(coordinates.length<2) return null;
+
+  const refLatitude=point.latitude;
+  const projectedPoint=projectMeters(point,refLatitude);
+
+  const segmentLengths:number[]=[];
+  let routeLength=0;
+
+  for(let index=1;index<coordinates.length;index+=1){
+    const [aLon,aLat]=coordinates[index-1];
+    const [bLon,bLat]=coordinates[index];
+    const a=projectMeters({latitude:aLat,longitude:aLon},refLatitude);
+    const b=projectMeters({latitude:bLat,longitude:bLon},refLatitude);
+    const length=Math.hypot(b.x-a.x,b.y-a.y);
+    segmentLengths.push(length);
+    routeLength+=length;
+  }
+
+  if(routeLength<=0) return null;
+
+  let bestDistance=Number.POSITIVE_INFINITY;
+  let bestTravel=0;
+  let bestCoordinate:RoutingCoordinate={
+    latitude:coordinates[0][1],
+    longitude:coordinates[0][0]
+  };
+  let traveledBefore=0;
+
+  for(let index=1;index<coordinates.length;index+=1){
+    const [aLon,aLat]=coordinates[index-1];
+    const [bLon,bLat]=coordinates[index];
+    const a=projectMeters({latitude:aLat,longitude:aLon},refLatitude);
+    const b=projectMeters({latitude:bLat,longitude:bLon},refLatitude);
+    const abX=b.x-a.x;
+    const abY=b.y-a.y;
+    const lengthSquared=abX*abX+abY*abY;
+
+    let t=0;
+    if(lengthSquared>0){
+      t=((projectedPoint.x-a.x)*abX+(projectedPoint.y-a.y)*abY)/lengthSquared;
+      t=Math.max(0,Math.min(1,t));
+    }
+
+    const nearestX=a.x+t*abX;
+    const nearestY=a.y+t*abY;
+    const distance=Math.hypot(
+      projectedPoint.x-nearestX,
+      projectedPoint.y-nearestY
+    );
+
+    if(distance<bestDistance){
+      bestDistance=distance;
+      bestTravel=traveledBefore+segmentLengths[index-1]*t;
+      bestCoordinate={
+        latitude:aLat+(bLat-aLat)*t,
+        longitude:aLon+(bLon-aLon)*t
+      };
+    }
+
+    traveledBefore+=segmentLengths[index-1];
+  }
+
+  const geometryRatio=Math.max(0,Math.min(1,bestTravel/routeLength));
+  const traveledMeters=Math.max(
+    0,
+    Math.min(route.distanceMeters,route.distanceMeters*geometryRatio)
+  );
+  const remainingMeters=Math.max(0,route.distanceMeters-traveledMeters);
+  const remainingSeconds=Math.max(
+    0,
+    route.durationSeconds*(route.distanceMeters>0
+      ? remainingMeters/route.distanceMeters
+      : 0)
+  );
+
+  return {
+    traveledMeters,
+    remainingMeters,
+    remainingSeconds,
+    progressRatio:route.distanceMeters>0
+      ? traveledMeters/route.distanceMeters
+      : geometryRatio,
+    distanceFromRouteMeters:bestDistance,
+    snapped:bestCoordinate
+  };
+}
+
+export function getNavigationCueAtProgress(
+  route:InMapRouteResult,
+  traveledMeters:number
+):NavigationCue|null{
+  if(route.steps.length===0) return null;
+
+  const traveled=Math.max(0,traveledMeters);
+  let distanceBefore=0;
+
+  for(let index=1;index<route.steps.length;index+=1){
+    distanceBefore+=Math.max(0,route.steps[index-1].distanceMeters);
+    if(distanceBefore+5>=traveled){
+      return {
+        instruction:route.steps[index].instruction,
+        distanceMeters:Math.max(0,distanceBefore-traveled),
+        step:route.steps[index]
+      };
+    }
+  }
+
+  const finalStep=route.steps[route.steps.length-1];
+  return {
+    instruction:finalStep.instruction,
+    distanceMeters:0,
+    step:finalStep
   };
 }
 

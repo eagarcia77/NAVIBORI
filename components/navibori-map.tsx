@@ -12,6 +12,8 @@ import {
 import {
   distanceBetweenCoordinates,
   getNextNavigationCue,
+  getNavigationCueAtProgress,
+  getNavigationProgress,
   hasArrivedAtDestination,
   isOffNavigationRoute,
   routeModeLabel,
@@ -65,6 +67,14 @@ function formatDuration(seconds:number){
   const hours=Math.floor(minutes/60);
   const remainder=minutes%60;
   return hours+" h"+(remainder ? " "+remainder+" min" : "");
+}
+
+function formatArrivalTime(seconds:number){
+  const arrival=new Date(Date.now()+Math.max(0,seconds)*1000);
+  return new Intl.DateTimeFormat("es-PR",{
+    hour:"numeric",
+    minute:"2-digit"
+  }).format(arrival);
 }
 
 function routeModeIcon(mode:InMapRouteMode){
@@ -218,9 +228,25 @@ export default function NaviboriMap({
 
   const demoRoute=Boolean(source==="demo" && selected?.demo && selected?.mapLocation);
 
+  const navigationProgress=useMemo(
+    ()=>routeResult && userLocation
+      ? getNavigationProgress(routeResult,userLocation)
+      : null,
+    [routeResult,userLocation]
+  );
+
   const nextCue=useMemo(
-    ()=>routeResult ? getNextNavigationCue(routeResult) : null,
-    [routeResult]
+    ()=>{
+      if(!routeResult) return null;
+      if(navigationProgress){
+        return getNavigationCueAtProgress(
+          routeResult,
+          navigationProgress.traveledMeters
+        );
+      }
+      return getNextNavigationCue(routeResult);
+    },
+    [routeResult,navigationProgress]
   );
 
   useEffect(()=>{
@@ -855,7 +881,13 @@ export default function NaviboriMap({
   ){
     if(!voiceEnabledRef.current || !("speechSynthesis" in window)) return;
 
-    const key=instruction;
+    const distanceBand=
+      distanceMeters<60
+        ? "now"
+        : distanceMeters<250
+          ? "near"
+          : "far";
+    const key=instruction+"|"+distanceBand;
     if(!force && lastSpokenInstructionRef.current===key) return;
 
     lastSpokenInstructionRef.current=key;
@@ -1150,6 +1182,23 @@ export default function NaviboriMap({
       }else{
         const now=Date.now();
         const currentRoute=routeResultRef.current;
+        if(currentRoute){
+          const liveProgress=getNavigationProgress(currentRoute,next);
+          const liveCue=liveProgress
+            ? getNavigationCueAtProgress(
+                currentRoute,
+                liveProgress.traveledMeters
+              )
+            : null;
+
+          if(liveCue && liveCue.distanceMeters<=350){
+            speakNavigation(
+              liveCue.instruction,
+              liveCue.distanceMeters
+            );
+          }
+        }
+
         const offRoute=
           currentRoute!==null &&
           isOffNavigationRoute(next,currentRoute,accuracy);
@@ -1379,11 +1428,21 @@ export default function NaviboriMap({
             <div className="navibori-navigation-footer">
               <div>
                 <span>ETA</span>
-                <strong>{formatDuration(routeResult.durationSeconds)}</strong>
+                <strong>
+                  {formatArrivalTime(
+                    navigationProgress?.remainingSeconds ??
+                    routeResult.durationSeconds
+                  )}
+                </strong>
               </div>
               <div>
                 <span>Restante</span>
-                <strong>{formatDistance(routeResult.distanceMeters)}</strong>
+                <strong>
+                  {formatDistance(
+                    navigationProgress?.remainingMeters ??
+                    routeResult.distanceMeters
+                  )}
+                </strong>
               </div>
               <div>
                 <span>Velocidad</span>
