@@ -125,12 +125,14 @@ export function buildValhallaRouteRequest(
   };
 }
 
-export function routeModeLabel(mode:InMapRouteMode){
+export function routeModeLabel(mode:InMapRouteMode,locale="es-ES"){
+  const english=locale.toLowerCase().startsWith("en");
+
   switch(mode){
-    case "walking": return "Caminando";
-    case "cycling": return "En bicicleta";
-    case "scooter": return "En scooter";
-    default: return "En carro";
+    case "walking": return english ? "Walking" : "Caminando";
+    case "cycling": return english ? "Cycling" : "En bicicleta";
+    case "scooter": return english ? "Scooter" : "En scooter";
+    default: return english ? "Driving" : "En carro";
   }
 }
 
