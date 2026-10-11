@@ -268,6 +268,7 @@ export default function NaviboriMap({
   const userMarkerRef=useRef<maplibregl.Marker|null>(null);
   const nextTurnMarkerRef=useRef<maplibregl.Marker|null>(null);
   const destinationBeaconRef=useRef<maplibregl.Marker|null>(null);
+  const photonCursorRef=useRef<maplibregl.Marker|null>(null);
   const deviceHeadingRef=useRef<number|null>(null);
   const orientationHandlerRef=useRef<((event:DeviceOrientationEvent)=>void)|null>(null);
   const routeAbortRef=useRef<AbortController|null>(null);
@@ -416,6 +417,13 @@ export default function NaviboriMap({
     [routeResult,navigationProgress]
   );
 
+  const vectorGateState=
+    nextCue && nextCue.distanceMeters<=75
+      ? "critical"
+      : nextCue && nextCue.distanceMeters<=250
+        ? "near"
+        : "cruise";
+
   useEffect(()=>{
     const applyLocale=()=>{
       const locale=browserNaviboriLocale();
@@ -492,6 +500,8 @@ export default function NaviboriMap({
     nextTurnMarkerRef.current=null;
     destinationBeaconRef.current?.remove();
     destinationBeaconRef.current=null;
+    photonCursorRef.current?.remove();
+    photonCursorRef.current=null;
 
     if(routeResult && selected?.mapLocation){
       const element=document.createElement("div");
@@ -532,17 +542,40 @@ export default function NaviboriMap({
         .addTo(map);
     }
 
+    if(gpsActive && navigationProgress){
+      const element=document.createElement("div");
+      element.className="navibori-photon-cursor";
+      element.setAttribute(
+        "aria-label",
+        tr("Posición sobre Photon Corridor","Position on Photon Corridor")
+      );
+      element.innerHTML="<span></span><i></i>";
+      photonCursorRef.current=new maplibregl.Marker({
+        element,
+        anchor:"center"
+      })
+        .setLngLat([
+          navigationProgress.snapped.longitude,
+          navigationProgress.snapped.latitude
+        ])
+        .addTo(map);
+    }
+
     return ()=>{
       nextTurnMarkerRef.current?.remove();
       nextTurnMarkerRef.current=null;
       destinationBeaconRef.current?.remove();
       destinationBeaconRef.current=null;
+      photonCursorRef.current?.remove();
+      photonCursorRef.current=null;
     };
   },[
     gpsActive,
     mapReady,
     nextCue?.step.location?.latitude,
     nextCue?.step.location?.longitude,
+    navigationProgress?.snapped.latitude,
+    navigationProgress?.snapped.longitude,
     routeResult,
     selected?.mapLocation?.latitude,
     selected?.mapLocation?.longitude
@@ -701,6 +734,7 @@ export default function NaviboriMap({
       userMarkerRef.current?.remove();
       nextTurnMarkerRef.current?.remove();
       destinationBeaconRef.current?.remove();
+      photonCursorRef.current?.remove();
       map.remove();
       mapRef.current=null;
     };
@@ -1955,7 +1989,7 @@ export default function NaviboriMap({
 
         {gpsActive && routeResult && selected && (
           <aside className="navibori-navigation-hud" aria-live="polite">
-            <div className="navibori-navigation-maneuver">
+            <div className={"navibori-navigation-maneuver vector-gate-"+vectorGateState}>
               <span>
                 {nextCue
                   ? formatManeuverDistance(nextCue.distanceMeters)
@@ -1976,6 +2010,31 @@ export default function NaviboriMap({
                     ? tr("FUSIÓN DE SENSORES","SENSOR FUSION")
                     : tr("FUSIÓN DE RUTA","ROUTE FUSION")}
                 </strong>
+              </div>
+
+              <div
+                className="photon-corridor-meter"
+                aria-label={tr(
+                  "Progreso de Photon Corridor",
+                  "Photon Corridor progress"
+                )}
+              >
+                <div>
+                  <span>PHOTON CORRIDOR</span>
+                  <strong>
+                    {Math.round((navigationProgress?.progressRatio ?? 0)*100)}%
+                  </strong>
+                </div>
+                <i aria-hidden="true">
+                  <b
+                    style={{
+                      width:
+                        Math.round(
+                          (navigationProgress?.progressRatio ?? 0)*100
+                        )+"%"
+                    }}
+                  />
+                </i>
               </div>
             </div>
 
