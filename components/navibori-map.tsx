@@ -2950,6 +2950,19 @@ export default function NaviboriMap({
 
             <details className="navibori-health-panel">
               <summary>{tr("Estado técnico de navegación","Navigation health")}</summary>
+              <div className="navibori-health-summary" role="status">
+                {basemapState==="error"
+                  ? tr("El mapa no cargó. Comprueba la conexión y vuelve a abrir NAVIBORI.","Map failed to load. Check connectivity and reopen NAVIBORI.")
+                  : !gpsDiagnostics.geolocation
+                    ? tr("GPS no disponible: comprueba el permiso de ubicación del navegador.","GPS unavailable: check browser location permission.")
+                    : gpsActive && gpsAccuracy!==null && gpsAccuracy>100
+                      ? tr("Señal GPS imprecisa. Espera una mejor ubicación antes de conducir.","Low GPS accuracy. Wait for a better location before driving.")
+                      : routeBusy!==null
+                        ? tr("Calculando la ruta…","Calculating route…")
+                        : !routeResult
+                          ? tr("Selecciona un comercio y solicita una ruta para comenzar.","Select a business and request a route to begin.")
+                          : tr("Ruta disponible. Comprueba el mapa y sigue las indicaciones con precaución.","Route available. Check the map and follow guidance cautiously.")}
+              </div>
               <dl>
                 <div><dt>{tr("Versión","Version")}</dt><dd>{buildRevision}</dd></div>
                 <div><dt>{tr("Mapa","Map")}</dt><dd>{basemapState}</dd></div>
