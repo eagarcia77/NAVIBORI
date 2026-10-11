@@ -117,6 +117,14 @@ A submitted request still requires merchant confirmation. Requests in new, accep
 - If no peripheral locale is supplied, NAVIBORI continues to follow navigator.languages / navigator.language.
 - Transport labels, nearby commerce navigation and primary map controls use the active locale consistently.
 
+## Vector Gate 2.0
+- The next maneuver is rendered directly on the map as a spacecraft-inspired Vector Gate anchored to the maneuver coordinate returned by the routing engine.
+- Vector Gate phases are deterministic: CRUISE (>250 m), NEAR (76–250 m), CRITICAL (26–75 m), and COMMIT (0–25 m).
+- The gate shows a compact maneuver glyph, localized phase label, and remaining maneuver distance without replacing the primary route line or HUD.
+- Supported browsers/peripherals receive progressive vibration patterns when the gate enters NEAR, CRITICAL, and COMMIT. Devices without vibration support simply ignore the optional haptic call.
+- XR and gamepad profiles automatically scale the gate up, while reduced-motion profiles disable its lock animation.
+- Vector Gate is intentionally a situational-awareness layer; it does not change route geometry, GPS truth, or routing-provider decisions.
+
 ## High-visibility navigation route
 - The route overlay now uses four visual layers: route glow, dark casing, high-contrast primary line, and repeated directional arrows.
 - Route layers are explicitly moved to the top of the MapLibre layer stack so the raster basemap cannot cover them.
