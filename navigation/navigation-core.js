@@ -50,15 +50,15 @@ export class NavigationTracker {
         const point = { lat: c.latitude, lng: c.longitude, accuracyMeters: c.accuracy,
           headingDegrees: Number.isFinite(c.heading) ? c.heading : null,
           speedMps: Number.isFinite(c.speed) ? c.speed : null, timestamp: pos.timestamp };
-        this.lastPosition = point;
         if (!Number.isFinite(point.lat) || !Number.isFinite(point.lng) || Math.abs(point.lat) > 90 || Math.abs(point.lng) > 180 || !Number.isFinite(point.accuracyMeters) || point.accuracyMeters < 0) {
           this.onStatus({ type: "invalid-fix" });
           return;
         }
-        if (Date.now() - point.timestamp > 15000) {
+        if (point.timestamp > Date.now() + 5000 || Date.now() - point.timestamp > 15000) {
           this.onStatus({ type: "stale-fix" });
           return;
         }
+        this.lastPosition = point;
         this.onPosition(point);
         this.onStatus({ type: "tracking", accuracyMeters: c.accuracy });
         if (this.route.length < 2 || c.accuracy > 45) return;
@@ -74,6 +74,7 @@ export class NavigationTracker {
       },
       err => {
         const types = { 1: "permission-denied", 2: "position-unavailable", 3: "timeout" };
+        if (err.code === 1) this.stop();
         this.onStatus({ type: types[err.code] || "error", message: err.message });
       },
       { enableHighAccuracy: true, maximumAge: 1000, timeout: 12000 }
