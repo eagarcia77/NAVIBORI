@@ -6,6 +6,12 @@ const rules:Array<[RegExp,string[]]>=[
  [/^Turn right onto /i,["Gira a la derecha en "]],
  [/^Continue (straight )?onto /i,["Continúa recto por ","Continúa por "]],
  [/^Continue straight/i,["Continúa recto"]],
+ [/^At the roundabout, take the (first|second|third|fourth|fifth) exit(?: onto )?/i,["En la rotonda, toma la salida indicada hacia "]],
+ [/^Enter the roundabout/i,["Entra en la rotonda"]],
+ [/^Take the exit(?: toward| towards) /i,["Toma la salida hacia "]],
+ [/^Merge (?:left |right )?onto /i,["Incorpórate a "]],
+ [/^Keep left(?: to stay on )?/i,["Mantente a la izquierda por "]],
+ [/^Keep right(?: to stay on )?/i,["Mantente a la derecha por "]],
  [/^Make a U-turn/i,["Haz un cambio de sentido"]],
  [/^You have arrived at your destination/i,["Has llegado a tu destino"]]
 ];
