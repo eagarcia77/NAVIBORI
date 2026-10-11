@@ -96,6 +96,17 @@ A submitted request still requires merchant confirmation. Requests in new, accep
 - Mission Dock compresses the selected-commerce sheet on mobile, keeps all four transport modes as touch-sized controls and returns more screen area to the map.
 - Peripheral/device locale and input adaptations remain authoritative for language, control size, density, hover behavior and reduced-motion presentation.
 
+## Lagrange adaptive cockpit
+- Lagrange Cockpit is a deterministic adaptive UI layer inspired by aerospace mission displays; it does not claim extraterrestrial technology.
+- The cockpit derives a live phase from GPS activity, arrival state, next-maneuver distance, remaining route distance and Trajectory Shield risk.
+- Phases are: idle, cruise, approach, vector, correction and arrival.
+- Cruise mode suppresses secondary visual noise and deemphasizes unrelated commerce markers.
+- Approach mode increases maneuver prominence as the next turn comes within 250 meters.
+- Vector mode prioritizes the imminent maneuver inside 75 meters and reduces secondary telemetry.
+- Correction mode takes precedence when Trajectory Shield predicts meaningful route divergence, elevating correction guidance while dimming nonessential telemetry.
+- Arrival mode switches the navigation surface into a confirmation state near the destination.
+- Peripheral-adaptive control sizing, XR/gamepad affordances and reduced-motion preferences continue to apply across all phases.
+
 ## High-visibility navigation route
 - The route overlay now uses four visual layers: route glow, dark casing, high-contrast primary line, and repeated directional arrows.
 - Route layers are explicitly moved to the top of the MapLibre layer stack so the raster basemap cannot cover them.
