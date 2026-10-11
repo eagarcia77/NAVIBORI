@@ -1,0 +1,10 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import {navigationLocale,navigationLabels,navigationDisplayState} from "./navigation-presentation.js";
+test("Spanish is default",()=>assert.equal(navigationLocale(["es-PR"]),"es"));
+test("English follows device language",()=>assert.equal(navigationLocale(["en-US"]),"en"));
+test("Spanish navigation controls",()=>assert.equal(navigationLabels("es").end,"Finalizar"));
+test("demo state explicitly disclosed",()=>assert.match(navigationDisplayState().status,/Demostración/));
+test("live GPS label is distinct",()=>assert.equal(navigationDisplayState({mode:"live"}).isDemo,false));
+test("Puerto Rico distances use kilometers",()=>assert.match(navigationDisplayState({distanceMeters:4800}).remaining,/4,8 km/));
+test("missing GPS speed remains unknown",()=>assert.equal(navigationDisplayState().speed,"—"));
