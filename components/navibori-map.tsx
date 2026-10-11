@@ -1023,7 +1023,10 @@ export default function NaviboriMap({
       map.setPaintProperty(
         ROUTE_LINE_ID,
         "line-gradient",
-        buildPhotonRouteGradient(progressRatio,color)
+        buildPhotonRouteGradient(
+          progressRatio,
+          color
+        ) as maplibregl.ExpressionSpecification
       );
 
       for(const layerId of [
