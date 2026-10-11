@@ -24,6 +24,7 @@ import {
 } from "@/lib/commerce/in-map-routing";
 import {commerceMatchesSearch} from "@/lib/commerce/map-search";
 import {canNavigateCommerce} from "@/lib/commerce/navigation-eligibility";
+import {chooseNavigationBearing} from "@/lib/commerce/navigation-sensor-fusion";
 import {
   NAVIBORI_LOCALE_CHANGE_EVENT,
   browserNaviboriLocale,
@@ -160,6 +161,10 @@ export default function NaviboriMap({
   const mapRef=useRef<maplibregl.Map|null>(null);
   const markersRef=useRef<maplibregl.Marker[]>([]);
   const userMarkerRef=useRef<maplibregl.Marker|null>(null);
+  const nextTurnMarkerRef=useRef<maplibregl.Marker|null>(null);
+  const destinationBeaconRef=useRef<maplibregl.Marker|null>(null);
+  const deviceHeadingRef=useRef<number|null>(null);
+  const orientationHandlerRef=useRef<((event:DeviceOrientationEvent)=>void)|null>(null);
   const routeAbortRef=useRef<AbortController|null>(null);
   const gpsWatchRef=useRef<number|null>(null);
   const gpsBootstrapTimerRef=useRef<ReturnType<typeof setTimeout>|null>(null);
@@ -204,6 +209,9 @@ export default function NaviboriMap({
   const [gpsActive,setGpsActive]=useState(false);
   const [gpsAccuracy,setGpsAccuracy]=useState<number|null>(null);
   const [gpsSpeedKph,setGpsSpeedKph]=useState<number|null>(null);
+  const [astraCompassState,setAstraCompassState]=useState<
+    "idle"|"active"|"blocked"|"unsupported"
+  >("idle");
   const [gpsTestBusy,setGpsTestBusy]=useState(false);
   const [navigationPhase,setNavigationPhase]=useState<
     "idle"|"permission"|"gps"|"routing"|"navigating"|"error"
@@ -324,6 +332,116 @@ export default function NaviboriMap({
       window.removeEventListener(NAVIBORI_LOCALE_CHANGE_EVENT,applyLocale);
     };
   },[]);
+
+  useEffect(()=>{
+    const ctor=window.DeviceOrientationEvent as typeof DeviceOrientationEvent & {
+      requestPermission?:()=>Promise<"granted"|"denied">;
+    };
+
+    if(!ctor){
+      setAstraCompassState("unsupported");
+      return;
+    }
+
+    if(typeof ctor.requestPermission==="function"){
+      return;
+    }
+
+    const handler=(event:DeviceOrientationEvent)=>{
+      const extended=event as DeviceOrientationEvent & {
+        webkitCompassHeading?:number;
+      };
+
+      const heading=
+        typeof extended.webkitCompassHeading==="number" &&
+        Number.isFinite(extended.webkitCompassHeading)
+          ? extended.webkitCompassHeading
+          : event.absolute &&
+            typeof event.alpha==="number" &&
+            Number.isFinite(event.alpha)
+              ? 360-event.alpha
+              : null;
+
+      if(heading!==null){
+        deviceHeadingRef.current=heading;
+        setAstraCompassState("active");
+      }
+    };
+
+    orientationHandlerRef.current=handler;
+    window.addEventListener("deviceorientationabsolute",handler as EventListener,true);
+    window.addEventListener("deviceorientation",handler,true);
+
+    return ()=>{
+      window.removeEventListener("deviceorientationabsolute",handler as EventListener,true);
+      window.removeEventListener("deviceorientation",handler,true);
+      orientationHandlerRef.current=null;
+    };
+  },[]);
+
+  useEffect(()=>{
+    const map=mapRef.current;
+    if(!map || !mapReady) return;
+
+    nextTurnMarkerRef.current?.remove();
+    nextTurnMarkerRef.current=null;
+    destinationBeaconRef.current?.remove();
+    destinationBeaconRef.current=null;
+
+    if(routeResult && selected?.mapLocation){
+      const element=document.createElement("div");
+      element.className="navibori-holo-destination";
+      element.setAttribute(
+        "aria-label",
+        tr("Destino de navegación","Navigation destination")
+      );
+      element.innerHTML="<span></span>";
+      destinationBeaconRef.current=new maplibregl.Marker({
+        element,
+        anchor:"center"
+      })
+        .setLngLat([
+          selected.mapLocation.longitude,
+          selected.mapLocation.latitude
+        ])
+        .addTo(map);
+    }
+
+    const turnLocation=nextCue?.step.location;
+    if(gpsActive && turnLocation){
+      const element=document.createElement("div");
+      element.className="navibori-holo-turn";
+      element.setAttribute(
+        "aria-label",
+        tr("Próximo giro","Next turn")
+      );
+      element.innerHTML="<span></span><i></i>";
+      nextTurnMarkerRef.current=new maplibregl.Marker({
+        element,
+        anchor:"center"
+      })
+        .setLngLat([
+          turnLocation.longitude,
+          turnLocation.latitude
+        ])
+        .addTo(map);
+    }
+
+    return ()=>{
+      nextTurnMarkerRef.current?.remove();
+      nextTurnMarkerRef.current=null;
+      destinationBeaconRef.current?.remove();
+      destinationBeaconRef.current=null;
+    };
+  },[
+    gpsActive,
+    mapReady,
+    nextCue?.step.location?.latitude,
+    nextCue?.step.location?.longitude,
+    routeResult,
+    selected?.mapLocation?.latitude,
+    selected?.mapLocation?.longitude
+  ]);
 
   useEffect(()=>{
     routeResultRef.current=routeResult;
@@ -469,6 +587,8 @@ export default function NaviboriMap({
       }
       markersRef.current.forEach((marker)=>marker.remove());
       userMarkerRef.current?.remove();
+      nextTurnMarkerRef.current?.remove();
+      destinationBeaconRef.current?.remove();
       map.remove();
       mapRef.current=null;
     };
@@ -866,6 +986,72 @@ export default function NaviboriMap({
       maxZoom:17,
       duration:650
     });
+  }
+
+  async function enableAstraCompass(){
+    const ctor=window.DeviceOrientationEvent as typeof DeviceOrientationEvent & {
+      requestPermission?:()=>Promise<"granted"|"denied">;
+    };
+
+    if(!ctor){
+      setAstraCompassState("unsupported");
+      setLocationStatus(
+        tr(
+          "La orientación avanzada no está disponible en este dispositivo.",
+          "Advanced orientation is not available on this device."
+        )
+      );
+      return;
+    }
+
+    if(typeof ctor.requestPermission==="function"){
+      try{
+        const permission=await ctor.requestPermission();
+        if(permission!=="granted"){
+          setAstraCompassState("blocked");
+          setLocationStatus(
+            tr(
+              "Permiso de orientación no concedido; NAVIBORI continuará con GPS + rumbo de ruta.",
+              "Orientation permission was not granted; NAVIBORI will continue with GPS + route bearing."
+            )
+          );
+          return;
+        }
+      }catch{
+        setAstraCompassState("blocked");
+        return;
+      }
+    }
+
+    if(orientationHandlerRef.current){
+      setAstraCompassState("active");
+      return;
+    }
+
+    const handler=(event:DeviceOrientationEvent)=>{
+      const extended=event as DeviceOrientationEvent & {
+        webkitCompassHeading?:number;
+      };
+      const heading=
+        typeof extended.webkitCompassHeading==="number" &&
+        Number.isFinite(extended.webkitCompassHeading)
+          ? extended.webkitCompassHeading
+          : event.absolute &&
+            typeof event.alpha==="number" &&
+            Number.isFinite(event.alpha)
+              ? 360-event.alpha
+              : null;
+
+      if(heading!==null){
+        deviceHeadingRef.current=heading;
+        setAstraCompassState("active");
+      }
+    };
+
+    orientationHandlerRef.current=handler;
+    window.addEventListener("deviceorientationabsolute",handler as EventListener,true);
+    window.addEventListener("deviceorientation",handler,true);
+    setAstraCompassState("active");
   }
 
   function recenterGpsCamera(){
@@ -1422,13 +1608,20 @@ export default function NaviboriMap({
           zoom:Math.max(map?.getZoom() ?? 16,16.8),
           offset:[0,110],
           bearing:
-            heading!==null && (speed===null || speed>0.8)
-              ? heading
-              : routeResultRef.current
-                ? getRouteBearingNearPoint(routeResultRef.current,next) ??
-                  map?.getBearing() ??
-                  0
-                : map?.getBearing() ?? 0,
+            chooseNavigationBearing({
+              gpsHeading:heading,
+              speedKph:
+                speed!==null
+                  ? Math.max(0,speed*3.6)
+                  : gpsSpeedKph,
+              deviceHeading:deviceHeadingRef.current,
+              routeHeading:
+                routeResultRef.current
+                  ? getRouteBearingNearPoint(routeResultRef.current,next)
+                  : null
+            }) ??
+            map?.getBearing() ??
+            0,
           pitch:
             activeMode==="driving"
               ? 42
@@ -1716,6 +1909,14 @@ export default function NaviboriMap({
                 )}
               </strong>
               <small>{selected.name}</small>
+              <div className="astranav-chip">
+                <span>✦ ASTRANAV</span>
+                <strong>
+                  {astraCompassState==="active"
+                    ? tr("FUSIÓN DE SENSORES","SENSOR FUSION")
+                    : tr("FUSIÓN DE RUTA","ROUTE FUSION")}
+                </strong>
+              </div>
             </div>
 
             <div className="navibori-navigation-footer">
@@ -1913,6 +2114,18 @@ export default function NaviboriMap({
                 onClick={runGpsDiagnostics}
               >
                 {copy.diagnoseGps}
+              </button>
+              <button
+                type="button"
+                className={
+                  "full-map-diagnostic-button astranav-toggle "+
+                  (astraCompassState==="active" ? "active" : "")
+                }
+                onClick={enableAstraCompass}
+              >
+                {astraCompassState==="active"
+                  ? tr("✦ AstraNav activo","✦ AstraNav active")
+                  : tr("✦ Activar AstraNav","✦ Enable AstraNav")}
               </button>
 
               <div className="full-map-gps-diagnostics" aria-live="polite">

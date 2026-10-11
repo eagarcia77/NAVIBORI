@@ -1290,3 +1290,110 @@ html[data-motion="reduced"] *::after{
     min-height:44px;
   }
 }
+
+
+/* NAVIBORI AstraNav / HoloRoute */
+.astranav-chip{
+  display:flex;
+  align-items:center;
+  gap:6px;
+  width:max-content;
+  max-width:100%;
+  padding:4px 7px;
+  border:1px solid rgba(10,132,255,.18);
+  border-radius:999px;
+  background:linear-gradient(135deg,rgba(10,132,255,.08),rgba(103,232,249,.12));
+  color:#0a84ff;
+  font-size:.46rem;
+  letter-spacing:.06em;
+  text-transform:uppercase;
+}
+.astranav-chip span{font-weight:950}
+.astranav-chip strong{
+  font-size:.46rem;
+  font-weight:850;
+  color:#31546f;
+  white-space:nowrap;
+}
+.astranav-toggle.active{
+  border-color:rgba(10,132,255,.4);
+  background:linear-gradient(135deg,#eaf5ff,#ecfeff);
+  box-shadow:0 0 0 1px rgba(10,132,255,.08),0 8px 20px rgba(10,132,255,.12);
+}
+.navibori-holo-turn,
+.navibori-holo-destination{
+  position:relative;
+  display:grid;
+  place-items:center;
+  pointer-events:none;
+  transform:translateZ(0);
+}
+.navibori-holo-turn{
+  width:38px;
+  height:38px;
+}
+.navibori-holo-turn span,
+.navibori-holo-destination span{
+  position:absolute;
+  inset:0;
+  border-radius:50%;
+  border:2px solid rgba(103,232,249,.92);
+  box-shadow:
+    0 0 0 6px rgba(10,132,255,.12),
+    0 0 24px rgba(10,132,255,.55),
+    inset 0 0 16px rgba(103,232,249,.32);
+  animation:navibori-holo-pulse 1.6s ease-out infinite;
+}
+.navibori-holo-turn i{
+  width:10px;
+  height:10px;
+  border-radius:50%;
+  background:#ffffff;
+  box-shadow:0 0 0 4px #0a84ff,0 0 18px rgba(10,132,255,.72);
+}
+.navibori-holo-destination{
+  width:48px;
+  height:48px;
+}
+.navibori-holo-destination span{
+  border-color:rgba(255,138,52,.94);
+  box-shadow:
+    0 0 0 7px rgba(255,138,52,.12),
+    0 0 28px rgba(255,138,52,.52),
+    inset 0 0 18px rgba(255,209,102,.32);
+}
+.navibori-holo-destination:after{
+  content:"◆";
+  position:relative;
+  z-index:2;
+  color:#ff8a34;
+  font-size:.78rem;
+  text-shadow:0 0 10px rgba(255,138,52,.72);
+}
+@keyframes navibori-holo-pulse{
+  0%{transform:scale(.72);opacity:.92}
+  70%{transform:scale(1.18);opacity:.18}
+  100%{transform:scale(1.24);opacity:0}
+}
+html[data-input="gamepad"] .navibori-navigation-maneuver,
+html[data-input="xr"] .navibori-navigation-maneuver{
+  border-color:rgba(103,232,249,.28);
+  box-shadow:
+    0 12px 34px rgba(15,23,42,.18),
+    0 0 0 1px rgba(103,232,249,.08),
+    inset 0 0 22px rgba(10,132,255,.035);
+}
+html[data-input="xr"] .astranav-chip{
+  background:linear-gradient(135deg,rgba(10,132,255,.14),rgba(103,232,249,.18));
+  box-shadow:0 0 18px rgba(103,232,249,.14);
+}
+html[data-input="gamepad"] .full-map-menu,
+html[data-input="xr"] .full-map-menu{
+  max-width:420px;
+}
+@media(max-width:760px){
+  .astranav-chip{padding:3px 6px}
+  .astranav-chip strong{display:none}
+  .navibori-holo-turn{width:32px;height:32px}
+  .navibori-holo-destination{width:42px;height:42px}
+}

@@ -67,6 +67,15 @@ A submitted request still requires merchant confirmation. Requests in new, accep
 - PeripheralAdapter now drives adaptive control density: touch/gamepad/XR use comfortable targets, pointer layouts can be compact, keyboard/gamepad focus is emphasized, and reduced-motion preferences suppress nonessential CSS motion.
 - Touch targets are kept at comfortable sizes while the map remains the dominant interactive surface.
 
+## AstraNav sensor fusion and HoloRoute
+- AstraNav is an advanced navigation layer inspired by aerospace cockpit sensor fusion; it does not claim extraterrestrial technology.
+- Camera bearing fuses GPS heading, device orientation/compass heading when available, and the bearing of the nearest active route segment.
+- GPS heading has priority while moving; device orientation acts as an intermediate source; route bearing remains the deterministic fallback.
+- On browsers that require explicit Device Orientation permission, the customer can enable AstraNav from the map menu. Navigation continues normally if permission is denied.
+- HoloRoute places a pulsing beacon on the next maneuver and a distinct destination beacon on the selected commerce destination.
+- HoloRoute markers are presentation-only: the route geometry remains the authoritative OSRM/Valhalla path and the beacon does not change routing.
+- The adaptive cockpit uses the existing peripheral profile to optimize touch, pointer, gamepad and XR presentation while respecting reduced-motion preferences.
+
 ## High-visibility navigation route
 - The route overlay now uses four visual layers: route glow, dark casing, high-contrast primary line, and repeated directional arrows.
 - Route layers are explicitly moved to the top of the MapLibre layer stack so the raster basemap cannot cover them.
