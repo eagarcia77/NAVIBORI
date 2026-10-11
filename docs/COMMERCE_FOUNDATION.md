@@ -58,6 +58,13 @@ A submitted request still requires merchant confirmation. Requests in new, accep
 - Voice guidance may repeat the same instruction at far, near and now distance bands.
 - Route progress remains session-only and is not persisted.
 
+## Waze-style navigation preflight
+- Every transport entry point uses the same commerce navigation eligibility rule, including map pins, Nearby and the destination card.
+- Each navigation attempt automatically runs a lightweight GPS/routing preflight in parallel with location acquisition.
+- The preflight checks secure context, browser geolocation support, permission state and routing provider health.
+- If GPS startup fails, the navigation phase remains visibly in error state and exposes a one-tap “Reintentar GPS” action instead of silently returning to idle.
+- DEMO destinations expose the same internal GPS test flow without being presented as real merchants; LIVE routing still requires verified public coordinates.
+
 ## GPS dual acquisition and routing fallback
 - GPS startup now runs getCurrentPosition and watchPosition in parallel and uses the first valid fix received.
 - If high-accuracy positioning fails without a permission denial, NAVIBORI retries with lower-accuracy cached positioning before giving up.
