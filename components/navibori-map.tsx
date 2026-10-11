@@ -309,6 +309,7 @@ export default function NaviboriMap({
   buildRevision:string;
 }){
   const mapNode=useRef<HTMLDivElement|null>(null);
+  const routeSvgRef=useRef<SVGSVGElement|null>(null);
   const mapRef=useRef<maplibregl.Map|null>(null);
   const markersRef=useRef<maplibregl.Marker[]>([]);
   const userMarkerRef=useRef<maplibregl.Marker|null>(null);
@@ -1561,6 +1562,42 @@ export default function NaviboriMap({
     }
   }
 
+  // Independent SVG route overlay: survives WebGL style/layer failures on iOS.
+  useEffect(()=>{
+    const map=mapRef.current;
+    const svg=routeSvgRef.current;
+    if(!map || !svg || !routeResult) return;
+    const geometry=routeResult.geometry.coordinates;
+    if(geometry.length<2) return;
+    let frame=0;
+    const paint=()=>{
+      frame=0;
+      const canvas=map.getCanvas();
+      const width=canvas.clientWidth;
+      const height=canvas.clientHeight;
+      if(!width || !height) return;
+      svg.setAttribute("viewBox",`0 0 ${width} ${height}`);
+      const step=Math.max(1,Math.floor(geometry.length/1600));
+      const coords=geometry.filter((_,index)=>index%step===0 || index===geometry.length-1);
+      const points=coords.map(([longitude,latitude])=>{
+        const point=map.project([longitude,latitude]);
+        return `${point.x.toFixed(1)},${point.y.toFixed(1)}`;
+      }).join(" ");
+      svg.querySelectorAll("polyline").forEach(line=>line.setAttribute("points",points));
+    };
+    const schedule=()=>{if(!frame) frame=window.requestAnimationFrame(paint);};
+    paint();
+    map.on("move",schedule);
+    map.on("resize",schedule);
+    map.on("styledata",schedule);
+    return ()=>{
+      map.off("move",schedule);
+      map.off("resize",schedule);
+      map.off("styledata",schedule);
+      if(frame) window.cancelAnimationFrame(frame);
+    };
+  },[mapReady,routeResult]);
+
   function showFullRoute(){
     const map=mapRef.current;
     const route=routeResultRef.current;
@@ -2586,6 +2623,12 @@ export default function NaviboriMap({
     >
       <div className="map-stage full-map-stage">
         <div ref={mapNode} className="map-canvas full-map-canvas" />
+        {routeResult && (
+          <svg ref={routeSvgRef} className="navibori-route-svg-fallback" aria-hidden="true" preserveAspectRatio="none">
+            <polyline fill="none" stroke="#ffffff" strokeWidth="13" strokeLinejoin="round" strokeLinecap="round" />
+            <polyline fill="none" stroke={routeLineColor(routeResult.mode)} strokeWidth="8" strokeLinejoin="round" strokeLinecap="round" />
+          </svg>
+        )}
 
         <button
           type="button"
