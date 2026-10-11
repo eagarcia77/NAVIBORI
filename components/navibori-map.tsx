@@ -22,6 +22,7 @@ import {
   type InMapRouteResult
 } from "@/lib/commerce/in-map-routing";
 import {commerceMatchesSearch} from "@/lib/commerce/map-search";
+import {canNavigateCommerce} from "@/lib/commerce/navigation-eligibility";
 import type {CommerceCategory,CommerceProfile} from "@/lib/commerce/types";
 
 const JUANA_DIAZ_REFERENCE:[number,number]=[-66.506,18.052];
@@ -216,15 +217,7 @@ export default function NaviboriMap({
     [businesses,selectedSlug]
   );
 
-  const canRoute=Boolean(
-    selected?.mapLocation &&
-    validRouteCoordinate(selected.mapLocation) &&
-    (
-      source==="demo"
-        ? selected.demo
-        : selected.verifiedLocation && selected.mapLocation.verified
-    )
-  );
+  const canRoute=canNavigateCommerce(selected,source);
 
   const demoRoute=Boolean(source==="demo" && selected?.demo && selected?.mapLocation);
 
@@ -539,11 +532,13 @@ export default function NaviboriMap({
     business:CommerceProfile,
     routeMode:InMapRouteMode
   ){
-    if(
-      !business.verifiedLocation ||
-      !business.mapLocation?.verified
-    ){
+    if(!canNavigateCommerce(business,source)){
       focusBusiness(business);
+      setLocationStatus(
+        source==="live"
+          ? "Este comercio todavía no tiene una ubicación LIVE verificada para navegación."
+          : "Este destino DEMO no tiene coordenadas válidas para probar navegación."
+      );
       return;
     }
 
