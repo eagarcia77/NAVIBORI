@@ -58,6 +58,14 @@ A submitted request still requires merchant confirmation. Requests in new, accep
 - Voice guidance may repeat the same instruction at far, near and now distance bands.
 - Route progress remains session-only and is not persisted.
 
+## High-visibility navigation route
+- The route overlay now uses four visual layers: route glow, dark casing, high-contrast primary line, and repeated directional arrows.
+- Route layers are explicitly moved to the top of the MapLibre layer stack so the raster basemap cannot cover them.
+- If the route arrives before the map style is fully ready, NAVIBORI retries rendering at 100 ms, 300 ms, 700 ms, and 1400 ms and once again when the map becomes idle.
+- Route redraw retries are cancelled when the route changes, preventing a stale recalculated route from being painted over the current route.
+- Mobile navigation hides redundant zoom/globe controls, keeps familiar map gestures, and reduces the permanent HUD height so more of the route stays visible.
+- The mobile HUD prioritizes next maneuver, ETA, remaining distance, speed, follow/recenter, voice, and end-navigation controls; GPS diagnostics remain available from the menu.
+
 ## Route arrows and device language
 - Active navigation draws a high-contrast route from the current origin to the selected commerce destination and overlays repeated directional arrow symbols along the route.
 - Route arrows use the same route geometry returned by OSRM/Valhalla, so they indicate the path the customer should follow rather than a straight-line bearing.
