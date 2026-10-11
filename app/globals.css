@@ -1145,3 +1145,10 @@ body{overflow:hidden}
 .navibori-navigation-phase.error{border-color:rgba(177,61,61,.28)}
 .navibori-navigation-phase.error span{background:#fff2f2;color:#a83b3b}
 @media(max-width:700px){.navibori-navigation-phase{top:max(62px,calc(env(safe-area-inset-top) + 54px));max-width:calc(100vw - 20px);overflow:hidden}.navibori-navigation-phase span{padding:4px 6px;font-size:.46rem}}
+
+
+/* NAVIBORI Waze preflight retry */
+.navibori-navigation-phase.error{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:5px;align-items:center}
+.navibori-navigation-phase.error>button{grid-column:1/-1;min-height:38px;border:0;border-radius:10px;background:var(--ocean);color:white;font-size:.66rem;font-weight:900;box-shadow:0 7px 18px rgba(0,95,143,.22)}
+.navibori-navigation-phase.error>button:active{transform:translateY(1px)}
+@media(max-width:620px){.navibori-navigation-phase.error>button{min-height:42px;font-size:.7rem}}
