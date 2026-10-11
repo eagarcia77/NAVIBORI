@@ -143,10 +143,10 @@ function routeModeIcon(mode:InMapRouteMode){
 
 function routeLineColor(mode:InMapRouteMode){
   switch(mode){
-    case "walking": return "#00a884";
-    case "cycling": return "#00a884";
-    case "scooter": return "#ff8a34";
-    default: return "#0a84ff";
+    case "walking": return "#008f63";
+    case "cycling": return "#008f63";
+    case "scooter": return "#e87916";
+    default: return "#0878f9";
   }
 }
 
@@ -224,8 +224,8 @@ function ensureRouteInfrastructure(map:maplibregl.Map){
         },
         paint:{
           "line-color":"#0a84ff",
-          "line-width":20,
-          "line-opacity":0.3,
+          "line-width":24,
+          "line-opacity":0.35,
           "line-blur":4
         }
       });
@@ -242,7 +242,7 @@ function ensureRouteInfrastructure(map:maplibregl.Map){
         },
         paint:{
           "line-color":"#10263b",
-          "line-width":14,
+          "line-width":17,
           "line-opacity":0.98
         }
       });
@@ -259,7 +259,7 @@ function ensureRouteInfrastructure(map:maplibregl.Map){
         },
         paint:{
           "line-color":"#0a84ff",
-          "line-width":9,
+          "line-width":11,
           "line-opacity":1
         }
       });
@@ -1518,6 +1518,11 @@ export default function NaviboriMap({
       source.setData(feature);
 
       const color=routeLineColor(route.mode);
+      // Reassert a high-contrast continuous route on every GPS progress update.
+      map.setLayoutProperty(ROUTE_GLOW_ID,"visibility","visible");
+      map.setLayoutProperty(ROUTE_CASING_ID,"visibility","visible");
+      map.setLayoutProperty(ROUTE_LINE_ID,"visibility","visible");
+      map.setPaintProperty(ROUTE_CASING_ID,"line-color","#ffffff");
       map.setPaintProperty(ROUTE_GLOW_ID,"line-color",color);
       map.setPaintProperty(
         ROUTE_GLOW_ID,
