@@ -1,0 +1,11 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import {DirectionsClient,normalizeDirections,validateMode} from "./directions-client.js";
+const a={lat:18,lng:-66},b={lat:18.1,lng:-66.1};
+test("supports four travel modes",()=>["driving","walking","cycling","scooter"].forEach(x=>assert.equal(validateMode(x),x)));
+test("rejects unsupported mode",()=>assert.throws(()=>validateMode("flying"),RangeError));
+test("validates routing geometry",()=>assert.throws(()=>normalizeDirections({coordinates:[a],distanceMeters:1,durationSeconds:1}),TypeError));
+test("normalizes a valid response",()=>assert.equal(normalizeDirections({coordinates:[a,b],distanceMeters:100,durationSeconds:20}).steps.length,0));
+test("sends a same-origin POST with selected mode",async()=>{let request;const client=new DirectionsClient({fetchImpl:async(url,options)=>{request={url,...options};return {ok:true,json:async()=>({coordinates:[a,b],distanceMeters:100,durationSeconds:20})};}});await client.route({origin:a,destination:b,mode:"walking"});assert.equal(request.url,"/api/directions");assert.equal(JSON.parse(request.body).mode,"walking");});
+test("rejects external endpoints to avoid leaking GPS",()=>assert.throws(()=>new DirectionsClient({endpoint:"https://external.example/route"}),TypeError));
+test("propagates routing service failure",async()=>{const client=new DirectionsClient({fetchImpl:async()=>({ok:false,status:503})});await assert.rejects(client.route({origin:a,destination:b}),/503/);});

@@ -1,0 +1,11 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import {MerchantPromotionsClient,validatePromotionInput} from "./merchant-promotions-client.js";
+const promotion={title:"10% descuento",description:"Válido hoy",startsAt:"2026-10-11T00:00:00Z",endsAt:"2026-10-12T00:00:00Z"};
+test("validates merchant promotion",()=>assert.equal(validatePromotionInput(promotion).title,"10% descuento"));
+test("rejects invalid promotion time window",()=>assert.throws(()=>validatePromotionInput({...promotion,endsAt:promotion.startsAt}),TypeError));
+test("rejects oversized description",()=>assert.throws(()=>validatePromotionInput({...promotion,description:"a".repeat(1001)}),TypeError));
+test("creates promotion through authenticated same-origin API",async()=>{let request;const c=new MerchantPromotionsClient({fetchImpl:async(url,options)=>{request={url,...options};return {ok:true,status:201,json:async()=>({id:"p1"})};}});await c.create(promotion);assert.equal(request.method,"POST");assert.equal(request.credentials,"same-origin");});
+test("deactivates promotion",async()=>{let url;const c=new MerchantPromotionsClient({fetchImpl:async(u)=>{url=u;return {ok:true,status:204};}});await c.deactivate("p1");assert.match(url,/p1\/deactivate$/);});
+test("rejects unsafe IDs",async()=>{const c=new MerchantPromotionsClient({fetchImpl:async()=>({ok:true,status:204})});await assert.rejects(c.deactivate("../admin"),TypeError);});
+test("rejects external endpoint",()=>assert.throws(()=>new MerchantPromotionsClient({endpoint:"https://example.com"}),TypeError));
