@@ -2927,6 +2927,7 @@ export default function NaviboriMap({
               ? demoRoute ? "GPS DEMO" : "GPS LIVE"
               : source==="live" ? "Comercios LIVE" : "Comercios DEMO"}
           </span>
+          <small title={tr("Identificador de la versión instalada","Installed build identifier")}>v{buildRevision}</small>
         </div>
 
         {menuOpen && (
