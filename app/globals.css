@@ -2702,3 +2702,21 @@ html[data-motion="reduced"] .navibori-drift-bridge-marker i{
     opacity: .9;
   }
 }
+
+/* Driver-first HUD: retain spoken/visual maneuvers, hide decorative telemetry. */
+.navibori-navigation-hud .lagrange-cockpit-chip,
+.navibori-navigation-hud .astra-flight-director,
+.navibori-navigation-hud .orbital-lookahead-chip,
+.navibori-navigation-hud .photon-corridor-meter,
+.navibori-navigation-hud .astra-drift-bridge-chip {
+  display: none;
+}
+.navibori-navigation-hud .trajectory-shield-chip.warning,
+.navibori-navigation-hud .exodock-chip {
+  display: flex;
+}
+@media (max-width: 760px) {
+  .navibori-navigation-hud {
+    max-width: min(520px, calc(100vw - 24px));
+  }
+}
