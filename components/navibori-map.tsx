@@ -612,6 +612,98 @@ export default function NaviboriMap({
   },[flightDirectorState.phase,gpsActive]);
 
   useEffect(()=>{
+    const clearEstimate=()=>{
+      setDriftBridgeEstimate(null);
+      driftBridgeMarkerRef.current?.remove();
+      driftBridgeMarkerRef.current=null;
+    };
+
+    if(!gpsActive || !routeResult){
+      clearEstimate();
+      return;
+    }
+
+    const tick=()=>{
+      const route=routeResultRef.current;
+      const fix=lastGpsFixRef.current;
+      if(!route || !fix){
+        clearEstimate();
+        return;
+      }
+
+      const estimate=buildDriftBridgeEstimate(
+        route,
+        fix.traveledMeters,
+        fix.speedKph,
+        Date.now()-fix.at,
+        fix.accuracyMeters
+      );
+
+      if(estimate.phase==="inactive"){
+        clearEstimate();
+        return;
+      }
+
+      setDriftBridgeEstimate(estimate);
+
+      if(estimate.phase!=="holding" || !estimate.coordinate){
+        driftBridgeMarkerRef.current?.remove();
+        driftBridgeMarkerRef.current=null;
+        return;
+      }
+
+      const map=mapRef.current;
+      if(!map) return;
+
+      if(!driftBridgeMarkerRef.current){
+        const element=document.createElement("div");
+        element.className="navibori-drift-bridge-marker";
+        element.setAttribute(
+          "aria-label",
+          tr(
+            "Posición estimada temporalmente por ASTRA Drift Bridge",
+            "Position temporarily estimated by ASTRA Drift Bridge"
+          )
+        );
+        element.innerHTML="<span>DR</span><i></i>";
+        driftBridgeMarkerRef.current=new maplibregl.Marker({
+          element,
+          anchor:"center"
+        }).addTo(map);
+      }
+
+      driftBridgeMarkerRef.current.setLngLat([
+        estimate.coordinate.longitude,
+        estimate.coordinate.latitude
+      ]);
+
+      if(
+        followGpsRef.current &&
+        document.documentElement.dataset.motion!=="reduced"
+      ){
+        const bearing=getRouteBearingNearPoint(route,estimate.coordinate);
+        map.easeTo({
+          center:[
+            estimate.coordinate.longitude,
+            estimate.coordinate.latitude
+          ],
+          bearing:bearing ?? map.getBearing(),
+          duration:420,
+          essential:false
+        });
+      }
+    };
+
+    tick();
+    const interval=window.setInterval(tick,500);
+
+    return ()=>{
+      window.clearInterval(interval);
+      clearEstimate();
+    };
+  },[gpsActive,routeResult]);
+
+  useEffect(()=>{
     const applyLocale=()=>{
       const locale=browserNaviboriLocale();
       setDeviceLocale(locale);
