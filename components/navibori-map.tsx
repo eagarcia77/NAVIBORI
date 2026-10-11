@@ -109,10 +109,9 @@ const travelModes:Array<{
 ];
 
 function formatDistance(meters:number){
-  if(meters<1000){
-    return Math.max(1,Math.round(meters*3.28084))+" ft";
-  }
-  return (meters/1609.344).toFixed(1)+" mi · "+(meters/1000).toFixed(1)+" km";
+  if(!Number.isFinite(meters)||meters<0) return "—";
+  if(meters<1000) return Math.round(meters)+" m";
+  return (meters/1000).toFixed(1)+" km";
 }
 
 function formatDuration(seconds:number){
