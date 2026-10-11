@@ -1,0 +1,10 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import {CommerceClient,normalizeCommerce} from "./commerce-client.js";
+const item={id:"market-1",name:"Mercado",location:{lat:18,lng:-66}};
+test("validates commerce identity",()=>assert.equal(normalizeCommerce(item).id,"market-1"));
+test("rejects invalid coordinates",()=>assert.throws(()=>normalizeCommerce({...item,location:{lat:100,lng:0}}),TypeError));
+test("defaults missing offer to null",()=>assert.equal(normalizeCommerce(item).offer,null));
+test("nearby search uses radius and location",async()=>{let url;const client=new CommerceClient({fetchImpl:async u=>{url=u;return {ok:true,json:async()=>({commerces:[item]})};}});assert.equal((await client.nearby({position:item.location})).length,1);assert.match(url,/radius=2000/);});
+test("rejects excessively large search radius",async()=>{const client=new CommerceClient({fetchImpl:async()=>{throw Error("unexpected")}});await assert.rejects(client.nearby({position:item.location,radiusMeters:999999}),TypeError);});
+test("rejects external endpoint",()=>assert.throws(()=>new CommerceClient({endpoint:"https://example.com"}),TypeError));
