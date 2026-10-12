@@ -2013,8 +2013,9 @@ export default function NaviboriMap({
     lastRouteRefreshAtRef.current=Date.now();
     setLastRouteMode(routeMode);
 
+    // Show recalculation progress even when the existing route remains visible.
+    setRouteBusy(routeMode);
     if(!quiet){
-      setRouteBusy(routeMode);
       setNavigationPhase("routing");
       setRouteStatus(
         (deviceLocale.language==="en" ? "Calculating route · " : "Calculando ruta · ")+
@@ -2094,7 +2095,7 @@ export default function NaviboriMap({
     }finally{
       if(routeAbortRef.current===controller){
         routeAbortRef.current=null;
-        if(!quiet) setRouteBusy(null);
+        setRouteBusy(null);
       }
     }
   }
@@ -2117,6 +2118,7 @@ export default function NaviboriMap({
     activeNavigationModeRef.current=null;
     lastRouteOriginRef.current=null;
     lastRouteRefreshAtRef.current=0;
+    consecutiveOffRouteFixesRef.current=0;
     setGpsActive(false);
     setGpsAccuracy(null);
     setGpsSpeedKph(null);
