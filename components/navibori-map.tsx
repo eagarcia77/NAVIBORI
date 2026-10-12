@@ -1206,7 +1206,7 @@ export default function NaviboriMap({
         if(!map.getSource("navibori-building-tiles")){
           map.addSource("navibori-building-tiles",{
             type:"vector",
-            url:"https://tiles.openfreemap.org/planet",
+            url:"https://tiles.openfreemap.org/planet/latest",
             attribution:"© OpenStreetMap contributors · OpenFreeMap"
           });
         }
@@ -1289,6 +1289,9 @@ export default function NaviboriMap({
     // extrusions again so the highlighted navigation line stays legible.
     map.on("sourcedata",(event)=>{
       if(event.sourceId!=="navibori-building-tiles" || !event.isSourceLoaded) return;
+      if(map.getLayer("navibori-3d-buildings") && mapModeRef.current==="3d"){
+        map.setLayoutProperty("navibori-3d-buildings","visibility","visible");
+      }
       if(map.getLayer("navibori-3d-buildings") && map.getLayer(ROUTE_LINE_ID)){
         for(const id of [ROUTE_GLOW_ID,ROUTE_CASING_ID,ROUTE_LINE_ID,ROUTE_ARROW_ID]){
           if(map.getLayer(id)) map.moveLayer(id);
