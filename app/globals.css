@@ -2789,3 +2789,15 @@ html[data-motion="reduced"] .navibori-drift-bridge-marker i{
   cursor:pointer;
 }
 .navibori-refresh-version:disabled {opacity:.48;cursor:not-allowed;}
+
+.navibori-navigation-maneuver .navibori-live-reroute,
+.navibori-navigation-maneuver .navibori-live-gps-warning {
+  display:block;
+  padding:5px 8px;
+  border-radius:8px;
+  font-size:.7rem;
+  font-weight:750;
+  line-height:1.3;
+}
+.navibori-navigation-maneuver .navibori-live-reroute {background:#e5f2ff;color:#07588b;}
+.navibori-navigation-maneuver .navibori-live-gps-warning {background:#fff1d9;color:#8c5100;}
