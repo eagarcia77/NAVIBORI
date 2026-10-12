@@ -2805,3 +2805,17 @@ html[data-motion="reduced"] .navibori-drift-bridge-marker i{
 }
 .navibori-navigation-maneuver .navibori-live-reroute {background:#e5f2ff;color:#07588b;}
 .navibori-navigation-maneuver .navibori-live-gps-warning {background:#fff1d9;color:#8c5100;}
+
+/* Driving focus: map and route remain primary; menu and navigation HUD remain usable. */
+.map-panel[data-navigation-active="true"] .full-map-gps-button,
+.map-panel[data-navigation-active="true"] .navibori-perspective-button,
+.map-panel[data-navigation-active="true"] .maplibregl-ctrl-top-right,
+.map-panel[data-navigation-active="true"] .maplibregl-ctrl-bottom-right {
+  display:none!important;
+}
+.map-panel[data-navigation-active="true"] .navibori-navigation-maneuver .astranav-chip,
+.map-panel[data-navigation-active="true"] .navibori-navigation-maneuver .astra-flight-director,
+.map-panel[data-navigation-active="true"] .navibori-navigation-maneuver .lagrange-cockpit-chip,
+.map-panel[data-navigation-active="true"] .navibori-navigation-maneuver .exodock-chip {
+  display:none!important;
+}
