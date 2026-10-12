@@ -374,6 +374,7 @@ export default function NaviboriMap({
   const [mapReady,setMapReady]=useState(false);
   const [mode,setMode]=useState<RealityMode>("2d");
   const mapModeRef=useRef<RealityMode>("2d");
+  const streetZoomBeforeGlobeRef=useRef<number|null>(null);
   const [timeOpen,setTimeOpen]=useState(false);
   const [menuOpen,setMenuOpen]=useState(false);
   const [basemapState,setBasemapState]=useState<"loading"|"ready"|"error">("loading");
@@ -1450,6 +1451,9 @@ export default function NaviboriMap({
     // Honor accessibility settings when transitioning between map perspectives.
     const reducedMotion=window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     if(next==="globe"){
+      if(mapModeRef.current!=="globe"){
+        streetZoomBeforeGlobeRef.current=map.getZoom();
+      }
       // The globe is an overview, not a street-level turn-by-turn camera.
       map.setProjection({type:"globe"});
       map.easeTo({
@@ -1462,7 +1466,7 @@ export default function NaviboriMap({
       map.setProjection({type:"mercator"});
       map.easeTo({
         // Returning from globe should restore street detail in both 2D and 3D.
-        zoom:mapModeRef.current==="globe" ? Math.max(map.getZoom(),15) : map.getZoom(),
+        zoom:mapModeRef.current==="globe" ? (streetZoomBeforeGlobeRef.current ?? Math.max(map.getZoom(),15)) : map.getZoom(),
         pitch:next==="3d" ? 58 : 0,
         bearing:next==="3d" ? map.getBearing() : 0,
         duration:reducedMotion ? 0 : 750
