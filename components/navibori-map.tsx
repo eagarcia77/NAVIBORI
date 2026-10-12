@@ -1203,6 +1203,10 @@ export default function NaviboriMap({
       // Restore the user's map perspective without changing GPS or routing.
       try{
         const savedMode=window.localStorage.getItem("navibori:map-mode");
+        const savedStreetZoom=Number(window.localStorage.getItem("navibori:street-zoom"));
+        if(Number.isFinite(savedStreetZoom) && savedStreetZoom>=1 && savedStreetZoom<=22){
+          streetZoomBeforeGlobeRef.current=savedStreetZoom;
+        }
         if(savedMode==="3d"){
           map.setProjection({type:"mercator"});
           map.setPitch(58);
@@ -1453,6 +1457,11 @@ export default function NaviboriMap({
     if(next==="globe"){
       if(mapModeRef.current!=="globe"){
         streetZoomBeforeGlobeRef.current=map.getZoom();
+        try{
+          window.localStorage.setItem("navibori:street-zoom",String(map.getZoom()));
+        }catch{
+          // Map navigation still works when browser storage is unavailable.
+        }
       }
       // The globe is an overview, not a street-level turn-by-turn camera.
       map.setProjection({type:"globe"});
