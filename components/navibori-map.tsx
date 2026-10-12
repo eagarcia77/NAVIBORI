@@ -2594,7 +2594,7 @@ export default function NaviboriMap({
             map?.getBearing() ??
             0,
           pitch:mapModeRef.current==="3d"
-            ? Math.max(48,cameraProfile.pitch)
+            ? (cameraProfile.zoom<=14 ? 38 : cameraProfile.zoom>=18 ? 58 : 38+(cameraProfile.zoom-14)*5)
             : mapModeRef.current==="2d"
               ? 0
               : cameraProfile.pitch,
