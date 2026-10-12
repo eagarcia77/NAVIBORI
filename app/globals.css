@@ -2950,3 +2950,29 @@ html[data-motion="reduced"] .navibori-drift-bridge-marker i{
     to{opacity:1;transform:translateY(0)}
   }
 }
+
+/* 3D visual refresh: richer depth without animations on the map itself. */
+.map-panel[data-navigation-active="false"] .navibori-perspective-button{
+  background:linear-gradient(145deg,#e9fbff,#d7eaff);
+  border-color:rgba(30,125,190,.28);
+  box-shadow:0 6px 22px rgba(23,94,161,.14),inset 0 1px 0 rgba(255,255,255,.9);
+}
+.map-panel[data-navigation-active="true"] .navibori-navigation-maneuver{
+  border:1px solid rgba(52,143,229,.26);
+  border-left:4px solid #1787ec;
+  background:linear-gradient(115deg,rgba(255,255,255,.98),rgba(239,249,255,.97));
+  box-shadow:0 7px 25px rgba(22,76,137,.15);
+}
+.map-panel[data-navigation-active="true"] .navibori-navigation-maneuver>strong{
+  color:#123d63;
+  letter-spacing:-.015em;
+}
+@media(prefers-reduced-motion:no-preference){
+  .map-panel[data-navigation-active="false"] .navibori-perspective-button{
+    transition:transform .25s ease,box-shadow .25s ease,background-color .25s ease;
+  }
+  .map-panel[data-navigation-active="false"] .navibori-perspective-button:hover{
+    transform:translateY(-2px);
+    box-shadow:0 10px 26px rgba(23,94,161,.23);
+  }
+}
