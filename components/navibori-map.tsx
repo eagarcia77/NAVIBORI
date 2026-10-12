@@ -373,6 +373,7 @@ export default function NaviboriMap({
   const [lastCommerceRefreshAt,setLastCommerceRefreshAt]=useState<Date|null>(null);
   const [mapReady,setMapReady]=useState(false);
   const [mode,setMode]=useState<RealityMode>("2d");
+  const mapModeRef=useRef<RealityMode>("2d");
   const [timeOpen,setTimeOpen]=useState(false);
   const [menuOpen,setMenuOpen]=useState(false);
   const [basemapState,setBasemapState]=useState<"loading"|"ready"|"error">("loading");
@@ -1204,14 +1205,17 @@ export default function NaviboriMap({
         if(savedMode==="3d"){
           map.setProjection({type:"mercator"});
           map.setPitch(58);
+          mapModeRef.current="3d";
           setMode("3d");
         }else if(savedMode==="globe"){
           map.setProjection({type:"globe"});
           map.setZoom(Math.min(map.getZoom(),8));
+          mapModeRef.current="globe";
           setMode("globe");
         }else if(savedMode==="2d"){
           map.setProjection({type:"mercator"});
           map.setPitch(0);
+          mapModeRef.current="2d";
           setMode("2d");
         }
       }catch{
@@ -1455,6 +1459,7 @@ export default function NaviboriMap({
       });
     }
 
+    mapModeRef.current=next;
     setMode(next);
     try{
       if(next==="2d" || next==="3d" || next==="globe"){
@@ -2504,9 +2509,9 @@ export default function NaviboriMap({
             navigationBearing ??
             map?.getBearing() ??
             0,
-          pitch:mode==="3d"
+          pitch:mapModeRef.current==="3d"
             ? Math.max(48,cameraProfile.pitch)
-            : mode==="2d"
+            : mapModeRef.current==="2d"
               ? 0
               : cameraProfile.pitch,
           duration:firstFix ? 650 : cameraProfile.duration
