@@ -1175,24 +1175,7 @@ export default function NaviboriMap({
 
     const map=new maplibregl.Map({
       container:mapNode.current,
-      style:{
-        version:8,
-        sources:{
-          osm:{
-            type:"raster",
-            tiles:["https://tile.openstreetmap.org/{z}/{x}/{y}.png"],
-            tileSize:256,
-            attribution:"© OpenStreetMap contributors"
-          }
-        },
-        layers:[{
-          id:"osm-raster",
-          type:"raster",
-          source:"osm",
-          minzoom:0,
-          maxzoom:20
-        }]
-      },
+      style:"https://tiles.openfreemap.org/styles/liberty",
       center:JUANA_DIAZ_REFERENCE,
       zoom:14,
       canvasContextAttributes:{antialias:true}
@@ -1206,7 +1189,7 @@ export default function NaviboriMap({
         if(!map.getSource("navibori-building-tiles")){
           map.addSource("navibori-building-tiles",{
             type:"vector",
-            url:"https://tiles.openfreemap.org/planet/latest",
+            url:"https://tiles.openfreemap.org/planet",
             attribution:"© OpenStreetMap contributors · OpenFreeMap"
           });
         }
