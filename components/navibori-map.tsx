@@ -1175,7 +1175,25 @@ export default function NaviboriMap({
 
     const map=new maplibregl.Map({
       container:mapNode.current,
-      style:"https://tiles.openfreemap.org/styles/liberty",
+      // Reliable OSM raster basemap until vector style availability is verified.
+      style:{
+        version:8,
+        sources:{
+          osm:{
+            type:"raster",
+            tiles:["https://tile.openstreetmap.org/{z}/{x}/{y}.png"],
+            tileSize:256,
+            attribution:"© OpenStreetMap contributors"
+          }
+        },
+        layers:[{
+          id:"osm-raster",
+          type:"raster",
+          source:"osm",
+          minzoom:0,
+          maxzoom:20
+        }]
+      },
       center:JUANA_DIAZ_REFERENCE,
       zoom:14,
       canvasContextAttributes:{antialias:true}
