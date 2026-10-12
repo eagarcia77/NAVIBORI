@@ -1450,8 +1450,14 @@ export default function NaviboriMap({
     // Honor accessibility settings when transitioning between map perspectives.
     const reducedMotion=window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     if(next==="globe"){
+      // The globe is an overview, not a street-level turn-by-turn camera.
       map.setProjection({type:"globe"});
-      map.easeTo({zoom:Math.min(map.getZoom(),8),pitch:0,duration:reducedMotion ? 0 : 900});
+      map.easeTo({
+        zoom:Math.min(map.getZoom(),8),
+        pitch:0,
+        bearing:0,
+        duration:reducedMotion ? 0 : 900
+      });
     }else{
       map.setProjection({type:"mercator"});
       map.easeTo({
