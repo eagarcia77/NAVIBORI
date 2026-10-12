@@ -2830,6 +2830,20 @@ export default function NaviboriMap({
           {menuOpen ? "×" : "☰"}
         </button>
 
+        {gpsActive && (
+          <button
+            type="button"
+            className="navibori-minimal-stop"
+            onClick={()=>{
+              stopGpsNavigation();
+              setLocationStatus(tr("GPS detenido. La ruta permanece visible.","GPS stopped. The route remains visible."));
+            }}
+            aria-label={tr("Finalizar navegación GPS","End GPS navigation")}
+          >
+            {tr("Finalizar","End")}
+          </button>
+        )}
+
         {navigationPhase!=="idle" && !gpsActive && selected && (
           <div className={"navibori-navigation-phase "+navigationPhase} aria-live="polite">
             <span className={navigationPhase==="permission"||navigationPhase==="gps"||navigationPhase==="routing"||navigationPhase==="navigating" ? "done" : ""}>{copy.permissionStep}</span>
