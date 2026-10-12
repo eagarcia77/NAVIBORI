@@ -83,6 +83,57 @@ const ROUTE_LINE_ID="navibori-commerce-route-line";
 const ROUTE_ARROW_ID="navibori-commerce-route-arrows";
 const ROUTE_ARROW_IMAGE_ID="navibori-route-arrow-image";
 
+
+const VECTOR_MAP_STYLE="https://tiles.openfreemap.org/styles/liberty";
+const NAVIBORI_BUILDINGS_ID="navibori-3d-buildings";
+const VECTOR_BUILDINGS_ID="navibori-building-tiles";
+const RASTER_FALLBACK_STYLE:maplibregl.StyleSpecification={
+  version:8,
+  sources:{osm:{type:"raster",tiles:["https://tile.openstreetmap.org/{z}/{x}/{y}.png"],tileSize:256,attribution:"© OpenStreetMap contributors"}},
+  layers:[{id:"osm-raster",type:"raster",source:"osm",minzoom:0,maxzoom:20}]
+};
+function create3DBuildings(map:maplibregl.Map){
+  const existing=map.getStyle().layers?.find(layer=>layer.type==="fill-extrusion" && layer.id==="building-3d");
+  const sourceId=(existing?.type==="fill-extrusion" && existing.source) ||
+    ["openmaptiles","openfreemap"].find(key=>Boolean(map.getSource(key))) || VECTOR_BUILDINGS_ID;
+  if(!map.getSource(sourceId)){
+    map.addSource(sourceId,{type:"vector",url:"https://tiles.openfreemap.org/planet",attribution:"© OpenStreetMap contributors · OpenFreeMap"});
+  }
+  // These are visual estimates when actual building heights are missing.
+  const height=["min",300,["max",8,["coalesce",
+    ["to-number",["get","render_height"],null],
+    ["to-number",["get","height"],null],
+    ["*",3,["to-number",["get","building:levels"],null]],
+    9]]] as maplibregl.ExpressionSpecification;
+  const base=["min",300,["max",0,["coalesce",
+    ["to-number",["get","render_min_height"],null],
+    ["to-number",["get","min_height"],null],0]]] as maplibregl.ExpressionSpecification;
+  const paint={
+    "fill-extrusion-color":["interpolate",["linear"],["zoom"],14,"#d3e4f2",17,"#82b2d0",19,"#377da8"],
+    "fill-extrusion-height":["interpolate",["linear"],["zoom"],14,0,15,height],
+    "fill-extrusion-base":base,
+    "fill-extrusion-opacity":0.86,
+    "fill-extrusion-vertical-gradient":true
+  } as maplibregl.FillExtrusionLayerSpecification["paint"];
+  if(map.getLayer("building-3d")){
+    // Prefer the vector style's native 3D layer; do not render competing walls.
+    map.setPaintProperty("building-3d","fill-extrusion-color",paint?.["fill-extrusion-color"]);
+    map.setPaintProperty("building-3d","fill-extrusion-height",paint?.["fill-extrusion-height"]);
+    map.setPaintProperty("building-3d","fill-extrusion-base",paint?.["fill-extrusion-base"]);
+    map.setPaintProperty("building-3d","fill-extrusion-opacity",0.86);
+    return "building-3d";
+  }
+  if(!map.getLayer(NAVIBORI_BUILDINGS_ID)){
+    const firstLabel=map.getStyle().layers?.find(layer=>layer.type==="symbol" && Boolean(layer.layout && "text-field" in layer.layout))?.id;
+    map.addLayer({
+      id:NAVIBORI_BUILDINGS_ID,type:"fill-extrusion",
+      source:sourceId,"source-layer":"building",
+      minzoom:14,layout:{visibility:"visible"},paint
+    },firstLabel);
+  }
+  return NAVIBORI_BUILDINGS_ID;
+}
+
 type RealityMode="2d"|"3d"|"globe"|"time";
 type MapCategory="all"|CommerceCategory;
 
@@ -374,6 +425,8 @@ export default function NaviboriMap({
   const [mapReady,setMapReady]=useState(false);
   const [mode,setMode]=useState<RealityMode>("3d");
   const mapModeRef=useRef<RealityMode>("3d");
+  const buildingsLayerRef=useRef<string|null>(null);
+  const [buildings3DState,setBuildings3DState]=useState<"loading"|"ready"|"no-data"|"unavailable">("loading");
   const streetZoomBeforeGlobeRef=useRef<number|null>(null);
   const [timeOpen,setTimeOpen]=useState(false);
   const [menuOpen,setMenuOpen]=useState(false);
@@ -1175,102 +1228,87 @@ export default function NaviboriMap({
 
     const map=new maplibregl.Map({
       container:mapNode.current,
-      // Reliable OSM raster basemap until vector style availability is verified.
-      style:{
-        version:8,
-        sources:{
-          osm:{
-            type:"raster",
-            tiles:["https://tile.openstreetmap.org/{z}/{x}/{y}.png"],
-            tileSize:256,
-            attribution:"© OpenStreetMap contributors"
-          }
-        },
-        layers:[{
-          id:"osm-raster",
-          type:"raster",
-          source:"osm",
-          minzoom:0,
-          maxzoom:20
-        }]
-      },
+      style:VECTOR_MAP_STYLE,
       center:JUANA_DIAZ_REFERENCE,
-      zoom:14,
+      zoom:16.5,
+      pitch:58,
+      bearing:-15,
       canvasContextAttributes:{antialias:true}
     });
-
-    map.on("load",()=>{
-      // Optional real building extrusions from OpenFreeMap vector tiles.
-      // The raster street map remains the primary basemap; route layers are
-      // inserted afterwards so navigation lines stay above building geometry.
-      try{
-        if(!map.getSource("navibori-building-tiles")){
-          map.addSource("navibori-building-tiles",{
-            type:"vector",
-            url:"https://tiles.openfreemap.org/planet",
-            attribution:"© OpenStreetMap contributors · OpenFreeMap"
-          });
+    let fallback=false;
+    let disposed=false;
+    let mapWatchdog:ReturnType<typeof setTimeout>|null=null;
+    const fallbackTo2D=()=>{
+      if(fallback||disposed) return;
+      fallback=true;
+      if(mapWatchdog!==null){clearTimeout(mapWatchdog);mapWatchdog=null;}
+      buildingsLayerRef.current=null;
+      setBuildings3DState("unavailable");
+      setBasemapState("loading");
+      setLocationStatus(tr(
+        "El proveedor de mapas 3D no respondió. NAVIBORI continúa con mapa 2D.",
+        "3D map provider did not respond. NAVIBORI continues with a 2D map."
+      ));
+      map.setStyle(RASTER_FALLBACK_STYLE);
+    };
+    const setupMap=()=>{
+      if(disposed) return;
+      const raster=Boolean(map.getSource("osm"));
+      if(!raster){
+        try{
+          buildingsLayerRef.current=create3DBuildings(map);
+          setBuildings3DState("ready");
+        }catch{
+          buildingsLayerRef.current=null;
+          setBuildings3DState("unavailable");
         }
-        if(!map.getLayer("navibori-3d-buildings")){
-          map.addLayer({
-            id:"navibori-3d-buildings",
-            type:"fill-extrusion",
-            source:"navibori-building-tiles",
-            "source-layer":"building",
-            minzoom:15,
-            filter:["!=",["get","hide_3d"],true],
-            layout:{visibility:"visible"},
-            paint:{
-              "fill-extrusion-color":["interpolate",["linear"],["zoom"],15,"#d3e4f2",17,"#8ab9d6",19,"#397eae"],
-              "fill-extrusion-vertical-gradient":true,
-              "fill-extrusion-height":["interpolate",["linear"],["zoom"],15,0,16,["min",300,["max",0,["max",9,["coalesce",["to-number",["get","render_height"],null],["to-number",["get","height"],null],["*",["to-number",["get","building:levels"],null],3],9]]]]],
-              "fill-extrusion-base":["min",300,["max",0,["coalesce",["to-number",["get","render_min_height"],null],["to-number",["get","min_height"],null],0]]],
-              "fill-extrusion-opacity":0.72
-            }
-          });
-        }
-      }catch{
-        // Buildings are progressive enhancement; keep routing functional.
+      }else{
+        buildingsLayerRef.current=null;
+        setBuildings3DState("unavailable");
       }
       ensureRouteInfrastructure(map);
-      // Restore the user's map perspective without changing GPS or routing.
       try{
-        const savedMode=window.localStorage.getItem("navibori:map-mode");
-        const savedStreetZoom=Number(window.localStorage.getItem("navibori:street-zoom"));
-        if(Number.isFinite(savedStreetZoom) && savedStreetZoom>=1 && savedStreetZoom<=22){
-          streetZoomBeforeGlobeRef.current=savedStreetZoom;
+        const stored=window.localStorage.getItem("navibori:map-mode-v2");
+        const streetZoom=Number(window.localStorage.getItem("navibori:street-zoom"));
+        if(Number.isFinite(streetZoom)&&streetZoom>=1&&streetZoom<=22){
+          streetZoomBeforeGlobeRef.current=streetZoom;
         }
-        if(savedMode==="3d" || !savedMode){
-          // Start in true street-level 3D on first visit; preserve an
-          // explicitly selected 2D or globe preference.
-
-          map.setProjection({type:"mercator"});
-          // Restore the 3D perspective relative to the actual initial zoom.
-          const initialZoom=map.getZoom();
-          map.setPitch(adaptiveStreetPitch(initialZoom));
-          if(map.getLayer("navibori-3d-buildings")){
-            map.setLayoutProperty("navibori-3d-buildings","visibility","visible");
-          }
-          mapModeRef.current="3d";
-          setMode("3d");
-        }else if(savedMode==="globe"){
+        const nextMode:RealityMode=raster?"2d":stored==="2d"||stored==="globe"?stored:"3d";
+        if(nextMode==="globe"){
           map.setProjection({type:"globe"});
           map.setZoom(Math.min(map.getZoom(),8));
-          mapModeRef.current="globe";
-          setMode("globe");
-        }else if(savedMode==="2d"){
-          map.setProjection({type:"mercator"});
           map.setPitch(0);
-          mapModeRef.current="2d";
-          setMode("2d");
+        }else{
+          map.setProjection({type:"mercator"});
+          map.setPitch(nextMode==="3d"?adaptiveStreetPitch(map.getZoom()):0);
         }
+        if(buildingsLayerRef.current && map.getLayer(buildingsLayerRef.current)){
+          map.setLayoutProperty(buildingsLayerRef.current,"visibility",nextMode==="3d"?"visible":"none");
+        }
+        mapModeRef.current=nextMode;
+        setMode(nextMode);
       }catch{
-        // Private browsing can disable storage; keep the default 2D view.
+        mapModeRef.current=raster?"2d":"3d";
+        setMode(raster?"2d":"3d");
       }
       setBasemapState("ready");
       setMapReady(true);
-    });
-
+    };
+    map.on("style.load",setupMap);
+    // A style can load while its vector tiles remain inaccessible. Fall back
+    // after an explicit delay only when no actual vector features were drawn.
+    mapWatchdog=setTimeout(()=>{
+      mapWatchdog=null;
+      if(disposed||fallback)return;
+      try{
+        const hasVectorFeatures=map.queryRenderedFeatures().some(feature=>
+          feature.source!=="osm" &&
+          feature.source!==VECTOR_BUILDINGS_ID &&
+          feature.source!==ROUTE_SOURCE_ID
+        );
+        if(!hasVectorFeatures) fallbackTo2D();
+      }catch{fallbackTo2D();}
+    },12000);
     // Keep the street-level 3D camera adaptive when the user zooms manually.
     // Do not interfere with the live GPS follow camera.
     // Wait for the entire gesture/camera animation to settle before correcting
@@ -1286,42 +1324,40 @@ export default function NaviboriMap({
       }
     });
 
-    // When optional building tiles become available, place the route above
-    // extrusions again so the highlighted navigation line stays legible.
     map.on("sourcedata",(event)=>{
-      if(event.sourceId!=="navibori-building-tiles" || !event.isSourceLoaded) return;
-      if(map.getLayer("navibori-3d-buildings") && mapModeRef.current==="3d"){
-        map.setLayoutProperty("navibori-3d-buildings","visibility","visible");
-      }
-      if(map.getLayer("navibori-3d-buildings") && map.getLayer(ROUTE_LINE_ID)){
-        for(const id of [ROUTE_GLOW_ID,ROUTE_CASING_ID,ROUTE_LINE_ID,ROUTE_ARROW_ID]){
-          if(map.getLayer(id)) map.moveLayer(id);
-        }
+      if(disposed || !event.isSourceLoaded) return;
+      const layer=buildingsLayerRef.current;
+      if(!layer||!map.getLayer(layer)) return;
+      if(mapModeRef.current==="3d") map.setLayoutProperty(layer,"visibility","visible");
+      for(const id of [ROUTE_GLOW_ID,ROUTE_CASING_ID,ROUTE_LINE_ID,ROUTE_ARROW_ID]){
+        if(map.getLayer(id)) map.moveLayer(id);
       }
     });
-
     map.on("styledata",()=>{
-      if(
-        map.isStyleLoaded() &&
-        (
-          !map.getSource(ROUTE_SOURCE_ID) ||
-          !map.getLayer(ROUTE_LINE_ID)
-        )
-      ){
+      if(map.isStyleLoaded() &&
+         (!map.getSource(ROUTE_SOURCE_ID)||!map.getLayer(ROUTE_LINE_ID))){
         ensureRouteInfrastructure(map);
       }
     });
     map.on("error",(event)=>{
-      if(!event?.error) return;
-      // Optional 3D vector tiles must not mark the working OSM raster
-      // basemap as failed. Keep GPS routing usable on weak connections.
-      const detail=String(event.error.message ?? event.error);
-      if(detail.includes("openfreemap.org") || detail.includes("navibori-building-tiles")){
-        return;
+      if(disposed||!event?.error)return;
+      const detail=String(event.error.message??event.error);
+      if(!fallback && !map.isStyleLoaded() &&
+         /openfreemap|failed to fetch|networkerror/i.test(detail)){
+        fallbackTo2D();
+      }else if(fallback && /tile.openstreetmap.org|osm-raster/i.test(detail)){
+        setBasemapState("error");
       }
-      setBasemapState("error");
     });
-
+    map.on("idle",()=>{
+      const layer=buildingsLayerRef.current;
+      if(disposed||fallback||mapModeRef.current!=="3d"||!layer||
+         !map.getLayer(layer)||map.getZoom()<15) return;
+      try{
+        const hasBuildings=map.queryRenderedFeatures({layers:[layer]}).length>0;
+        setBuildings3DState(hasBuildings?"ready":"no-data");
+      }catch{setBuildings3DState("unavailable");}
+    });
     const showZoomControls=window.matchMedia("(min-width: 768px)").matches;
     map.addControl(
       new maplibregl.NavigationControl({
@@ -1347,6 +1383,8 @@ export default function NaviboriMap({
 
     mapRef.current=map;
     return ()=>{
+      disposed=true;
+      if(mapWatchdog!==null) clearTimeout(mapWatchdog);
       map.getCanvas().removeEventListener("pointerdown",handleManualMapInteraction);
       routeAbortRef.current?.abort();
       if("speechSynthesis" in window){
@@ -1531,11 +1569,12 @@ export default function NaviboriMap({
   // markings remain visually dominant. Restore depth when navigation ends.
   useEffect(()=>{
     const map=mapRef.current;
-    if(!map || !map.getLayer("navibori-3d-buildings")) return;
+    const layer=buildingsLayerRef.current;
+    if(!map||!layer||!map.getLayer(layer)) return;
     map.setPaintProperty(
-      "navibori-3d-buildings",
+      layer,
       "fill-extrusion-opacity",
-      gpsActive ? 0.2 : 0.72
+      gpsActive ? 0.50 : 0.86
     );
   },[gpsActive,mapReady]);
 
@@ -1550,6 +1589,10 @@ export default function NaviboriMap({
     const map=mapRef.current;
     if(!map) return;
 
+    if(next==="3d" && (!buildingsLayerRef.current||!map.getLayer(buildingsLayerRef.current))){
+      setLocationStatus(tr("La geometría 3D no está disponible. El mapa 2D sigue funcionando.","3D geometry is unavailable. The 2D map still works."));
+      return;
+    }
     // During live navigation, offer immersive 3D street perspective instead of
     // switching to the low-zoom globe overview and obscuring route detail.
     if(gpsActive && next==="globe"){
@@ -1595,14 +1638,14 @@ export default function NaviboriMap({
       });
     }
 
-    if(map.getLayer("navibori-3d-buildings")){
-      map.setLayoutProperty("navibori-3d-buildings","visibility",next==="3d" ? "visible" : "none");
+    if(buildingsLayerRef.current&&map.getLayer(buildingsLayerRef.current)){
+      map.setLayoutProperty(buildingsLayerRef.current,"visibility",next==="3d"?"visible":"none");
     }
     mapModeRef.current=next;
     setMode(next);
     try{
       if(next==="2d" || next==="3d" || next==="globe"){
-        window.localStorage.setItem("navibori:map-mode",next);
+        window.localStorage.setItem("navibori:map-mode-v2",next);
       }
     }catch{
       // Map switching must remain available without persistent storage.
@@ -2916,6 +2959,20 @@ export default function NaviboriMap({
     >
       <div className="map-stage full-map-stage">
         <div ref={mapNode} className="map-canvas full-map-canvas" />
+        {!gpsActive&&(
+          <div className="navibori-3d-indicator" data-view={mode} role="status">
+            <span className="navibori-3d-orb" aria-hidden="true">◈</span>
+            <span><strong>{mode==="3d"?"NAVIBORI 3D":tr("Vista de mapa","Map view")}</strong>
+              <small>{buildings3DState==="unavailable"
+                ?tr("Edificios 3D no disponibles","3D buildings unavailable")
+                :mode==="3d"&&buildings3DState==="no-data"
+                  ?tr("No hay edificios 3D en esta zona","No 3D buildings in this area")
+                  :mode==="3d"
+                    ?tr("Vista espacial activada","Spatial view enabled")
+                    :tr("Activa el mapa tridimensional","Enable 3D map")}</small>
+            </span>
+          </div>
+        )}
         {routeResult && (
           <svg ref={routeSvgRef} className="navibori-route-svg-fallback" aria-hidden="true" preserveAspectRatio="none">
             <polyline fill="none" stroke="#ffffff" strokeWidth="10" strokeLinejoin="round" strokeLinecap="round" />
@@ -2950,6 +3007,7 @@ export default function NaviboriMap({
             ? tr("Cambiar a vista 2D","Switch to 2D view")
             : tr("Cambiar a vista 3D","Switch to 3D view")}
           aria-pressed={mode==="3d"}
+          disabled={!mapReady||buildings3DState==="unavailable"}
           onClick={()=>activateMapMode(mode==="3d" ? "2d" : "3d")}
           title={tr("Cambiar perspectiva del mapa","Switch map perspective")}
         >
