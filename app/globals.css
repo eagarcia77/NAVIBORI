@@ -2772,3 +2772,20 @@ html[data-motion="reduced"] .navibori-drift-bridge-marker i{
 .full-map-stage .maplibregl-marker {
   z-index:4;
 }
+
+.navibori-refresh-version {
+  display:block;
+  width:100%;
+  min-height:42px;
+  padding:9px 12px;
+  margin:7px 0;
+  border:1px solid #a8cbe6;
+  border-radius:11px;
+  background:#eaf5ff;
+  color:#07588b;
+  font-size:.79rem;
+  font-weight:800;
+  text-align:left;
+  cursor:pointer;
+}
+.navibori-refresh-version:disabled {opacity:.48;cursor:not-allowed;}
