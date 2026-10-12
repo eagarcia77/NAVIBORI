@@ -1455,6 +1455,8 @@ export default function NaviboriMap({
     }else{
       map.setProjection({type:"mercator"});
       map.easeTo({
+        // Globe mode can leave the map zoomed far out; restore street detail in 3D.
+        zoom:next==="3d" ? Math.max(map.getZoom(),15) : map.getZoom(),
         pitch:next==="3d" ? 58 : 0,
         bearing:next==="3d" ? map.getBearing() : 0,
         duration:reducedMotion ? 0 : 750
