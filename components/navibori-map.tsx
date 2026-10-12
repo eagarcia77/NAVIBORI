@@ -832,6 +832,17 @@ export default function NaviboriMap({
 
   useEffect(()=>{
     const applyLocale=()=>{
+      // Persist an explicit language choice across page reloads and installed PWA launches.
+      try{
+        const saved=window.localStorage.getItem("navibori:preferred-language");
+        if(saved==="es-PR" || saved==="en-US"){
+          document.documentElement.dataset.peripheralLocale=saved;
+        }else if(saved==="auto"){
+          delete document.documentElement.dataset.peripheralLocale;
+        }
+      }catch{
+        // Private browsing may disable storage; device language still works.
+      }
       const locale=browserNaviboriLocale();
       setDeviceLocale(locale);
       document.documentElement.lang=locale.locale;
@@ -3328,14 +3339,17 @@ export default function NaviboriMap({
               <span>{tr("Idioma","Language")}</span>
               <button type="button" aria-pressed={deviceLocale.language==="es"} onClick={()=>{
                 document.documentElement.dataset.peripheralLocale="es-PR";
+                try{window.localStorage.setItem("navibori:preferred-language","es-PR");}catch{}
                 window.dispatchEvent(new Event(NAVIBORI_LOCALE_CHANGE_EVENT));
               }}>Español</button>
               <button type="button" aria-pressed={deviceLocale.language==="en"} onClick={()=>{
                 document.documentElement.dataset.peripheralLocale="en-US";
+                try{window.localStorage.setItem("navibori:preferred-language","en-US");}catch{}
                 window.dispatchEvent(new Event(NAVIBORI_LOCALE_CHANGE_EVENT));
               }}>English</button>
               <button type="button" onClick={()=>{
                 delete document.documentElement.dataset.peripheralLocale;
+                try{window.localStorage.setItem("navibori:preferred-language","auto");}catch{}
                 window.dispatchEvent(new Event(NAVIBORI_LOCALE_CHANGE_EVENT));
               }}>{tr("Automático","Auto")}</button>
             </div>
