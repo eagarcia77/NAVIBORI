@@ -1198,6 +1198,25 @@ export default function NaviboriMap({
 
     map.on("load",()=>{
       ensureRouteInfrastructure(map);
+      // Restore the user's map perspective without changing GPS or routing.
+      try{
+        const savedMode=window.localStorage.getItem("navibori:map-mode");
+        if(savedMode==="3d"){
+          map.setProjection({type:"mercator"});
+          map.setPitch(58);
+          setMode("3d");
+        }else if(savedMode==="globe"){
+          map.setProjection({type:"globe"});
+          map.setZoom(Math.min(map.getZoom(),8));
+          setMode("globe");
+        }else if(savedMode==="2d"){
+          map.setProjection({type:"mercator"});
+          map.setPitch(0);
+          setMode("2d");
+        }
+      }catch{
+        // Private browsing can disable storage; keep the default 2D view.
+      }
       setBasemapState("ready");
       setMapReady(true);
     });
@@ -1437,6 +1456,13 @@ export default function NaviboriMap({
     }
 
     setMode(next);
+    try{
+      if(next==="2d" || next==="3d" || next==="globe"){
+        window.localStorage.setItem("navibori:map-mode",next);
+      }
+    }catch{
+      // Map switching must remain available without persistent storage.
+    }
     setTimeOpen(next==="time");
   }
 
