@@ -22,7 +22,8 @@ const CACHE_MS=1000*60*30;
 const MAX_CACHE_RECORDS=64;
 const OVERPASS_ENDPOINTS=[
   "https://overpass-api.de/api/interpreter",
-  "https://overpass.private.coffee/api/interpreter"
+  "https://overpass.private.coffee/api/interpreter",
+  "https://maps.mail.ru/osm/tools/overpass/api/interpreter"
 ] as const;
 
 function safeMeters(value:string|undefined){
@@ -99,21 +100,43 @@ export async function GET(request:NextRequest){
     .map(v=>v.toFixed(6)).join(",");
   const overpassQuery='[out:json][timeout:14];way["building"]('+bbox+');out geom 1800;';
   let lastError="Building provider unavailable";
+  // Make provider failures discoverable from Render logs, without recording
+  // exact device/GPS coordinates.
+  const startedAt=Date.now();
+  const viewportArea=(bounds.north-bounds.south)*(bounds.east-bounds.west);
+  console.info("[navibori-3d] request area_degrees2="+viewportArea.toFixed(7));
   for(const endpoint of OVERPASS_ENDPOINTS){
     try{
       const response=await fetch(endpoint,{
         method:"POST",
         body:new URLSearchParams({data:overpassQuery}),
-        headers:{"Content-Type":"application/x-www-form-urlencoded","Accept":"application/json"},
+        headers:{
+          "Content-Type":"application/x-www-form-urlencoded",
+          "Accept":"application/json",
+          "User-Agent":"NAVIBORI-3D/1.0 (OSM building-footprint visualization)"
+        },
         signal:AbortSignal.timeout(16000),
         cache:"no-store"
       });
-      if(!response.ok){lastError="Building provider HTTP "+response.status;continue;}
+      if(!response.ok){
+        lastError="Building provider HTTP "+response.status;
+        console.warn("[navibori-3d] provider "+new URL(endpoint).host+" HTTP "+response.status);
+        continue;
+      }
       const text=await response.text();
-      if(text.length>4_000_000){lastError="Building response too large";continue;}
+      if(text.length>4_000_000){
+        lastError="Building response too large";
+        console.warn("[navibori-3d] provider "+new URL(endpoint).host+" exceeded response-size limit");
+        continue;
+      }
       const parsed=JSON.parse(text) as {elements?:OverpassElement[]};
       if(!Array.isArray(parsed.elements))continue;
       const features=toFeatures(parsed.elements).slice(0,1800);
+      console.info(
+        "[navibori-3d] success provider="+new URL(endpoint).host+
+        " count="+features.length+
+        " elapsed_ms="+(Date.now()-startedAt)
+      );
       if(cache.size>=MAX_CACHE_RECORDS){
         const oldest=cache.keys().next().value;
         if(oldest!==undefined)cache.delete(oldest);
@@ -121,12 +144,24 @@ export async function GET(request:NextRequest){
       cache.set(key,{expiresAt:now+CACHE_MS,features});
       return NextResponse.json(
         {type:"FeatureCollection",features,source:"osm",cached:false},
-        {headers:{"Cache-Control":"public, max-age=120, stale-while-revalidate=600"}}
+        {headers:{
+          "Cache-Control":"public, max-age=120, stale-while-revalidate=600",
+          "X-Navibori-3D-Count":String(features.length),
+          "X-Navibori-3D-Provider":new URL(endpoint).host
+        }}
       );
     }catch(error){
       lastError=error instanceof Error?error.message:"Building request failed";
+      console.warn(
+        "[navibori-3d] provider "+new URL(endpoint).host+
+        " failed "+lastError.slice(0,140)
+      );
     }
   }
+  console.error(
+    "[navibori-3d] all providers failed after "+
+    (Date.now()-startedAt)+" ms"
+  );
   return NextResponse.json({error:"No se pudo consultar la geometría 3D.",detail:lastError},
     {status:503,headers:{"Cache-Control":"no-store"}});
 }
