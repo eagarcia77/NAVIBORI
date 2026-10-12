@@ -3578,6 +3578,7 @@ export default function NaviboriMap({
 
             <nav className="full-map-menu-links" aria-label="Opciones NAVIBORI">
               <Link href="/comercios">{copy.commerce}</Link>
+              <Link href="/store">{deviceLocale.language==="en" ? "NAVIBORI Store" : "Tienda NAVIBORI"}</Link>
               <Link href="/ar">AR</Link>
               <Link href="/twin">Twin</Link>
               <Link href="/studio">Studio</Link>
