@@ -2227,6 +2227,26 @@ export default function NaviboriMap({
         return;
       }
 
+      // Reject a transient, very imprecise fix only while a recent, more
+      // reliable route fix exists. Never block the initial GPS acquisition.
+      const incomingAccuracy=position.coords.accuracy;
+      const previousFix=lastGpsFixRef.current;
+      if(
+        previousFix &&
+        Date.now()-previousFix.at<15000 &&
+        Number.isFinite(incomingAccuracy) &&
+        incomingAccuracy>150 &&
+        previousFix.accuracyMeters!==null &&
+        previousFix.accuracyMeters<75
+      ){
+        setGpsAccuracy(incomingAccuracy);
+        setLocationStatus(tr(
+          "Señal GPS imprecisa: manteniendo la última posición confiable.",
+          "Low GPS accuracy: keeping the last reliable position."
+        ));
+        return;
+      }
+
       receivedFix=true;
       if(gpsBootstrapTimerRef.current!==null){
         clearTimeout(gpsBootstrapTimerRef.current);
