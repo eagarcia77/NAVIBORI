@@ -1457,6 +1457,11 @@ export default function NaviboriMap({
     if(gpsActive && next==="globe"){
       next="3d";
     }
+    // Navigation must not open the time-exploration view over an active route.
+    if(gpsActive && next==="time"){
+      next=mapModeRef.current==="3d" ? "3d" : "2d";
+      setTimeOpen(false);
+    }
 
     // Honor accessibility settings when transitioning between map perspectives.
     const reducedMotion=window.matchMedia("(prefers-reduced-motion: reduce)").matches;
