@@ -1448,6 +1448,12 @@ export default function NaviboriMap({
     userLocation
   ]);
 
+  // Adaptive 3D perspective: show more surrounding streets at lower zoom,
+  // then gradually tilt toward the road at street-level detail.
+  function adaptiveStreetPitch(zoom:number){
+    return zoom<15 ? 40 : zoom<17 ? 50 : 58;
+  }
+
   function activateMapMode(next:RealityMode){
     const map=mapRef.current;
     if(!map) return;
@@ -1487,7 +1493,7 @@ export default function NaviboriMap({
       map.easeTo({
         // Returning from globe should restore street detail in both 2D and 3D.
         zoom:mapModeRef.current==="globe" ? (streetZoomBeforeGlobeRef.current ?? Math.max(map.getZoom(),15)) : map.getZoom(),
-        pitch:next==="3d" ? 58 : 0,
+        pitch:next==="3d" ? adaptiveStreetPitch(map.getZoom()) : 0,
         bearing:next==="3d" ? map.getBearing() : 0,
         duration:reducedMotion ? 0 : 750
       });
@@ -1817,7 +1823,7 @@ export default function NaviboriMap({
       zoom:Math.max(mapRef.current?.getZoom() ?? 16,16.8),
       offset:[0,orbitalLookahead ? 130 : 110],
       pitch:mapModeRef.current==="3d"
-        ? 58
+        ? adaptiveStreetPitch(Math.max(mapRef.current?.getZoom() ?? 16,16.8))
         : mapModeRef.current==="2d"
           ? 0
           : activeMode==="driving"
