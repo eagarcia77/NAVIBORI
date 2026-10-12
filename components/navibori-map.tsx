@@ -421,6 +421,9 @@ export default function NaviboriMap({
   const buildingsLayerRef=useRef<string|null>(null);
   const [buildings3DState,setBuildings3DState]=useState<"loading"|"ready"|"no-data"|"unavailable">("loading");
   const [buildingCount,setBuildingCount]=useState(0);
+  const [buildingRenderedCount,setBuildingRenderedCount]=useState(0);
+  const [buildingError,setBuildingError]=useState("");
+  const buildingRefreshRef=useRef<((force?:boolean)=>void)|null>(null);
   const streetZoomBeforeGlobeRef=useRef<number|null>(null);
   const [timeOpen,setTimeOpen]=useState(false);
   const [menuOpen,setMenuOpen]=useState(false);
@@ -1233,16 +1236,21 @@ export default function NaviboriMap({
     let buildingsRequest:AbortController|null=null;
     let refreshTimer:ReturnType<typeof setTimeout>|null=null;
     let lastCenter:{lng:number;lat:number;at:number}|null=null;
-    const update3DBuildings=async()=>{
+    const update3DBuildings=async(force=false)=>{
       if(disposed||!map.isStyleLoaded())return;
       if(map.getZoom()<15){
         setBuildings3DState("no-data");
         setBuildingCount(0);
+        setBuildingRenderedCount(0);
+        setBuildingError(tr(
+          "Acerca el mapa para cargar edificios (zoom mínimo: 15).",
+          "Zoom in to load buildings (minimum zoom: 15)."
+        ));
         return;
       }
       const current=map.getCenter();
       // Avoid repeated requests for nearby GPS positions and animated pitch.
-      if(lastCenter &&
+      if(!force && lastCenter &&
         Math.abs(current.lng-lastCenter.lng)<0.0024 &&
         Math.abs(current.lat-lastCenter.lat)<0.0024 &&
         Date.now()-lastCenter.at<60_000)return;
@@ -1251,13 +1259,19 @@ export default function NaviboriMap({
       const controller=new AbortController();
       buildingsRequest=controller;
       setBuildings3DState("loading");
+      setBuildingError("");
       const bounds=map.getBounds();
       // Keep the requested viewport small enough for the Overpass rate limits.
       const south=Math.max(bounds.getSouth(),current.lat-0.012);
       const north=Math.min(bounds.getNorth(),current.lat+0.012);
       const west=Math.max(bounds.getWest(),current.lng-0.012);
       const east=Math.min(bounds.getEast(),current.lng+0.012);
-      if(north-south<0.00002||east-west<0.00002) return;
+      if(north-south<0.00002||east-west<0.00002){
+        setBuildings3DState("unavailable");
+        setBuildingError(tr("La extensión del mapa no es válida.","Invalid map bounds."));
+        lastCenter=null;
+        return;
+      }
       const query=new URLSearchParams({
         south:south.toFixed(6),west:west.toFixed(6),
         north:north.toFixed(6),east:east.toFixed(6)
@@ -1267,7 +1281,13 @@ export default function NaviboriMap({
           signal:controller.signal,
           cache:"default"
         });
-        if(!response.ok)throw Error("OSM buildings HTTP "+response.status);
+        if(!response.ok){
+          const failed=await response.json().catch(()=>null) as {detail?:string}|null;
+          throw Error(
+            "HTTP "+response.status+
+            (failed?.detail ? " · "+String(failed.detail).slice(0,115) : "")
+          );
+        }
         const data=await response.json() as {
           type:"FeatureCollection";
           features:Array<{
@@ -1277,12 +1297,20 @@ export default function NaviboriMap({
             geometry:{type:"Polygon";coordinates:number[][][]};
           }>;
         };
-        if(disposed||controller.signal.aborted||!Array.isArray(data.features))return;
+        if(disposed||controller.signal.aborted)return;
+        if(!Array.isArray(data.features))throw Error("Invalid GeoJSON response");
         const source=map.getSource(NAVIBORI_BUILDINGS_SOURCE) as maplibregl.GeoJSONSource|undefined;
-        if(!source)return;
+        if(!source)throw Error("3D GeoJSON source missing from map");
         source.setData({type:"FeatureCollection",features:data.features});
         setBuildingCount(data.features.length);
-        setBuildings3DState(data.features.length>0?"ready":"no-data");
+        setBuildingRenderedCount(0);
+        setBuildings3DState(data.features.length>0?"loading":"no-data");
+        if(data.features.length===0){
+          setBuildingError(tr(
+            "El proveedor respondió, pero no encontró edificios en esta zona.",
+            "Provider responded, but found no buildings in this area."
+          ));
+        }
         // The route layer must always remain visible above the 3D buildings.
         for(const id of [ROUTE_GLOW_ID,ROUTE_CASING_ID,ROUTE_LINE_ID,ROUTE_ARROW_ID]){
           if(map.getLayer(id))map.moveLayer(id);
@@ -1290,19 +1318,25 @@ export default function NaviboriMap({
       }catch(error){
         if(disposed||controller.signal.aborted)return;
         setBuildingCount(0);
+        setBuildingRenderedCount(0);
         setBuildings3DState("unavailable");
+        setBuildingError(
+          error instanceof Error ? error.message.slice(0,160)
+            : tr("Error desconocido al cargar edificios.","Unknown building loading error.")
+        );
         // Allow an explicit map movement to retry after provider failure.
         lastCenter=null;
       }
     };
-    const queueBuildingsRefresh=()=>{
+    const queueBuildingsRefresh=(force=false)=>{
       if(disposed||mapModeRef.current!=="3d")return;
       if(refreshTimer!==null)clearTimeout(refreshTimer);
       refreshTimer=setTimeout(()=>{
         refreshTimer=null;
-        void update3DBuildings();
-      },650);
+        void update3DBuildings(force);
+      },force ? 50 : 650);
     };
+    buildingRefreshRef.current=queueBuildingsRefresh;
     const setupMap=()=>{
       if(disposed)return;
       buildingsLayerRef.current=create3DBuildings(map);
@@ -1363,6 +1397,20 @@ export default function NaviboriMap({
         if(map.getLayer(id))map.moveLayer(id);
       }
     });
+    map.on("idle",()=>{
+      if(disposed||mapModeRef.current!=="3d"||!map.getLayer(NAVIBORI_BUILDINGS_ID))return;
+      try{
+        const features=map.queryRenderedFeatures({layers:[NAVIBORI_BUILDINGS_ID]});
+        if(features.length>0){
+          setBuildingRenderedCount(features.length);
+          setBuildings3DState("ready");
+          setBuildingError("");
+        }
+      }catch(error){
+        setBuildingError(error instanceof Error?error.message.slice(0,160):"3D rendering failed");
+        setBuildings3DState("unavailable");
+      }
+    });
     const showZoomControls=window.matchMedia("(min-width: 768px)").matches;
     map.addControl(
       new maplibregl.NavigationControl({
@@ -1389,6 +1437,7 @@ export default function NaviboriMap({
     mapRef.current=map;
     return ()=>{
       disposed=true;
+      buildingRefreshRef.current=null;
       if(refreshTimer!==null)clearTimeout(refreshTimer);
       buildingsRequest?.abort();
       map.getCanvas().removeEventListener("pointerdown",handleManualMapInteraction);
@@ -1646,8 +1695,7 @@ export default function NaviboriMap({
     mapModeRef.current=next;
     setMode(next);
     if(next==="3d"){
-      // Reload the actual building polygons after switching out of 2D.
-      map.fire("moveend");
+      buildingRefreshRef.current?.(true);
     }
     try{
       if(next==="2d" || next==="3d" || next==="globe"){
@@ -2965,6 +3013,18 @@ export default function NaviboriMap({
     >
       <div className="map-stage full-map-stage">
         <div ref={mapNode} className="map-canvas full-map-canvas" />
+        {gpsActive&&mode==="3d"&&(
+          <div className="navibori-3d-navigation-status" role="status">
+            <span>◈ 3D</span>
+            <strong>{buildings3DState==="ready"
+              ?tr(buildingRenderedCount+" edificios visibles",buildingRenderedCount+" buildings visible")
+              :buildings3DState==="loading"
+                ?tr("Cargando edificios","Loading buildings")
+                :buildings3DState==="no-data"
+                  ?tr("Sin edificios visibles","No visible buildings")
+                  :tr("Edificios no disponibles","Buildings unavailable")}</strong>
+          </div>
+        )}
         {!gpsActive&&(
           <div className="navibori-3d-indicator" data-view={mode} role="status">
             <span className="navibori-3d-orb" aria-hidden="true">◈</span>
@@ -2974,7 +3034,7 @@ export default function NaviboriMap({
                 :mode==="3d"&&buildings3DState==="no-data"
                   ?tr("No hay edificios 3D en esta zona","No 3D buildings in this area")
                   :mode==="3d"&&buildings3DState==="ready"
-                    ?tr(buildingCount+" edificios 3D",buildingCount+" 3D buildings")
+                    ?tr(buildingRenderedCount+" visibles de "+buildingCount+" edificios",buildingRenderedCount+" visible of "+buildingCount+" buildings")
                   :mode==="3d"&&buildings3DState==="loading"
                     ?tr("Cargando edificios reales…","Loading real buildings…")
                   :mode==="3d"
@@ -3659,6 +3719,25 @@ export default function NaviboriMap({
                   onClick={()=>activateMapMode("globe")}
                 >
                   {deviceLocale.language==="en" ? "Globe" : "Globo"}
+                </button>
+              </div>
+              <div className="navibori-3d-diagnostic-menu" role="status">
+                <strong>{tr("Diagnóstico 3D","3D diagnostics")}</strong>
+                <span>{mode!=="3d"
+                  ?tr("Vista 2D o globo seleccionada","2D or globe view selected")
+                  :buildings3DState==="loading"
+                    ?tr("Consultando y dibujando edificios…","Fetching and drawing buildings…")
+                  :buildings3DState==="ready"
+                    ?tr(buildingRenderedCount+" estructuras visibles",buildingRenderedCount+" visible structures")
+                  :buildings3DState==="no-data"
+                    ?tr("No hay geometría 3D visible","No visible 3D geometry")
+                    :tr("No se pudieron cargar los edificios","Buildings could not be loaded")}</span>
+                {buildingError&&<small>{buildingError}</small>}
+                <button type="button" onClick={()=>{
+                  if(mode!=="3d")activateMapMode("3d");
+                  buildingRefreshRef.current?.(true);
+                }}>
+                  {tr("Reintentar edificios 3D","Retry 3D buildings")}
                 </button>
               </div>
             </section>
