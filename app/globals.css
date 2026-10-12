@@ -2850,3 +2850,36 @@ html[data-motion="reduced"] .navibori-drift-bridge-marker i{
     padding:7px 9px;
   }
 }
+
+/* Minimal driving strip: ETA + distance + three controls; hide diagnostics while driving. */
+.map-panel[data-navigation-active="true"] .navibori-navigation-footer{
+  width:min(510px,calc(100% - 20px));
+  grid-template-columns:minmax(70px,1fr) minmax(70px,1fr) auto auto auto;
+  gap:4px;
+  padding:5px;
+  border-radius:13px;
+}
+.map-panel[data-navigation-active="true"] .navibori-navigation-footer>div:nth-child(3),
+.map-panel[data-navigation-active="true"] .navibori-navigation-footer>div:nth-child(4){
+  display:none!important;
+}
+.map-panel[data-navigation-active="true"] .navibori-navigation-footer>div{
+  padding:4px 6px;
+}
+.map-panel[data-navigation-active="true"] .navibori-navigation-footer>button{
+  min-height:36px;
+  padding:0 7px;
+}
+@media(max-width:440px){
+  .map-panel[data-navigation-active="true"] .navibori-navigation-footer{
+    width:calc(100% - 12px);
+    grid-template-columns:minmax(55px,1fr) minmax(55px,1fr) auto auto auto;
+    gap:3px;
+    padding:4px;
+  }
+  .map-panel[data-navigation-active="true"] .navibori-navigation-footer>button{
+    min-height:36px;
+    padding:0 5px;
+    font-size:.52rem;
+  }
+}
