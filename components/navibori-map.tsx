@@ -1451,7 +1451,10 @@ export default function NaviboriMap({
   // Adaptive 3D perspective: show more surrounding streets at lower zoom,
   // then gradually tilt toward the road at street-level detail.
   function adaptiveStreetPitch(zoom:number){
-    return zoom<15 ? 40 : zoom<17 ? 50 : 58;
+    // Smooth interpolation avoids abrupt camera jumps across zoom thresholds.
+    if(zoom<=14) return 38;
+    if(zoom>=18) return 58;
+    return 38+(zoom-14)*5;
   }
 
   function activateMapMode(next:RealityMode){
