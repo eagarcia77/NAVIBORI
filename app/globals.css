@@ -2883,3 +2883,30 @@ html[data-motion="reduced"] .navibori-drift-bridge-marker i{
     font-size:.52rem;
   }
 }
+
+/* Full map driving mode: eliminate the bottom navigation bar entirely. */
+.map-panel[data-navigation-active="true"] .navibori-navigation-footer{
+  display:none!important;
+}
+.navibori-minimal-stop{
+  position:absolute;
+  top:max(16px,env(safe-area-inset-top));
+  left:max(74px,calc(env(safe-area-inset-left) + 74px));
+  z-index:46;
+  min-height:36px;
+  padding:0 11px;
+  border:1px solid rgba(177,61,61,.35);
+  border-radius:10px;
+  background:rgba(255,255,255,.96);
+  color:#a83b3b;
+  font-size:.75rem;
+  font-weight:800;
+  box-shadow:0 4px 14px rgba(22,38,46,.12);
+}
+.navibori-minimal-stop:focus-visible{outline:3px solid #087a67;outline-offset:3px}
+@media(max-width:760px){
+  .navibori-minimal-stop{
+    top:max(62px,calc(env(safe-area-inset-top) + 54px));
+    left:max(12px,env(safe-area-inset-left));
+  }
+}
