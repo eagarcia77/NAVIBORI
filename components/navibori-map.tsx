@@ -1348,7 +1348,7 @@ export default function NaviboriMap({
       // tile errors should not replace a usable map or erase active routes.
       if(!rasterFallback &&
          !map.isStyleLoaded() &&
-         /openfreemap|styles\\/bright|failed to fetch|networkerror/i.test(detail)){
+         /openfreemap|failed to fetch|networkerror/i.test(detail)){
         rasterFallback=true;
         setBuildings3DState("unavailable");
         setBasemapState("loading");
