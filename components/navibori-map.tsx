@@ -1282,6 +1282,17 @@ export default function NaviboriMap({
       }
     });
 
+    // When optional building tiles become available, place the route above
+    // extrusions again so the highlighted navigation line stays legible.
+    map.on("sourcedata",(event)=>{
+      if(event.sourceId!=="navibori-building-tiles" || !event.isSourceLoaded) return;
+      if(map.getLayer("navibori-3d-buildings") && map.getLayer(ROUTE_LINE_ID)){
+        for(const id of [ROUTE_GLOW_ID,ROUTE_CASING_ID,ROUTE_LINE_ID,ROUTE_ARROW_ID]){
+          if(map.getLayer(id)) map.moveLayer(id);
+        }
+      }
+    });
+
     map.on("styledata",()=>{
       if(
         map.isStyleLoaded() &&
