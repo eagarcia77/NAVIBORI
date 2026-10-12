@@ -1459,7 +1459,7 @@ export default function NaviboriMap({
     mapRef.current?.easeTo({
       center:[location.longitude,location.latitude],
       zoom:17,
-      pitch:0,
+      pitch:mode==="3d" ? 58 : 0,
       duration:650
     });
   }
@@ -2478,7 +2478,11 @@ export default function NaviboriMap({
             navigationBearing ??
             map?.getBearing() ??
             0,
-          pitch:cameraProfile.pitch,
+          pitch:mode==="3d"
+            ? Math.max(48,cameraProfile.pitch)
+            : mode==="2d"
+              ? 0
+              : cameraProfile.pitch,
           duration:firstFix ? 650 : cameraProfile.duration
         });
       }
