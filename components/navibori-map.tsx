@@ -1293,7 +1293,14 @@ export default function NaviboriMap({
       }
     });
     map.on("error",(event)=>{
-      if(event?.error) setBasemapState("error");
+      if(!event?.error) return;
+      // Optional 3D vector tiles must not mark the working OSM raster
+      // basemap as failed. Keep GPS routing usable on weak connections.
+      const detail=String(event.error.message ?? event.error);
+      if(detail.includes("openfreemap.org") || detail.includes("navibori-building-tiles")){
+        return;
+      }
+      setBasemapState("error");
     });
 
     const showZoomControls=window.matchMedia("(min-width: 768px)").matches;
