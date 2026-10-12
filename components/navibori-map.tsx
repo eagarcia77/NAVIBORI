@@ -1199,6 +1199,37 @@ export default function NaviboriMap({
     });
 
     map.on("load",()=>{
+      // Optional real building extrusions from OpenFreeMap vector tiles.
+      // The raster street map remains the primary basemap; route layers are
+      // inserted afterwards so navigation lines stay above building geometry.
+      try{
+        if(!map.getSource("navibori-building-tiles")){
+          map.addSource("navibori-building-tiles",{
+            type:"vector",
+            url:"https://tiles.openfreemap.org/planet",
+            attribution:"© OpenStreetMap contributors · OpenFreeMap"
+          });
+        }
+        if(!map.getLayer("navibori-3d-buildings")){
+          map.addLayer({
+            id:"navibori-3d-buildings",
+            type:"fill-extrusion",
+            source:"navibori-building-tiles",
+            "source-layer":"building",
+            minzoom:15,
+            filter:["!=",["get","hide_3d"],true],
+            layout:{visibility:"none"},
+            paint:{
+              "fill-extrusion-color":"#aab5c2",
+              "fill-extrusion-height":["interpolate",["linear"],["zoom"],15,0,16,["coalesce",["get","render_height"],0]],
+              "fill-extrusion-base":["coalesce",["get","render_min_height"],0],
+              "fill-extrusion-opacity":0.42
+            }
+          });
+        }
+      }catch{
+        // Buildings are progressive enhancement; keep routing functional.
+      }
       ensureRouteInfrastructure(map);
       // Restore the user's map perspective without changing GPS or routing.
       try{
@@ -1212,6 +1243,9 @@ export default function NaviboriMap({
           // Restore the 3D perspective relative to the actual initial zoom.
           const initialZoom=map.getZoom();
           map.setPitch(adaptiveStreetPitch(initialZoom));
+          if(map.getLayer("navibori-3d-buildings")){
+            map.setLayoutProperty("navibori-3d-buildings","visibility","visible");
+          }
           mapModeRef.current="3d";
           setMode("3d");
         }else if(savedMode==="globe"){
@@ -1523,6 +1557,9 @@ export default function NaviboriMap({
       });
     }
 
+    if(map.getLayer("navibori-3d-buildings")){
+      map.setLayoutProperty("navibori-3d-buildings","visibility",next==="3d" ? "visible" : "none");
+    }
     mapModeRef.current=next;
     setMode(next);
     try{
