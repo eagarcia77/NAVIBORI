@@ -1452,6 +1452,12 @@ export default function NaviboriMap({
     const map=mapRef.current;
     if(!map) return;
 
+    // During live navigation, offer immersive 3D street perspective instead of
+    // switching to the low-zoom globe overview and obscuring route detail.
+    if(gpsActive && next==="globe"){
+      next="3d";
+    }
+
     // Honor accessibility settings when transitioning between map perspectives.
     const reducedMotion=window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     if(next==="globe"){
