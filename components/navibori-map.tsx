@@ -1970,7 +1970,6 @@ export default function NaviboriMap({
     const key=deviceLocale.language+"|"+localizedInstruction+"|"+distanceBand;
     if(!force && lastSpokenInstructionRef.current===key) return;
 
-    lastSpokenInstructionRef.current=key;
     window.speechSynthesis.cancel();
 
     const prefix=
@@ -1995,7 +1994,23 @@ export default function NaviboriMap({
     }
 
     utterance.rate=0.96;
-    window.speechSynthesis.speak(utterance);
+    // Only mark a cue as delivered once speech actually starts.
+    // Safari can reject or interrupt a queued utterance.
+    utterance.onstart=()=>{
+      lastSpokenInstructionRef.current=key;
+    };
+    utterance.onerror=()=>{
+      if(lastSpokenInstructionRef.current===key){
+        lastSpokenInstructionRef.current="";
+      }
+    };
+    try{
+      window.speechSynthesis.speak(utterance);
+    }catch{
+      if(lastSpokenInstructionRef.current===key){
+        lastSpokenInstructionRef.current="";
+      }
+    }
   }
 
   async function calculateRoute(
