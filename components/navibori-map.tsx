@@ -2208,6 +2208,12 @@ export default function NaviboriMap({
     }
 
     gpsWatchRef.current=null;
+    // A finished navigation must not leave spoken directions queued in Safari.
+    pendingSpeechKeyRef.current="";
+    lastSpokenInstructionRef.current="";
+    if(typeof window!=="undefined" && "speechSynthesis" in window){
+      window.speechSynthesis.cancel();
+    }
     activeNavigationModeRef.current=null;
     lastRouteOriginRef.current=null;
     lastRouteRefreshAtRef.current=0;
