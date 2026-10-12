@@ -2261,6 +2261,10 @@ export default function NaviboriMap({
     }
 
     stopGpsNavigation();
+    // Enter a distraction-reduced, full-map navigation view immediately.
+    setMenuOpen(false);
+    setTimeOpen(false);
+    setDirectionsOpen(false);
     setArrived(false);
     setDirectionsOpen(false);
     lastSpokenInstructionRef.current="";
@@ -2767,6 +2771,7 @@ export default function NaviboriMap({
       data-cockpit-phase={lagrangePhase}
       data-exodock-state={exoDockState}
       data-gravity-lens={gravityLensPhase}
+      data-navigation-active={gpsActive ? "true" : "false"}
       aria-label={tr("Mapa de comercios NAVIBORI","NAVIBORI business map")}
     >
       <div className="map-stage full-map-stage">
@@ -2825,7 +2830,7 @@ export default function NaviboriMap({
           {menuOpen ? "×" : "☰"}
         </button>
 
-        {navigationPhase!=="idle" && selected && (
+        {navigationPhase!=="idle" && !gpsActive && selected && (
           <div className={"navibori-navigation-phase "+navigationPhase} aria-live="polite">
             <span className={navigationPhase==="permission"||navigationPhase==="gps"||navigationPhase==="routing"||navigationPhase==="navigating" ? "done" : ""}>{copy.permissionStep}</span>
             <span className={navigationPhase==="gps"||navigationPhase==="routing"||navigationPhase==="navigating" ? "done" : ""}>{copy.gpsStep}</span>
