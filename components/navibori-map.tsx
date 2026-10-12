@@ -3028,6 +3028,17 @@ export default function NaviboriMap({
               </button>
             </div>
 
+            <button
+              type="button"
+              className="navibori-refresh-version"
+              disabled={gpsActive}
+              title={gpsActive ? tr("Termina la navegación antes de actualizar.","End navigation before refreshing.") : tr("Solicitar una copia nueva de la aplicación.","Request a fresh copy of the application.")}
+              onClick={()=>{
+                const url=new URL(window.location.href);
+                url.searchParams.set("navibori_refresh",Date.now().toString());
+                window.location.replace(url.toString());
+              }}
+            >↻ {tr("Actualizar aplicación","Refresh application")} · v{buildRevision}</button>
             <details className="navibori-health-panel">
               <summary>{tr("Estado técnico de navegación","Navigation health")}</summary>
               <div className="navibori-health-summary" role="status">
