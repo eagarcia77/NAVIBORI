@@ -83,7 +83,7 @@ const ROUTE_LINE_ID="navibori-commerce-route-line";
 const ROUTE_ARROW_ID="navibori-commerce-route-arrows";
 const ROUTE_ARROW_IMAGE_ID="navibori-route-arrow-image";
 
-type RealityMode="2d"|"globe"|"time";
+type RealityMode="2d"|"3d"|"globe"|"time";
 type MapCategory="all"|CommerceCategory;
 
 const categories:Array<{value:MapCategory;label:string}>=[
@@ -1429,6 +1429,11 @@ export default function NaviboriMap({
       map.easeTo({zoom:Math.min(map.getZoom(),8),duration:900});
     }else{
       map.setProjection({type:"mercator"});
+      map.easeTo({
+        pitch:next==="3d" ? 58 : 0,
+        bearing:next==="3d" ? map.getBearing() : 0,
+        duration:750
+      });
     }
 
     setMode(next);
@@ -3331,6 +3336,15 @@ export default function NaviboriMap({
                   onClick={()=>activateMapMode("2d")}
                 >
                   2D
+                </button>
+                <button
+                  type="button"
+                  className={mode==="3d" ? "active" : ""}
+                  onClick={()=>activateMapMode("3d")}
+                  aria-pressed={mode==="3d"}
+                  title={tr("Vista en perspectiva 3D","3D perspective view")}
+                >
+                  3D
                 </button>
                 <button
                   type="button"
