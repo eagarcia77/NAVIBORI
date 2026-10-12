@@ -1789,6 +1789,17 @@ export default function NaviboriMap({
     setFollowGps(true);
 
     const activeMode=activeNavigationModeRef.current;
+    // GPS guidance requires a street-level projection, not the globe overview.
+    if(mapModeRef.current==="globe"){
+      mapRef.current?.setProjection({type:"mercator"});
+      mapModeRef.current="2d";
+      setMode("2d");
+      try{
+        window.localStorage.setItem("navibori:map-mode","2d");
+      }catch{
+        // GPS guidance works without persistent preferences.
+      }
+    }
     const target=orbitalLookahead?.coordinate ?? userLocation;
     mapRef.current?.easeTo({
       center:[target.longitude,target.latitude],
