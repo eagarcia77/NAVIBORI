@@ -1577,21 +1577,25 @@ export default function NaviboriMap({
       const height=canvas.clientHeight;
       if(!width || !height) return;
       svg.setAttribute("viewBox",`0 0 ${width} ${height}`);
-      const step=Math.max(1,Math.floor(geometry.length/1600));
-      const coords=geometry.filter((_,index)=>index%step===0 || index===geometry.length-1);
-      const points=coords.map(([longitude,latitude])=>{
+      // Keep all road bends: thinning by index can cut across short streets.
+      const points=geometry.map(([longitude,latitude])=>{
+        if(!Number.isFinite(longitude) || !Number.isFinite(latitude)) return "";
         const point=map.project([longitude,latitude]);
-        return `${point.x.toFixed(1)},${point.y.toFixed(1)}`;
-      }).join(" ");
+        return Number.isFinite(point.x) && Number.isFinite(point.y)
+          ? `${point.x.toFixed(1)},${point.y.toFixed(1)}`
+          : "";
+      }).filter(Boolean).join(" ");
       svg.querySelectorAll("polyline").forEach(line=>line.setAttribute("points",points));
     };
     const schedule=()=>{if(!frame) frame=window.requestAnimationFrame(paint);};
     paint();
     map.on("move",schedule);
+    map.on("render",schedule);
     map.on("resize",schedule);
     map.on("styledata",schedule);
     return ()=>{
       map.off("move",schedule);
+      map.off("render",schedule);
       map.off("resize",schedule);
       map.off("styledata",schedule);
       if(frame) window.cancelAnimationFrame(frame);
