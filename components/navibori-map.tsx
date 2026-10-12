@@ -3074,7 +3074,7 @@ export default function NaviboriMap({
               </div>
             </div>
 
-            <div className="navibori-navigation-footer">
+            {!gpsActive && <div className="navibori-navigation-footer">
               <div>
                 <span>ETA</span>
                 <strong>
@@ -3152,7 +3152,7 @@ export default function NaviboriMap({
               >
                 {copy.finish}
               </button>
-            </div>
+            </div>}
           </aside>
         )}
 
