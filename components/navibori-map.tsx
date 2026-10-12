@@ -2768,6 +2768,19 @@ export default function NaviboriMap({
 
         <button
           type="button"
+          className={"navibori-perspective-button "+(mode==="3d" ? "active" : "")}
+          aria-label={mode==="3d"
+            ? tr("Cambiar a vista 2D","Switch to 2D view")
+            : tr("Cambiar a vista 3D","Switch to 3D view")}
+          aria-pressed={mode==="3d"}
+          onClick={()=>activateMapMode(mode==="3d" ? "2d" : "3d")}
+          title={tr("Cambiar perspectiva del mapa","Switch map perspective")}
+        >
+          {mode==="3d" ? "2D" : "3D"}
+        </button>
+
+        <button
+          type="button"
           className="full-map-menu-button"
           aria-label={
             menuOpen
