@@ -1235,6 +1235,7 @@ export default function NaviboriMap({
     let disposed=false;
     let buildingsRequest:AbortController|null=null;
     let refreshTimer:ReturnType<typeof setTimeout>|null=null;
+    let renderingCheckTimer:ReturnType<typeof setTimeout>|null=null;
     let lastCenter:{lng:number;lat:number;at:number}|null=null;
     const update3DBuildings=async(force=false)=>{
       if(disposed||!map.isStyleLoaded())return;
@@ -1256,6 +1257,10 @@ export default function NaviboriMap({
         Date.now()-lastCenter.at<60_000)return;
       lastCenter={lng:current.lng,lat:current.lat,at:Date.now()};
       if(buildingsRequest) buildingsRequest.abort();
+      if(renderingCheckTimer!==null){
+        clearTimeout(renderingCheckTimer);
+        renderingCheckTimer=null;
+      }
       const controller=new AbortController();
       buildingsRequest=controller;
       setBuildings3DState("loading");
@@ -1305,6 +1310,39 @@ export default function NaviboriMap({
         setBuildingCount(data.features.length);
         setBuildingRenderedCount(0);
         setBuildings3DState(data.features.length>0?"loading":"no-data");
+        // Verify actual GPU-visible extrusion faces after MapLibre processes
+        // the GeoJSON update, even if a moving GPS camera prevents 'idle'.
+        if(data.features.length>0){
+          let attempts=0;
+          const verifyRendered=()=>{
+            if(disposed||controller.signal.aborted)return;
+            let visible=0;
+            try{
+              visible=map.queryRenderedFeatures({layers:[NAVIBORI_BUILDINGS_ID]}).length;
+            }catch(error){
+              setBuildings3DState("unavailable");
+              setBuildingError(
+                error instanceof Error ? error.message.slice(0,150)
+                  : "MapLibre 3D feature inspection failed"
+              );
+              return;
+            }
+            if(visible>0){
+              setBuildingRenderedCount(visible);
+              setBuildings3DState("ready");
+              setBuildingError("");
+            }else if(++attempts<5){
+              renderingCheckTimer=setTimeout(verifyRendered,750);
+            }else{
+              setBuildings3DState("no-data");
+              setBuildingError(tr(
+                "La API entregó edificios, pero no se ven paredes 3D. Verifica zoom y WebGL.",
+                "Building API returned geometry, but 3D walls are not visible. Check zoom and WebGL."
+              ));
+            }
+          };
+          renderingCheckTimer=setTimeout(verifyRendered,950);
+        }
         if(data.features.length===0){
           setBuildingError(tr(
             "El proveedor respondió, pero no encontró edificios en esta zona.",
@@ -1439,6 +1477,7 @@ export default function NaviboriMap({
       disposed=true;
       buildingRefreshRef.current=null;
       if(refreshTimer!==null)clearTimeout(refreshTimer);
+      if(renderingCheckTimer!==null)clearTimeout(renderingCheckTimer);
       buildingsRequest?.abort();
       map.getCanvas().removeEventListener("pointerdown",handleManualMapInteraction);
       routeAbortRef.current?.abort();
