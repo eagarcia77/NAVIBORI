@@ -2550,7 +2550,9 @@ export default function NaviboriMap({
             : mapModeRef.current==="2d"
               ? 0
               : cameraProfile.pitch,
-          duration:firstFix ? 650 : cameraProfile.duration
+          duration:window.matchMedia("(prefers-reduced-motion: reduce)").matches
+            ? 0
+            : firstFix ? 650 : cameraProfile.duration
         });
       }
 
