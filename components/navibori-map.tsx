@@ -3535,7 +3535,7 @@ export default function NaviboriMap({
             className="gps-recenter-floating"
             onClick={recenterGpsCamera}
           >
-            ◎ Recentrar en mi GPS
+            {tr("◎ Recentrar","◎ Recenter")}
           </button>
         )}
 
