@@ -1220,7 +1220,7 @@ export default function NaviboriMap({
             filter:["!=",["get","hide_3d"],true],
             layout:{visibility:"none"},
             paint:{
-              "fill-extrusion-color":"#aab5c2",
+              "fill-extrusion-color":["interpolate",["linear"],["zoom"],15,"#d0dce8",17,"#8faec6",19,"#648cac"],
               "fill-extrusion-height":["interpolate",["linear"],["zoom"],15,0,16,["min",300,["max",0,["coalesce",["to-number",["get","render_height"],null],["to-number",["get","height"],null],["*",["to-number",["get","building:levels"],0],3],0]]]],
               "fill-extrusion-base":["min",300,["max",0,["coalesce",["to-number",["get","render_min_height"],null],["to-number",["get","min_height"],null],0]]],
               "fill-extrusion-opacity":0.42
