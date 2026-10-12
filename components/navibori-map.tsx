@@ -334,6 +334,7 @@ export default function NaviboriMap({
   const gpsActiveRef=useRef(false);
   const voiceEnabledRef=useRef(false);
   const lastSpokenInstructionRef=useRef("");
+  const pendingSpeechKeyRef=useRef("");
   const wakeLockRef=useRef<WakeLockSentinel|null>(null);
   const lastTrajectoryRiskRef=useRef<TrajectoryRisk>("stable");
   const lastVectorGatePhaseRef=useRef<ReturnType<typeof deriveVectorGatePhase>>("cruise");
@@ -1446,6 +1447,7 @@ export default function NaviboriMap({
     setArrived(false);
     setDirectionsOpen(false);
     setPendingNavigation(null);
+    pendingSpeechKeyRef.current="";
     lastSpokenInstructionRef.current="";
     setSelectedSlug(business.slug);
 
@@ -1968,8 +1970,12 @@ export default function NaviboriMap({
           : "far";
     const localizedInstruction=localizeManeuver(instruction,deviceLocale.language);
     const key=deviceLocale.language+"|"+localizedInstruction+"|"+distanceBand;
-    if(!force && lastSpokenInstructionRef.current===key) return;
+    if(!force && (
+      lastSpokenInstructionRef.current===key ||
+      pendingSpeechKeyRef.current===key
+    )) return;
 
+    pendingSpeechKeyRef.current=key;
     window.speechSynthesis.cancel();
 
     const prefix=
@@ -1997,9 +2003,15 @@ export default function NaviboriMap({
     // Only mark a cue as delivered once speech actually starts.
     // Safari can reject or interrupt a queued utterance.
     utterance.onstart=()=>{
+      if(pendingSpeechKeyRef.current===key){
+        pendingSpeechKeyRef.current="";
+      }
       lastSpokenInstructionRef.current=key;
     };
     utterance.onerror=()=>{
+      if(pendingSpeechKeyRef.current===key){
+        pendingSpeechKeyRef.current="";
+      }
       if(lastSpokenInstructionRef.current===key){
         lastSpokenInstructionRef.current="";
       }
@@ -2007,6 +2019,9 @@ export default function NaviboriMap({
     try{
       window.speechSynthesis.speak(utterance);
     }catch{
+      if(pendingSpeechKeyRef.current===key){
+        pendingSpeechKeyRef.current="";
+      }
       if(lastSpokenInstructionRef.current===key){
         lastSpokenInstructionRef.current="";
       }
