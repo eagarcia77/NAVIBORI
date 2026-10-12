@@ -1232,6 +1232,19 @@ export default function NaviboriMap({
       setMapReady(true);
     });
 
+    // Keep the street-level 3D camera adaptive when the user zooms manually.
+    // Do not interfere with the live GPS follow camera.
+    map.on("zoomend",()=>{
+      if(mapModeRef.current!=="3d" || gpsActiveRef.current) return;
+      const desiredPitch=adaptiveStreetPitch(map.getZoom());
+      if(Math.abs(map.getPitch()-desiredPitch)>1){
+        map.easeTo({
+          pitch:desiredPitch,
+          duration:window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 260
+        });
+      }
+    });
+
     map.on("styledata",()=>{
       if(
         map.isStyleLoaded() &&
