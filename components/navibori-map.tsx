@@ -2777,6 +2777,16 @@ export default function NaviboriMap({
                 )}
               </strong>
               <small>{selected.name}</small>
+              {routeBusy!==null && (
+                <small className="navibori-live-reroute" role="status">
+                  {tr("Actualizando la ruta…","Updating route…")}
+                </small>
+              )}
+              {gpsActive && gpsAccuracy!==null && gpsAccuracy>100 && (
+                <small className="navibori-live-gps-warning" role="status">
+                  {tr("GPS impreciso · verifica tu posición","Low GPS accuracy · verify your position")}
+                </small>
+              )}
               <div className="astranav-chip">
                 <span>✦ ASTRANAV</span>
                 <strong>
