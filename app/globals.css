@@ -3045,3 +3045,74 @@ html[data-motion="reduced"] .navibori-drift-bridge-marker i{
   .navibori-3d-indicator[data-view="3d"] .navibori-3d-orb{animation:none}
 }
 :root[data-motion="reduced"] .navibori-3d-indicator .navibori-3d-orb{animation:none}
+
+/* Always-visible spatial diagnostics — including during GPS guidance. */
+.navibori-3d-navigation-status{
+  position:absolute;
+  left:max(12px,env(safe-area-inset-left));
+  bottom:calc(max(14px,env(safe-area-inset-bottom)) + 80px);
+  z-index:38;
+  display:flex;
+  align-items:center;
+  gap:8px;
+  max-width:min(270px,calc(100vw - 32px));
+  border:1px solid rgba(255,255,255,.92);
+  border-radius:15px;
+  padding:9px 12px;
+  color:#103b4b;
+  background:rgba(247,252,253,.94);
+  box-shadow:0 10px 30px rgba(0,33,49,.16);
+  backdrop-filter:blur(18px);
+  -webkit-backdrop-filter:blur(18px);
+  pointer-events:none;
+  font-size:.62rem;
+}
+.navibori-3d-navigation-status>span{
+  color:#087d95;
+  font-weight:950;
+  letter-spacing:.04em;
+}
+.navibori-3d-navigation-status>strong{
+  font-size:.62rem;
+  font-weight:750;
+}
+.navibori-3d-diagnostic-menu{
+  display:grid;
+  gap:6px;
+  padding:10px 11px;
+  border:1px solid rgba(33,141,158,.20);
+  border-radius:12px;
+  background:rgba(241,249,250,.87);
+  color:#153a4a;
+}
+.navibori-3d-diagnostic-menu>strong{font-size:.68rem}
+.navibori-3d-diagnostic-menu>span{font-size:.64rem;line-height:1.4}
+.navibori-3d-diagnostic-menu>small{
+  font-size:.6rem;
+  color:#6c4850;
+  line-height:1.4;
+  overflow-wrap:anywhere;
+}
+.navibori-3d-diagnostic-menu>button{
+  justify-self:start;
+  min-height:34px;
+  border:1px solid #0c859d;
+  border-radius:9px;
+  padding:6px 12px;
+  background:#fff;
+  color:#08677b;
+  font-weight:800;
+  font-size:.62rem;
+  cursor:pointer;
+}
+.navibori-3d-diagnostic-menu>button:hover{background:#eaf6f8}
+.navibori-3d-diagnostic-menu>button:focus-visible{outline:3px solid #0b7ea1;outline-offset:2px}
+@media(max-width:700px){
+  .navibori-3d-navigation-status{
+    bottom:calc(max(10px,env(safe-area-inset-bottom)) + 74px);
+    left:8px;
+    padding:7px 9px;
+    font-size:.57rem;
+    max-width:calc(100vw - 16px);
+  }
+}
