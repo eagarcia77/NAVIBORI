@@ -2976,3 +2976,72 @@ html[data-motion="reduced"] .navibori-drift-bridge-marker i{
     box-shadow:0 10px 26px rgba(23,94,161,.23);
   }
 }
+
+/* NAVIBORI Spatial Maps v2 — lightweight animated 3D context indicator */
+.navibori-3d-indicator{
+  position:absolute;
+  top:calc(max(12px,env(safe-area-inset-top)) + 76px);
+  left:max(14px,env(safe-area-inset-left));
+  z-index:26;
+  display:flex;
+  align-items:center;
+  gap:10px;
+  max-width:min(286px,calc(100vw - 145px));
+  padding:10px 14px 10px 10px;
+  border:1px solid rgba(255,255,255,.85);
+  border-radius:18px;
+  color:#12374c;
+  background:linear-gradient(120deg,rgba(255,255,255,.97),rgba(232,250,246,.94));
+  box-shadow:0 14px 35px rgba(10,45,58,.17);
+  backdrop-filter:blur(17px) saturate(145%);
+  -webkit-backdrop-filter:blur(17px) saturate(145%);
+  pointer-events:none;
+}
+.navibori-3d-indicator[data-view="3d"]{
+  border-color:rgba(45,203,175,.7);
+  box-shadow:0 12px 34px rgba(0,130,130,.17),0 0 0 1px rgba(75,217,180,.18);
+}
+.navibori-3d-orb{
+  display:grid;
+  place-items:center;
+  flex:none;
+  width:36px;
+  height:36px;
+  border-radius:13px;
+  color:white;
+  font-size:1.28rem;
+  background:linear-gradient(140deg,#007b9d,#25be9a 73%,#71eac6);
+  box-shadow:0 5px 15px rgba(0,133,150,.25);
+}
+.navibori-3d-indicator[data-view="3d"] .navibori-3d-orb{
+  animation:navibori-depth-orb 3.5s ease-in-out infinite;
+}
+.navibori-3d-indicator>span:last-child{display:grid;min-width:0;gap:3px}
+.navibori-3d-indicator strong{font-size:.71rem;letter-spacing:.025em}
+.navibori-3d-indicator small{font-size:.58rem;line-height:1.25;color:#47717a}
+.navibori-perspective-button.active{
+  color:white;
+  background:linear-gradient(135deg,#067ea5,#0dba97);
+  border-color:rgba(255,255,255,.8);
+  box-shadow:0 0 0 4px rgba(13,186,151,.14),0 10px 27px rgba(1,119,137,.25);
+}
+.navibori-perspective-button:disabled{cursor:not-allowed;opacity:.64}
+@keyframes navibori-depth-orb{
+  0%,100%{transform:translateY(0) rotate(0deg);filter:brightness(1)}
+  50%{transform:translateY(-2px) rotate(7deg);filter:brightness(1.12)}
+}
+@media(max-width:700px){
+  .navibori-3d-indicator{
+    top:calc(max(10px,env(safe-area-inset-top)) + 74px);
+    left:10px;
+    max-width:calc(100vw - 90px);
+    padding:8px 10px 8px 8px;
+  }
+  .navibori-3d-orb{width:31px;height:31px}
+  .navibori-3d-indicator strong{font-size:.65rem}
+  .navibori-3d-indicator small{font-size:.53rem}
+}
+@media(prefers-reduced-motion:reduce){
+  .navibori-3d-indicator[data-view="3d"] .navibori-3d-orb{animation:none}
+}
+:root[data-motion="reduced"] .navibori-3d-indicator .navibori-3d-orb{animation:none}
