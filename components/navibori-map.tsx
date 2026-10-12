@@ -1966,7 +1966,8 @@ export default function NaviboriMap({
         : distanceMeters<250
           ? "near"
           : "far";
-    const key=instruction+"|"+distanceBand;
+    const localizedInstruction=localizeManeuver(instruction,deviceLocale.language);
+    const key=deviceLocale.language+"|"+localizedInstruction+"|"+distanceBand;
     if(!force && lastSpokenInstructionRef.current===key) return;
 
     lastSpokenInstructionRef.current=key;
@@ -1977,7 +1978,7 @@ export default function NaviboriMap({
         ? formatManeuverDistance(distanceMeters,deviceLocale.language)+". "
         : "";
 
-    const utterance=new SpeechSynthesisUtterance(prefix+instruction);
+    const utterance=new SpeechSynthesisUtterance(prefix+localizedInstruction);
     const voices=window.speechSynthesis.getVoices();
     const preferredVoice=voices.find((voice)=>
       voice.lang.toLowerCase()===deviceLocale.speechLocale.toLowerCase()
