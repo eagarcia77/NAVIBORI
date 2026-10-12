@@ -1501,6 +1501,18 @@ export default function NaviboriMap({
 
   // Adaptive 3D perspective: show more surrounding streets at lower zoom,
   // then gradually tilt toward the road at street-level detail.
+  // During turn-by-turn navigation, fade 3D geometry so roads and route
+  // markings remain visually dominant. Restore depth when navigation ends.
+  useEffect(()=>{
+    const map=mapRef.current;
+    if(!map || !map.getLayer("navibori-3d-buildings")) return;
+    map.setPaintProperty(
+      "navibori-3d-buildings",
+      "fill-extrusion-opacity",
+      gpsActive ? 0.16 : 0.42
+    );
+  },[gpsActive,mapReady]);
+
   function adaptiveStreetPitch(zoom:number){
     // Smooth interpolation avoids abrupt camera jumps across zoom thresholds.
     if(zoom<=14) return 38;
