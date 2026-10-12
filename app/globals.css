@@ -2819,3 +2819,34 @@ html[data-motion="reduced"] .navibori-drift-bridge-marker i{
 .map-panel[data-navigation-active="true"] .navibori-navigation-maneuver .exodock-chip {
   display:none!important;
 }
+
+/* NAVIBORI focus mode: keep turn guidance and the essential footer at the edges. */
+.map-panel[data-navigation-active="true"] .navibori-navigation-maneuver{
+  top:max(8px,env(safe-area-inset-top));
+  left:50%;
+  width:min(540px,calc(100% - 144px));
+  padding:8px 12px;
+  gap:2px;
+  border-radius:12px;
+  box-shadow:0 4px 16px rgba(22,38,46,.13);
+}
+.map-panel[data-navigation-active="true"] .navibori-navigation-maneuver>strong{
+  font-size:clamp(.92rem,1.5vw,1.1rem);
+  line-height:1.2;
+}
+.map-panel[data-navigation-active="true"] .navibori-navigation-maneuver>small{
+  display:none!important;
+}
+.map-panel[data-navigation-active="true"] .navibori-navigation-footer{
+  bottom:max(6px,env(safe-area-inset-bottom));
+  padding:5px 7px;
+  box-shadow:0 4px 16px rgba(22,38,46,.12);
+}
+@media(max-width:760px){
+  .map-panel[data-navigation-active="true"] .navibori-navigation-maneuver{
+    left:68px;
+    transform:none;
+    width:calc(100% - 136px);
+    padding:7px 9px;
+  }
+}
