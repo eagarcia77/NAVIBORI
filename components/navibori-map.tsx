@@ -1295,6 +1295,7 @@ export default function NaviboriMap({
       setMapReady(true);
     };
     map.on("style.load",setupMap);
+    map.on("load",setupMap);
     // A style can load while its vector tiles remain inaccessible. Fall back
     // after an explicit delay only when no actual vector features were drawn.
     mapWatchdog=setTimeout(()=>{
@@ -1334,8 +1335,16 @@ export default function NaviboriMap({
       }
     });
     map.on("styledata",()=>{
-      if(map.isStyleLoaded() &&
-         (!map.getSource(ROUTE_SOURCE_ID)||!map.getLayer(ROUTE_LINE_ID))){
+      if(!map.isStyleLoaded()) return;
+      if(fallback && map.getSource("osm") && mapModeRef.current!=="2d"){
+        map.setProjection({type:"mercator"});
+        map.setPitch(0);
+        mapModeRef.current="2d";
+        setMode("2d");
+        setBasemapState("ready");
+        setMapReady(true);
+      }
+      if(!map.getSource(ROUTE_SOURCE_ID)||!map.getLayer(ROUTE_LINE_ID)){
         ensureRouteInfrastructure(map);
       }
     });
