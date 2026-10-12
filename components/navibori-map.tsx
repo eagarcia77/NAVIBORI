@@ -372,8 +372,8 @@ export default function NaviboriMap({
   >("idle");
   const [lastCommerceRefreshAt,setLastCommerceRefreshAt]=useState<Date|null>(null);
   const [mapReady,setMapReady]=useState(false);
-  const [mode,setMode]=useState<RealityMode>("2d");
-  const mapModeRef=useRef<RealityMode>("2d");
+  const [mode,setMode]=useState<RealityMode>("3d");
+  const mapModeRef=useRef<RealityMode>("3d");
   const streetZoomBeforeGlobeRef=useRef<number|null>(null);
   const [timeOpen,setTimeOpen]=useState(false);
   const [menuOpen,setMenuOpen]=useState(false);
@@ -1218,7 +1218,7 @@ export default function NaviboriMap({
             "source-layer":"building",
             minzoom:15,
             filter:["!=",["get","hide_3d"],true],
-            layout:{visibility:"none"},
+            layout:{visibility:"visible"},
             paint:{
               "fill-extrusion-color":["interpolate",["linear"],["zoom"],15,"#d3e4f2",17,"#8ab9d6",19,"#397eae"],
               "fill-extrusion-vertical-gradient":true,
@@ -1239,7 +1239,10 @@ export default function NaviboriMap({
         if(Number.isFinite(savedStreetZoom) && savedStreetZoom>=1 && savedStreetZoom<=22){
           streetZoomBeforeGlobeRef.current=savedStreetZoom;
         }
-        if(savedMode==="3d"){
+        if(savedMode==="3d" || !savedMode){
+          // Start in true street-level 3D on first visit; preserve an
+          // explicitly selected 2D or globe preference.
+
           map.setProjection({type:"mercator"});
           // Restore the 3D perspective relative to the actual initial zoom.
           const initialZoom=map.getZoom();
