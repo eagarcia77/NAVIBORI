@@ -1775,13 +1775,16 @@ export default function NaviboriMap({
       center:[target.longitude,target.latitude],
       zoom:Math.max(mapRef.current?.getZoom() ?? 16,16.8),
       offset:[0,orbitalLookahead ? 130 : 110],
-      pitch:
-        activeMode==="driving"
-          ? 42
-          : activeMode==="walking"
-            ? 15
-            : 28,
-      duration:450
+      pitch:mapModeRef.current==="3d"
+        ? 58
+        : mapModeRef.current==="2d"
+          ? 0
+          : activeMode==="driving"
+            ? 42
+            : activeMode==="walking"
+              ? 15
+              : 28,
+      duration:window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 450
     });
 
     setLocationStatus(
