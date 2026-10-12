@@ -1447,15 +1447,17 @@ export default function NaviboriMap({
     const map=mapRef.current;
     if(!map) return;
 
+    // Honor accessibility settings when transitioning between map perspectives.
+    const reducedMotion=window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     if(next==="globe"){
       map.setProjection({type:"globe"});
-      map.easeTo({zoom:Math.min(map.getZoom(),8),duration:900});
+      map.easeTo({zoom:Math.min(map.getZoom(),8),pitch:0,duration:reducedMotion ? 0 : 900});
     }else{
       map.setProjection({type:"mercator"});
       map.easeTo({
         pitch:next==="3d" ? 58 : 0,
         bearing:next==="3d" ? map.getBearing() : 0,
-        duration:750
+        duration:reducedMotion ? 0 : 750
       });
     }
 
