@@ -1,4 +1,5 @@
 import Link from "next/link";
+import NaviGuide from "@/components/brand/navi-guide";
 import NaviboriBrand from "@/components/brand/navibori-brand";
 import {STORE_PRODUCTS} from "@/lib/store/catalog";
 export const metadata={title:"NAVIBORI Store | NAVIBORI XR",description:"Catálogo preliminar de artículos oficiales NAVIBORI XR"};
@@ -20,4 +21,4 @@ export default function StorePage(){return <main style={{minHeight:"100vh",backg
 <button type="button" disabled aria-label={`Compra de ${p.name} próximamente`} style={{width:"100%",border:0,borderRadius:12,padding:12,background:"#e3e8eb",color:"#53646e",cursor:"not-allowed"}}>Próximamente</button>
 </article>)}</div>
 <footer style={{padding:"36px 0",color:"#667884"}}>NAVIBORI XR · Puerto Rico Spatial Experience Platform · Colección en desarrollo</footer>
-</section></main>}
+</section><NaviGuide mode="cockpit"/></main>}
