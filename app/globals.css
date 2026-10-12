@@ -2809,9 +2809,11 @@ html[data-motion="reduced"] .navibori-drift-bridge-marker i{
 /* Driving focus: map and route remain primary; menu and navigation HUD remain usable. */
 .map-panel[data-navigation-active="true"] .full-map-gps-button,
 .map-panel[data-navigation-active="true"] .navibori-perspective-button,
-.map-panel[data-navigation-active="true"] .maplibregl-ctrl-top-right,
-.map-panel[data-navigation-active="true"] .maplibregl-ctrl-bottom-right {
-  /* Keep required map-source attribution visible while navigating. */
+.map-panel[data-navigation-active="true"] .maplibregl-ctrl-top-right {
+  display:none!important;
+}
+/* Map-source attribution remains visible and accessible at bottom right. */
+.map-panel[data-navigation-active="true"] .maplibregl-ctrl-bottom-right{
   display:block!important;
 }
 .map-panel[data-navigation-active="true"] .navibori-navigation-maneuver .astranav-chip,
@@ -2923,4 +2925,28 @@ html[data-motion="reduced"] .navibori-drift-bridge-marker i{
   line-height:1.2;
   background:rgba(255,255,255,.84);
   border-radius:5px;
+}
+
+/* NAVIBORI immersive navigation: animated but unobtrusive maneuver guidance. */
+@keyframes navibori-maneuver-entrance{
+  from{opacity:.65;transform:translateX(-50%) translateY(-9px)}
+  to{opacity:1;transform:translateX(-50%) translateY(0)}
+}
+@media(prefers-reduced-motion:no-preference){
+  .map-panel[data-navigation-active="true"] .navibori-navigation-maneuver{
+    animation:navibori-maneuver-entrance .45s cubic-bezier(.2,.8,.2,1) both;
+  }
+  .map-panel[data-navigation-active="true"] .navibori-minimal-stop{
+    transition:background-color .2s ease,box-shadow .2s ease,transform .2s ease;
+  }
+  .map-panel[data-navigation-active="true"] .navibori-minimal-stop:hover{
+    transform:translateY(-2px);
+    box-shadow:0 8px 20px rgba(22,38,46,.2);
+  }
+}
+@media(max-width:760px) and (prefers-reduced-motion:no-preference){
+  @keyframes navibori-maneuver-entrance{
+    from{opacity:.65;transform:translateY(-9px)}
+    to{opacity:1;transform:translateY(0)}
+  }
 }
