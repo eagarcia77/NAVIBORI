@@ -1234,7 +1234,9 @@ export default function NaviboriMap({
 
     // Keep the street-level 3D camera adaptive when the user zooms manually.
     // Do not interfere with the live GPS follow camera.
-    map.on("zoomend",()=>{
+    // Wait for the entire gesture/camera animation to settle before correcting
+    // pitch. A zoomend can occur while a combined flyTo is still moving.
+    map.on("moveend",()=>{
       if(mapModeRef.current!=="3d" || gpsActiveRef.current) return;
       const desiredPitch=adaptiveStreetPitch(map.getZoom());
       if(Math.abs(map.getPitch()-desiredPitch)>1 && !map.isMoving()){
