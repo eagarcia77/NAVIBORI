@@ -1209,7 +1209,9 @@ export default function NaviboriMap({
         }
         if(savedMode==="3d"){
           map.setProjection({type:"mercator"});
-          map.setPitch(58);
+          // Restore the 3D perspective relative to the actual initial zoom.
+          const initialZoom=map.getZoom();
+          map.setPitch(initialZoom<=14 ? 38 : initialZoom>=18 ? 58 : 38+(initialZoom-14)*5);
           mapModeRef.current="3d";
           setMode("3d");
         }else if(savedMode==="globe"){
