@@ -2272,6 +2272,17 @@ export default function NaviboriMap({
     }
 
     stopGpsNavigation();
+    // A globe overview must not be used for street-level GPS guidance.
+    if(mapModeRef.current==="globe"){
+      mapRef.current?.setProjection({type:"mercator"});
+      mapModeRef.current="2d";
+      setMode("2d");
+      try{
+        window.localStorage.setItem("navibori:map-mode","2d");
+      }catch{
+        // Navigation does not depend on browser storage.
+      }
+    }
     // Enter a distraction-reduced, full-map navigation view immediately.
     setMenuOpen(false);
     setTimeOpen(false);
