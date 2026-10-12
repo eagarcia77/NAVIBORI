@@ -328,6 +328,7 @@ export default function NaviboriMap({
   const activeNavigationModeRef=useRef<InMapRouteMode|null>(null);
   const lastRouteOriginRef=useRef<RouteCoordinate|null>(null);
   const lastRouteRefreshAtRef=useRef(0);
+  const consecutiveOffRouteFixesRef=useRef(0);
   const routeResultRef=useRef<InMapRouteResult|null>(null);
   const followGpsRef=useRef(true);
   const gpsActiveRef=useRef(false);
@@ -2471,11 +2472,17 @@ export default function NaviboriMap({
           currentRoute!==null &&
           isOffNavigationRoute(next,currentRoute,accuracy);
 
-        if(offRoute && now-lastRouteRefreshAtRef.current>=6000){
+        // Require two consecutive off-route GPS fixes to avoid rerouting
+        // on a single noisy location reading near intersections.
+        consecutiveOffRouteFixesRef.current=offRoute
+          ? Math.min(2,consecutiveOffRouteFixesRef.current+1)
+          : 0;
+        if(offRoute && consecutiveOffRouteFixesRef.current>=2 && now-lastRouteRefreshAtRef.current>=6000){
+          consecutiveOffRouteFixesRef.current=0;
           setRouteStatus(tr("Fuera de ruta · recalculando…","Off route · recalculating…"));
           void calculateRoute(activeMode,next,{quiet:true});
         }else if(
-          shouldRefreshNavigationRoute(
+          !offRoute && shouldRefreshNavigationRoute(
             lastRouteOriginRef.current,
             next,
             lastRouteRefreshAtRef.current,
@@ -2604,6 +2611,7 @@ export default function NaviboriMap({
   }
 
   function clearRoute(){
+    consecutiveOffRouteFixesRef.current=0;
     routeAbortRef.current?.abort();
     routeAbortRef.current=null;
     stopGpsNavigation();
