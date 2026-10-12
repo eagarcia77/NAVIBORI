@@ -1237,7 +1237,7 @@ export default function NaviboriMap({
     map.on("zoomend",()=>{
       if(mapModeRef.current!=="3d" || gpsActiveRef.current) return;
       const desiredPitch=adaptiveStreetPitch(map.getZoom());
-      if(Math.abs(map.getPitch()-desiredPitch)>1){
+      if(Math.abs(map.getPitch()-desiredPitch)>1 && !map.isMoving()){
         map.easeTo({
           pitch:desiredPitch,
           duration:window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 260
