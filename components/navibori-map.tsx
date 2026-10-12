@@ -1493,7 +1493,11 @@ export default function NaviboriMap({
       map.easeTo({
         // Returning from globe should restore street detail in both 2D and 3D.
         zoom:mapModeRef.current==="globe" ? (streetZoomBeforeGlobeRef.current ?? Math.max(map.getZoom(),15)) : map.getZoom(),
-        pitch:next==="3d" ? adaptiveStreetPitch(map.getZoom()) : 0,
+        pitch:next==="3d"
+          ? adaptiveStreetPitch(mapModeRef.current==="globe"
+              ? (streetZoomBeforeGlobeRef.current ?? Math.max(map.getZoom(),15))
+              : map.getZoom())
+          : 0,
         bearing:next==="3d" ? map.getBearing() : 0,
         duration:reducedMotion ? 0 : 750
       });
