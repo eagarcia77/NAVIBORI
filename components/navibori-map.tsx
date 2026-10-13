@@ -3859,6 +3859,7 @@ export default function NaviboriMap({
 
             <nav className="full-map-menu-links" aria-label="Opciones NAVIBORI">
               <Link href="/comercios">{copy.commerce}</Link>
+              <Link href="/alertas">⚠️ Alertas viales GPS</Link>
               <Link href="/ar">AR</Link>
               <Link href="/twin">Twin</Link>
               <Link href="/studio">Studio</Link>
