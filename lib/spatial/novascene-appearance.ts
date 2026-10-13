@@ -72,3 +72,22 @@ export function approachTurnPitch(basePitch:number,distanceMeters:number|null){
   const near=Math.min(base,46);
   return near+(base-near)*ratio;
 }
+
+
+/** Thin roof caps at high street zoom provide a separate roof tint without
+ * modifying measured Overture geometry or using heavyweight 3D assets.
+ * Added only above z17.2 to keep mobile overview rendering efficient.
+ */
+export function novaSceneRoofPaint(appearance:NovaSceneAppearance){
+  const height=novaSceneHeightExpression(appearance);
+  const color=appearance==="natural"
+    ? ["case",["boolean",["get","estimated"],true],"#f0e8df","#dae4de"]
+    : ["case",["boolean",["get","estimated"],true],"#b8e2f0","#83c8e4"];
+  return {
+    "fill-extrusion-color":color,
+    "fill-extrusion-base":["max",0,["-",height,0.22]],
+    "fill-extrusion-height":["+",height,0.025],
+    "fill-extrusion-opacity":appearance==="natural"?0.93:0.91,
+    "fill-extrusion-vertical-gradient":false
+  } as unknown as NonNullable<FillExtrusionLayerSpecification["paint"]>;
+}

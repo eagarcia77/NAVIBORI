@@ -14,8 +14,10 @@ import {
 import {
   approachTurnPitch,
   novaSceneBuildingPaint,
+  novaSceneRoofPaint,
   type NovaSceneAppearance
 } from "@/lib/spatial/novascene-appearance";
+import {nearTurnZoom,nextRouteCorridor} from "@/lib/spatial/novascene-route-focus";
 import {
   buildAppleMapsDirectionsUrl,
   buildGoogleDirectionsUrl,
@@ -95,12 +97,16 @@ const ROUTE_CASING_ID="navibori-commerce-route-casing";
 const ROUTE_LINE_ID="navibori-commerce-route-line";
 const ROUTE_ARROW_ID="navibori-commerce-route-arrows";
 const ROUTE_ARROW_IMAGE_ID="navibori-route-arrow-image";
+const ROUTE_FOCUS_SOURCE_ID="navibori-next-corridor";
+const ROUTE_FOCUS_GLOW_ID="navibori-next-corridor-glow";
+const ROUTE_FOCUS_LINE_ID="navibori-next-corridor-line";
 
 
 // The reliable OSM raster map supplies streets; real OSM building footprints
 // are fetched separately from NAVIBORI's bounded, cached buildings API.
 // Extrusion is genuine MapLibre 3D geometry, not a pitched raster image.
 const NAVIBORI_BUILDINGS_ID="navibori-3d-buildings";
+const NAVIBORI_ROOF_ID="novascene-closeup-roof-caps";
 const NAVIBORI_BUILDINGS_SOURCE="navibori-building-geojson";
 const NAVIBORI_VECTOR_BUILDINGS_SOURCE="navibori-building-vector";
 const NAVIBORI_VECTOR_BUILDINGS_LAYER="navibori-vector-building-extrusions";
@@ -129,6 +135,14 @@ function create3DBuildings(map:maplibregl.Map){
       source:NAVIBORI_BUILDINGS_SOURCE,minzoom:14.5,
       layout:{visibility:"visible"},
       paint:novaSceneBuildingPaint("natural")
+    });
+  }
+  if(!map.getLayer(NAVIBORI_ROOF_ID)){
+    map.addLayer({
+      id:NAVIBORI_ROOF_ID,type:"fill-extrusion",
+      source:NAVIBORI_BUILDINGS_SOURCE,minzoom:17.2,
+      layout:{visibility:"visible"},
+      paint:novaSceneRoofPaint("natural")
     });
   }
   return NAVIBORI_BUILDINGS_ID;
@@ -332,11 +346,30 @@ function ensureRouteInfrastructure(map:maplibregl.Map){
       });
     }
 
+    // Highlight the immediate portion ahead without replacing the full route.
+    if(!map.getSource(ROUTE_FOCUS_SOURCE_ID)){
+      map.addSource(ROUTE_FOCUS_SOURCE_ID,{
+        type:"geojson",data:{type:"FeatureCollection",features:[]},lineMetrics:true
+      });
+    }
+    if(!map.getLayer(ROUTE_FOCUS_GLOW_ID)){
+      map.addLayer({
+        id:ROUTE_FOCUS_GLOW_ID,type:"line",source:ROUTE_FOCUS_SOURCE_ID,
+        layout:{"line-cap":"round","line-join":"round"},
+        paint:{"line-color":"#e3ffff","line-width":23,"line-blur":5,
+          "line-opacity":0.43}
+      });
+    }
+    if(!map.getLayer(ROUTE_FOCUS_LINE_ID)){
+      map.addLayer({
+        id:ROUTE_FOCUS_LINE_ID,type:"line",source:ROUTE_FOCUS_SOURCE_ID,
+        layout:{"line-cap":"round","line-join":"round"},
+        paint:{"line-color":"#f7fffd","line-width":5.4,"line-opacity":0.91}
+      });
+    }
     for(const layerId of [
-      ROUTE_GLOW_ID,
-      ROUTE_CASING_ID,
-      ROUTE_LINE_ID,
-      ROUTE_ARROW_ID
+      ROUTE_GLOW_ID,ROUTE_CASING_ID,ROUTE_LINE_ID,ROUTE_ARROW_ID,
+      ROUTE_FOCUS_GLOW_ID,ROUTE_FOCUS_LINE_ID
     ]){
       if(map.getLayer(layerId)){
         map.moveLayer(layerId);
@@ -1248,7 +1281,7 @@ export default function NaviboriMap({
       (window as unknown as {__novaQA?:{
         focus:(lng?:number,lat?:number)=>void; inspect:()=>Record<string,unknown>;
       }}).__novaQA={
-        focus:(lng=-66.506,lat=18.052)=>map.jumpTo({center:[lng,lat],zoom:17,pitch:58,bearing:-16}),
+        focus:(lng=-66.506,lat=18.052)=>map.jumpTo({center:[lng,lat],zoom:17.5,pitch:58,bearing:-16}),
         inspect:()=>({
           zoom:map.getZoom(),
           longitude:map.getCenter().lng,
@@ -1261,11 +1294,16 @@ export default function NaviboriMap({
           styleLoaded:map.isStyleLoaded(),
           rendered:map.getLayer(NAVIBORI_BUILDINGS_ID)
             ?map.queryRenderedFeatures({layers:[NAVIBORI_BUILDINGS_ID]}).length:0,
+          renderedRoofs:map.getLayer(NAVIBORI_ROOF_ID)
+            ?map.queryRenderedFeatures({layers:[NAVIBORI_ROOF_ID]}).length:0,
           routeAboveBuildings:(()=>{
             const ids=map.getStyle().layers?.map(layer=>layer.id)??[];
             const buildingIndex=ids.indexOf(NAVIBORI_BUILDINGS_ID);
+            const roofIndex=ids.indexOf(NAVIBORI_ROOF_ID);
             const routeIndex=ids.indexOf(ROUTE_LINE_ID);
-            return buildingIndex>=0 && routeIndex>buildingIndex;
+            const focusIndex=ids.indexOf(ROUTE_FOCUS_LINE_ID);
+            return buildingIndex>=0 && roofIndex>buildingIndex &&
+              routeIndex>roofIndex && focusIndex>routeIndex;
           })(),
           sourceFeatures:map.getSource(NAVIBORI_BUILDINGS_SOURCE)
             ?map.querySourceFeatures(NAVIBORI_BUILDINGS_SOURCE).length:0
@@ -1484,6 +1522,9 @@ export default function NaviboriMap({
       mapModeRef.current=initialMode;
       setMode(initialMode);
       map.setLayoutProperty(NAVIBORI_BUILDINGS_ID,"visibility",initialMode==="3d"?"visible":"none");
+      if(map.getLayer(NAVIBORI_ROOF_ID)){
+        map.setLayoutProperty(NAVIBORI_ROOF_ID,"visibility",initialMode==="3d"?"visible":"none");
+      }
       setMapReady(true);
       setBasemapState("ready");
       // Offline-first NovaScene: real building data lives on NAVIBORI itself.
@@ -1502,9 +1543,13 @@ export default function NaviboriMap({
       }
       const layerIds=map.getStyle().layers?.map(layer=>layer.id)??[];
       const buildingIndex=layerIds.indexOf(NAVIBORI_BUILDINGS_ID);
+      const roofIndex=layerIds.indexOf(NAVIBORI_ROOF_ID);
       const routeIndex=layerIds.indexOf(ROUTE_LINE_ID);
-      if(buildingIndex>=0&&routeIndex>=0&&routeIndex<buildingIndex){
-        for(const id of [ROUTE_GLOW_ID,ROUTE_CASING_ID,ROUTE_LINE_ID,ROUTE_ARROW_ID]){
+      if(routeIndex>=0&&
+        ((buildingIndex>=0&&routeIndex<buildingIndex)||
+         (roofIndex>=0&&routeIndex<roofIndex))){
+        for(const id of [ROUTE_GLOW_ID,ROUTE_CASING_ID,ROUTE_LINE_ID,
+          ROUTE_ARROW_ID,ROUTE_FOCUS_GLOW_ID,ROUTE_FOCUS_LINE_ID]){
           if(map.getLayer(id))map.moveLayer(id);
         }
       }
@@ -1540,7 +1585,8 @@ export default function NaviboriMap({
         event.sourceId!==NAVIBORI_BUILDINGS_SOURCE &&
         event.sourceId!==NAVIBORI_VECTOR_BUILDINGS_SOURCE
       ))return;
-      for(const id of [ROUTE_GLOW_ID,ROUTE_CASING_ID,ROUTE_LINE_ID,ROUTE_ARROW_ID]){
+      for(const id of [ROUTE_GLOW_ID,ROUTE_CASING_ID,ROUTE_LINE_ID,
+        ROUTE_ARROW_ID,ROUTE_FOCUS_GLOW_ID,ROUTE_FOCUS_LINE_ID]){
         if(map.getLayer(id))map.moveLayer(id);
       }
     });
@@ -1728,6 +1774,8 @@ export default function NaviboriMap({
       };
       const source=map.getSource(ROUTE_SOURCE_ID) as maplibregl.GeoJSONSource|undefined;
       source?.setData(empty);
+      const focus=map.getSource(ROUTE_FOCUS_SOURCE_ID) as maplibregl.GeoJSONSource|undefined;
+      focus?.setData(empty);
       setRouteVisualStatus("idle");
       return;
     }
@@ -1815,6 +1863,17 @@ export default function NaviboriMap({
         gpsActive ? (sceneAppearance==="natural"?0.73:0.77)
           : (sceneAppearance==="natural"?0.92:0.94));
     }
+    if(map?.getLayer(NAVIBORI_ROOF_ID)){
+      const roofPaint=novaSceneRoofPaint(sceneAppearance);
+      map.setPaintProperty(NAVIBORI_ROOF_ID,"fill-extrusion-color",
+        roofPaint["fill-extrusion-color"]);
+      map.setPaintProperty(NAVIBORI_ROOF_ID,"fill-extrusion-height",
+        roofPaint["fill-extrusion-height"]);
+      map.setPaintProperty(NAVIBORI_ROOF_ID,"fill-extrusion-base",
+        roofPaint["fill-extrusion-base"]);
+      map.setPaintProperty(NAVIBORI_ROOF_ID,"fill-extrusion-opacity",
+        gpsActive?0.76:(sceneAppearance==="natural"?0.93:0.91));
+    }
     try{window.localStorage.setItem("navibori:novascene-appearance",sceneAppearance);}catch{}
   },[sceneAppearance,gpsActive,mapReady]);
 
@@ -1876,6 +1935,9 @@ export default function NaviboriMap({
 
     if(buildingsLayerRef.current&&map.getLayer(buildingsLayerRef.current)){
       map.setLayoutProperty(buildingsLayerRef.current,"visibility",next==="3d"?"visible":"none");
+    }
+    if(map.getLayer(NAVIBORI_ROOF_ID)){
+      map.setLayoutProperty(NAVIBORI_ROOF_ID,"visibility",next==="3d"?"visible":"none");
     }
     if(map.getLayer(NAVIBORI_VECTOR_BUILDINGS_LAYER)){
       // Keep vector hidden if GeoJSON roofs have already been rendered.
@@ -2002,6 +2064,20 @@ export default function NaviboriMap({
 
       source.setData(feature);
 
+      // Build a true arc-length-clipped section of the route ahead of GPS.
+      // It never changes route geometry, selected destination or directions.
+      const spotlightSource=map.getSource(ROUTE_FOCUS_SOURCE_ID) as maplibregl.GeoJSONSource|undefined;
+      const corridor=gpsActiveRef.current
+        ? nextRouteCorridor(route.geometry.coordinates,progressRatio,145)
+        : [];
+      spotlightSource?.setData({
+        type:"FeatureCollection",
+        features:corridor.length>=2?[{
+          type:"Feature",properties:{},
+          geometry:{type:"LineString",coordinates:corridor}
+        }]:[]
+      });
+
       const color=routeLineColor(route.mode);
       // Reassert a high-contrast continuous route on every GPS progress update.
       map.setLayoutProperty(ROUTE_GLOW_ID,"visibility","visible");
@@ -2026,7 +2102,9 @@ export default function NaviboriMap({
         ROUTE_GLOW_ID,
         ROUTE_CASING_ID,
         ROUTE_LINE_ID,
-        ROUTE_ARROW_ID
+        ROUTE_ARROW_ID,
+        ROUTE_FOCUS_GLOW_ID,
+        ROUTE_FOCUS_LINE_ID
       ]){
         if(map.getLayer(layerId)){
           map.moveLayer(layerId);
@@ -2969,7 +3047,9 @@ export default function NaviboriMap({
         const map=mapRef.current;
         map?.easeTo({
           center:[cameraCenter.longitude,cameraCenter.latitude],
-          zoom:cameraProfile.zoom,
+          zoom:mapModeRef.current==="3d"
+            ? nearTurnZoom(cameraProfile.zoom,cameraCue?.distanceMeters ?? null)
+            : cameraProfile.zoom,
           offset:[0,cameraProfile.offsetY],
           bearing:
             navigationBearing ??
