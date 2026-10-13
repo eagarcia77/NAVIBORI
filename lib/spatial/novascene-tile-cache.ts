@@ -36,7 +36,14 @@ export function validNovaSceneManifest(data:unknown):data is NovaSceneManifest{
     value.bbox[1]>=-90&&value.bbox[3]<=90&&
     value.bbox[0]<value.bbox[2]&&value.bbox[1]<value.bbox[3]&&
     (value.bbox[2]-value.bbox[0])/value.step<=1000&&
-    (value.bbox[3]-value.bbox[1])/value.step<=1000;
+    (value.bbox[3]-value.bbox[1])/value.step<=1000&&
+    Object.entries(value.tiles).every(([key,descriptor])=>
+      /^\\d+-\\d+$/.test(key)&&descriptor!==null&&
+      typeof descriptor==="object"&&
+      (descriptor as {path?:unknown}).path==="/data/novascene/tiles/v2/"+key+".geojson"&&
+      Number.isSafeInteger((descriptor as {count?:unknown}).count)&&
+      Number((descriptor as {count:number}).count)>=0
+    );
 }
 
 export function visibleNovaSceneTileIds(
