@@ -3244,3 +3244,33 @@ html[data-motion="reduced"] .navibori-drift-bridge-marker i{
   }
   .novascene-gps-signal{font-size:.54rem}
 }
+
+
+/* NAVIBORI 2.7: a DEMO destination must never imply DEMO satellite data. */
+.novascene-gps-retry{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  min-height:32px;
+  border:1px solid rgba(12,108,146,.45);
+  border-radius:10px;
+  padding:6px 10px;
+  background:#e9f7ff;
+  color:#07537f;
+  font:inherit;
+  font-size:.65rem;
+  font-weight:800;
+  cursor:pointer;
+  -webkit-tap-highlight-color:transparent;
+}
+.novascene-gps-retry:focus-visible{
+  outline:3px solid #0786bd;
+  outline-offset:2px;
+}
+.novascene-gps-retry:hover{background:#d9f0fc}
+@media(max-width:540px){
+  .novascene-gps-retry{
+    min-height:36px;
+    padding:7px 10px;
+  }
+}
