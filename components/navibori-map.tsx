@@ -655,6 +655,9 @@ export default function NaviboriMap({
   const signalCopy=navigationSignalCopy(
     signal,deviceLocale.language,gpsAccuracy,gpsResumePending
   );
+  const navigationSessionVisible=Boolean(
+    gpsActive||(navigationPhase!=="idle"&&navigationPhase!=="error"&&selected)
+  );
 
   const navigationProgress=useMemo(
     ()=>routeResult && userLocation
@@ -3433,7 +3436,8 @@ export default function NaviboriMap({
     <section
       className="map-panel spatial-cockpit full-map-cockpit"
       data-native-route-visible={nativeRouteVisible ? "true" : "false"}
-      data-gps-signal={signal.fix}
+      data-gps-signal={gpsSignalQuality(gpsAccuracy)}
+      data-gps-freshness={signal.fix}
       data-route-kind={signal.routeKind}
       data-cockpit-phase={lagrangePhase}
       data-exodock-state={exoDockState}
@@ -3446,7 +3450,7 @@ export default function NaviboriMap({
     >
       <div className="map-stage full-map-stage">
         <div ref={mapNode} className="map-canvas full-map-canvas" />
-        {gpsActive&&mode==="3d"&&(
+        {navigationSessionVisible&&mode==="3d"&&(
           <div className="navibori-3d-navigation-status" role="status">
             <span>◈ NOVASCENE 3D</span>
             <strong>{buildings3DState==="ready"
@@ -3472,7 +3476,7 @@ export default function NaviboriMap({
             )}
           </div>
         )}
-        {!gpsActive&&(
+        {!navigationSessionVisible&&(
           <div className="navibori-3d-indicator" data-view={mode} role="status">
             <span className="navibori-3d-orb" aria-hidden="true">◈</span>
             <span><strong>{mode==="3d"?"NOVASCENE 3D":tr("Vista de mapa","Map view")}</strong>
@@ -3876,7 +3880,7 @@ export default function NaviboriMap({
         <div className="full-map-brand-pill" aria-label="Estado de NAVIBORI">
           <strong>NAVIBORI</strong>
           <span>
-            {gpsActive
+            {navigationSessionVisible
               ? signalCopy.route
               : source==="live" ? "Comercios LIVE" : "Comercios DEMO"}
           </span>
