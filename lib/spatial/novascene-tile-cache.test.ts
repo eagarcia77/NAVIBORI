@@ -6,6 +6,7 @@ import {
   mergeNovaSceneFeatures,
   newTileFetchCache,
   validNovaSceneManifest,
+  validNovaSceneTile,
   type NovaSceneManifest,
   type NovaSceneCollection
 } from "./novascene-tile-cache";
@@ -27,12 +28,30 @@ describe("NovaScene 2.1 expanded tile coverage",()=>{
     expect(manifest.bbox[2]).toBeGreaterThan(-66.486);
     expect(manifest.bbox[3]).toBeGreaterThan(18.068);
   });
+  it("rejects broken building rings, invalid heights, and invalid positions",()=>{
+    const polygon={type:"Feature",properties:{height:8,base:0,estimated:true},
+      geometry:{type:"Polygon",coordinates:[[[-66.5,18.05],[-66.49,18.05],
+        [-66.49,18.06],[-66.5,18.05]]]}};
+    expect(validNovaSceneTile({type:"FeatureCollection",features:[polygon]})).toBe(true);
+    expect(validNovaSceneTile({type:"FeatureCollection",features:[
+      {...polygon,properties:{height:NaN,base:0,estimated:true}}
+    ]})).toBe(false);
+    expect(validNovaSceneTile({type:"FeatureCollection",features:[
+      {...polygon,geometry:{type:"Polygon",coordinates:[[[-66.5,18.05],
+        [-66.49,18.05],[-66.49,18.06]]]}}
+    ]})).toBe(false);
+    expect(validNovaSceneTile({type:"FeatureCollection",features:[
+      {...polygon,geometry:{type:"Polygon",coordinates:[[[200,18.05],
+        [-66.49,18.05],[-66.49,18.06],[200,18.05]]]}}
+    ]})).toBe(false);
+  });
   it("retains every unique real footprint even when it crosses cell boundaries",()=>{
     const ids=new Set<string>();
     let repeated=0;
     for(const [key,tile] of Object.entries(manifest.tiles)){
       const data=load(key);
       expect(data.type).toBe("FeatureCollection");
+      expect(validNovaSceneTile(data)).toBe(true);
       expect(data.features.length).toBe(tile.count);
       for(const feature of data.features){
         const id=String(feature.id);
