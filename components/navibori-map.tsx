@@ -21,6 +21,7 @@ import {nearTurnZoom,nextRouteCorridor} from "@/lib/spatial/novascene-route-focu
 import {gpsSignalQuality,shouldDrawSvgFallback,stabilizedCameraBearing} from "@/lib/spatial/novascene-gps-stability";
 import {acceptGpsPositionTimestamp,hasLiveGpsFix,normalizeGeolocationTimestamp} from "@/lib/spatial/navibori-gps-freshness";
 import {navigationSignalCopy,navigationSignalState} from "@/lib/spatial/navibori-navigation-signal";
+import {evaluateAutomaticReroute,gpsFixAgeSeconds,reliableGpsForRouting} from "@/lib/commerce/automatic-reroute-guard";
 import {
   buildAppleMapsDirectionsUrl,
   buildGoogleDirectionsUrl,
@@ -421,6 +422,7 @@ export default function NaviboriMap({
   const lastRouteOriginRef=useRef<RouteCoordinate|null>(null);
   const lastRouteRefreshAtRef=useRef(0);
   const consecutiveOffRouteFixesRef=useRef(0);
+  const lastOffRouteCandidateAtRef=useRef<number|null>(null);
   const routeResultRef=useRef<InMapRouteResult|null>(null);
   const followGpsRef=useRef(true);
   const gpsActiveRef=useRef(false);
@@ -659,6 +661,9 @@ export default function NaviboriMap({
   const signalCopy=navigationSignalCopy(
     signal,deviceLocale.language,gpsAccuracy,gpsResumePending
   );
+  const gpsAgeSeconds=gpsFixAgeSeconds(gpsLastLiveFixAtRef.current,
+    gpsSignalHeartbeat||Date.now());
+  const confidentGpsForRerouting=signal.current&&reliableGpsForRouting(gpsAccuracy);
   const navigationSessionVisible=Boolean(
     gpsActive||(navigationPhase!=="idle"&&navigationPhase!=="error"&&selected)
   );
@@ -2782,6 +2787,7 @@ export default function NaviboriMap({
     lastRouteOriginRef.current=null;
     lastRouteRefreshAtRef.current=0;
     consecutiveOffRouteFixesRef.current=0;
+    lastOffRouteCandidateAtRef.current=null;
     setGpsActive(false);
     setGpsAccuracy(null);
     setGpsSpeedKph(null);
@@ -3193,30 +3199,27 @@ export default function NaviboriMap({
           }
         }
 
-        const offRoute=
-          currentRoute!==null &&
+        const offRoute=currentRoute!==null &&
           isOffNavigationRoute(next,currentRoute,accuracy);
-
-        // Require two consecutive off-route GPS fixes to avoid rerouting
-        // on a single noisy location reading near intersections.
-        consecutiveOffRouteFixesRef.current=offRoute
-          ? Math.min(2,consecutiveOffRouteFixesRef.current+1)
-          : 0;
-        if(offRoute && consecutiveOffRouteFixesRef.current>=2 && now-lastRouteRefreshAtRef.current>=6000){
-          consecutiveOffRouteFixesRef.current=0;
-          setRouteStatus(tr("Fuera de ruta · recalculando…","Off route · recalculating…"));
+        const decision=evaluateAutomaticReroute({
+          offRoute,accuracyMeters:accuracy,
+          lastConfirmedOffRouteAt:lastOffRouteCandidateAtRef.current,
+          consecutiveCount:consecutiveOffRouteFixesRef.current,
+          lastRouteRefreshAt:lastRouteRefreshAtRef.current,
+          now,routeRequestPending:routeAbortRef.current!==null
+        });
+        consecutiveOffRouteFixesRef.current=decision.consecutiveCount;
+        lastOffRouteCandidateAtRef.current=decision.lastConfirmedOffRouteAt;
+        if(decision.shouldReroute){
+          setRouteStatus(tr("Desvío confirmado · recalculando la ruta…",
+            "Confirmed deviation · recalculating route…"));
           void calculateRoute(activeMode,next,{quiet:true});
-        }else if(
-          !offRoute && shouldRefreshNavigationRoute(
-            lastRouteOriginRef.current,
-            next,
-            lastRouteRefreshAtRef.current,
-            now
-          )
-        ){
-          void calculateRoute(activeMode,next,{
-            quiet:currentRoute!==null
-          });
+        }else if(!offRoute && reliableGpsForRouting(accuracy) &&
+          routeAbortRef.current===null &&
+          shouldRefreshNavigationRoute(
+            lastRouteOriginRef.current,next,lastRouteRefreshAtRef.current,now
+          )){
+          void calculateRoute(activeMode,next,{quiet:currentRoute!==null});
         }
       }
 
@@ -3391,6 +3394,7 @@ export default function NaviboriMap({
 
   function clearRoute(){
     consecutiveOffRouteFixesRef.current=0;
+    lastOffRouteCandidateAtRef.current=null;
     routeAbortRef.current?.abort();
     routeAbortRef.current=null;
     stopGpsNavigation();
@@ -3472,6 +3476,11 @@ export default function NaviboriMap({
               title={tr("GPS del dispositivo, independiente del destino DEMO","Device GPS, separate from DEMO destination")}>
               {signalCopy.gps}
             </small>
+            {gpsAgeSeconds!==null&&(
+              <small className={"novascene-fix-age "+(signal.current?"current":"stale")}>
+                {tr("Última lectura: ","Last fix: ")+gpsAgeSeconds+" s"}
+              </small>
+            )}
             {signal.retryRecommended&&!gpsResumePending&&(
               <button type="button" className="novascene-gps-retry"
                 aria-label={tr("Solicitar ubicación GPS actual","Request current GPS fix")}
@@ -3689,9 +3698,16 @@ export default function NaviboriMap({
                   {tr("Actualizando la ruta…","Updating route…")}
                 </small>
               )}
-              {gpsActive && gpsAccuracy!==null && gpsAccuracy>100 && (
+              {gpsActive&&!signal.current&&(
                 <small className="navibori-live-gps-warning" role="status">
-                  {tr("GPS impreciso · verifica tu posición","Low GPS accuracy · verify your position")}
+                  {tr("GPS sin señal reciente · se conserva la última posición.",
+                    "GPS not updating · holding the last location.")}
+                </small>
+              )}
+              {gpsActive&&signal.current&&!confidentGpsForRerouting&&(
+                <small className="navibori-live-gps-warning" role="status">
+                  {tr("GPS impreciso · recálculo automático pausado.",
+                    "Low GPS confidence · automatic rerouting paused.")}
                 </small>
               )}
               <div className="astranav-chip">
@@ -3865,13 +3881,13 @@ export default function NaviboriMap({
               <div>
                 <span>{copy.gps}</span>
                 <strong>
-                  {gpsAccuracy!==null
+                  {signal.current&&gpsAccuracy!==null
                     ? gpsAccuracy<=20
                       ? copy.excellent+" · ±"+Math.round(gpsAccuracy)+" m"
                       : gpsAccuracy<=50
                         ? copy.good+" · ±"+Math.round(gpsAccuracy)+" m"
                         : copy.weak+" · ±"+Math.round(gpsAccuracy)+" m"
-                    : copy.searching}
+                    : signalCopy.gps}
                 </strong>
               </div>
               <button
@@ -3976,6 +3992,11 @@ export default function NaviboriMap({
                 <div><dt>{tr("Mapa","Map")}</dt><dd>{basemapState}</dd></div>
                 <div><dt>{tr("Destino","Destination")}</dt><dd>{demoRoute?signalCopy.route:tr("Comercio","Business")}</dd></div>
                 <div><dt>GPS</dt><dd>{gpsActive||navigationPhase!=="idle"?signalCopy.gps:tr("Inactivo","Inactive")}</dd></div>
+                <div><dt>{tr("Última lectura","Last fix")}</dt><dd>{gpsAgeSeconds===null?"—":gpsAgeSeconds+" s"}</dd></div>
+                <div><dt>{tr("Recálculo automático","Automatic rerouting")}</dt><dd>{
+                  confidentGpsForRerouting?tr("Disponible","Available"):
+                  tr("En espera de GPS preciso","Waiting for accurate GPS")
+                }</dd></div>
                 <div><dt>{tr("Precisión","Accuracy")}</dt><dd>{gpsAccuracy===null ? "—" : "±"+Math.round(gpsAccuracy)+" m"}</dd></div>
                 <div><dt>{tr("Seguimiento","Follow mode")}</dt><dd>{followGps ? tr("Activado","On") : tr("Pausado","Paused")}</dd></div>
                 <div><dt>{tr("Ruta","Route")}</dt><dd>{routeResult ? tr("Calculada","Calculated") : tr("Sin ruta","No route")}</dd></div>
@@ -4011,6 +4032,8 @@ export default function NaviboriMap({
                     "Map: "+basemapState,
                     "Destination type: "+signal.routeKind,
                     "GPS state: "+signal.fix,
+                    "Last fix age seconds: "+(gpsAgeSeconds===null?"unknown":gpsAgeSeconds),
+                    "Auto rerouting confidence: "+String(confidentGpsForRerouting),
                     "Accuracy: "+(gpsAccuracy===null ? "unknown" : Math.round(gpsAccuracy)+" m"),
                     "GPS permission: "+gpsDiagnostics.permission,
                     "Geolocation available: "+String(gpsDiagnostics.geolocation),
