@@ -1,0 +1,75 @@
+import {describe,expect,it} from "vitest";
+import {readFileSync} from "node:fs";
+import {resolve} from "node:path";
+import {
+  visibleNovaSceneTileIds,
+  mergeNovaSceneFeatures,
+  newTileFetchCache,
+  validNovaSceneManifest,
+  type NovaSceneManifest,
+  type NovaSceneCollection
+} from "./novascene-tile-cache";
+
+const folder=resolve(process.cwd(),"public/data/novascene/tiles");
+const manifest=JSON.parse(readFileSync(resolve(folder,"manifest-v2.json"),"utf8")) as NovaSceneManifest;
+const load=(key:string):NovaSceneCollection=>{
+  const descriptor=manifest.tiles[key];
+  return JSON.parse(readFileSync(resolve(process.cwd(),"public",descriptor.path.slice(1)),"utf8"));
+};
+describe("NovaScene 2.1 expanded tile coverage",()=>{
+  it("publishes geographic coverage significantly larger than the original footprint map",()=>{
+    expect(validNovaSceneManifest(manifest)).toBe(true);
+    expect(manifest.uniqueBuildings).toBeGreaterThan(7512);
+    expect(Object.keys(manifest.tiles).length).toBeGreaterThan(45);
+    expect(manifest.license).toContain("ODbL");
+    expect(manifest.bbox[0]).toBeLessThan(-66.531);
+    expect(manifest.bbox[1]).toBeLessThan(18.037);
+    expect(manifest.bbox[2]).toBeGreaterThan(-66.486);
+    expect(manifest.bbox[3]).toBeGreaterThan(18.068);
+  });
+  it("retains every unique real footprint even when it crosses cell boundaries",()=>{
+    const ids=new Set<string>();
+    let repeated=0;
+    for(const [key,tile] of Object.entries(manifest.tiles)){
+      const data=load(key);
+      expect(data.type).toBe("FeatureCollection");
+      expect(data.features.length).toBe(tile.count);
+      for(const feature of data.features){
+        const id=String(feature.id);
+        if(ids.has(id))repeated++;
+        ids.add(id);
+        expect(feature.properties.height).toBeGreaterThan(0);
+        expect(["Polygon","MultiPolygon"]).toContain(feature.geometry.type);
+      }
+    }
+    expect(ids.size).toBe(manifest.uniqueBuildings);
+    expect(repeated).toBeGreaterThan(0);
+  });
+  it("selects all local cells touching a GPS viewport, even outside legacy boundaries",()=>{
+    const inside=visibleNovaSceneTileIds(manifest,{
+      west:-66.506,south:18.049,east:-66.5,north:18.056
+    });
+    const extended=visibleNovaSceneTileIds(manifest,{
+      west:-66.554,south:18.072,east:-66.548,north:18.081
+    });
+    expect(inside.length).toBeGreaterThan(0);
+    expect(extended.length).toBeGreaterThan(0);
+    const expected=extended.flatMap(load);
+    expect(expected.length).toBeGreaterThan(0);
+  });
+  it("deduplicates boundary-crossing buildings without arbitrary first-2500 truncation",()=>{
+    const ids=visibleNovaSceneTileIds(manifest,{
+      west:-66.53,south:18.035,east:-66.49,north:18.061
+    });
+    const all=mergeNovaSceneFeatures(ids.map(load));
+    expect(all.features.length).toBeGreaterThan(2500);
+    expect(new Set(all.features.map(f=>String(f.id))).size).toBe(all.features.length);
+    const cache=newTileFetchCache(2);
+    cache.set("a",load(ids[0]));
+    cache.set("b",load(ids[1]));
+    cache.get("a");
+    cache.set("c",load(ids[2]));
+    expect(cache.get("b")).toBeUndefined();
+    expect(cache.size()).toBe(2);
+  });
+});
