@@ -28,6 +28,17 @@ describe("NovaScene 2.5 visual camera stabilization",()=>{
     expect(stabilizedCameraBearing(43,null,10,null)).toBe(43);
     expect(stabilizedCameraBearing(43,Number.NaN,10,null)).toBe(43);
   });
+  it("keeps iPhone camera steady at stops without changing route heading",()=>{
+    expect(stabilizedCameraBearing(355,110,0,7)).toBe(355);
+    expect(stabilizedCameraBearing(355,110,1.9,7)).toBe(355);
+    expect(stabilizedCameraBearing(null,110,0,7)).toBe(110);
+    expect(stabilizedCameraBearing(355,110,null,7)).not.toBe(355);
+  });
+  it("holds camera on weak slow GPS but follows genuine moving turns",()=>{
+    expect(stabilizedCameraBearing(30,170,5,150)).toBe(30);
+    expect(stabilizedCameraBearing(30,170,35,150)).not.toBe(30);
+    expect(stabilizedCameraBearing(30,170,5,12)).not.toBe(30);
+  });
   it("reduces small heading jitter at walking speeds and poor fixes",()=>{
     expect(stabilizedCameraBearing(90,91,1,20)).toBe(90);
     const precise=stabilizedCameraBearing(90,150,45,8)!;
