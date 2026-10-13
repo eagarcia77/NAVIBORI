@@ -13,7 +13,7 @@ import math
 import pathlib
 
 DEFAULT_BBOX = (-66.531, 18.037, -66.486, 18.068)
-MAX_FEATURES = 14000
+MAX_FEATURES = 150000  # Safety upper bound for regional builds, not a viewport cap.
 
 
 def normalize_ring(raw):
