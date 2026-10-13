@@ -110,8 +110,10 @@ function create3DBuildings(map:maplibregl.Map){
     if(!map.getSource(NAVIBORI_VECTOR_BUILDINGS_SOURCE)){
       map.addSource(NAVIBORI_VECTOR_BUILDINGS_SOURCE,{
         type:"vector",
-        url:"https://tiles.openfreemap.org/planet",
-        attribution:"© OpenStreetMap contributors · OpenFreeMap"
+        // OSMF's official Shortbread v1.1 vector tiles have a documented
+        // "buildings" polygon layer from zoom 14 onward.
+        url:"https://vector.openstreetmap.org/shortbread_v1/tilejson.json",
+        attribution:"© OpenStreetMap contributors"
       });
     }
     if(!map.getLayer(NAVIBORI_VECTOR_BUILDINGS_LAYER)){
@@ -119,24 +121,16 @@ function create3DBuildings(map:maplibregl.Map){
         id:NAVIBORI_VECTOR_BUILDINGS_LAYER,
         type:"fill-extrusion",
         source:NAVIBORI_VECTOR_BUILDINGS_SOURCE,
-        "source-layer":"building",
+        "source-layer":"buildings",
         minzoom:14.5,
-        filter:["!=",["get","hide_3d"],true],
         layout:{visibility:"visible"},
         paint:{
-          "fill-extrusion-color":"#90b8d4",
-          "fill-extrusion-height":["interpolate",["linear"],["zoom"],14.5,0,15.5,
-            ["min",300,["max",6,["coalesce",
-              ["to-number",["get","render_height"],null],
-              ["to-number",["get","height"],null],
-              ["*",3,["to-number",["get","building:levels"],null]],9
-            ]]]
-          ],
-          "fill-extrusion-base":["max",0,["coalesce",
-            ["to-number",["get","render_min_height"],null],
-            ["to-number",["get","min_height"],null],0
-          ]],
-          "fill-extrusion-opacity":0.82,
+          "fill-extrusion-color":["interpolate",["linear"],["zoom"],15,"#a6cada",17,"#73a9cc",19,"#4781b9"],
+          // Shortbread carries outlines but no real heights. Approximate
+          // two-storey volume for visual context, NOT measured clearance.
+          "fill-extrusion-height":["interpolate",["linear"],["zoom"],14.5,0,15.5,8.7],
+          "fill-extrusion-base":0,
+          "fill-extrusion-opacity":0.91,
           "fill-extrusion-vertical-gradient":true
         }
       });
@@ -1279,8 +1273,26 @@ export default function NaviboriMap({
     let refreshTimer:ReturnType<typeof setTimeout>|null=null;
     let renderingCheckTimer:ReturnType<typeof setTimeout>|null=null;
     let lastCenter:{lng:number;lat:number;at:number}|null=null;
+    let apiStartedAt=0;
+    let vectorWatchdog:ReturnType<typeof setTimeout>|null=null;
+    let visualMonitorAt=0;
+    let lastReported3DCount=-1;
+    const countVectorBuildings=()=>{
+      if(!map.getLayer(NAVIBORI_VECTOR_BUILDINGS_LAYER)||
+        map.getLayoutProperty(NAVIBORI_VECTOR_BUILDINGS_LAYER,"visibility")==="none")return 0;
+      try{
+        return map.queryRenderedFeatures({layers:[NAVIBORI_VECTOR_BUILDINGS_LAYER]}).length;
+      }catch{return 0;}
+    };
     const update3DBuildings=async(force=false)=>{
       if(disposed)return;
+      // Do not launch a fresh Overpass request on each GPS camera movement.
+      // Keep the existing request alive and rate-limit failures per viewport.
+      if(!force){
+        if(buildingsRequest||Date.now()-apiStartedAt<120000)return;
+        if(countVectorBuildings()>0)return;
+      }
+      apiStartedAt=Date.now();
       // isStyleLoaded() is false whenever raster tiles are still loading,
       // which previously caused silent, permanent 3D loading on mobile GPS.
       if(!map.getSource(NAVIBORI_BUILDINGS_SOURCE)){
@@ -1306,7 +1318,7 @@ export default function NaviboriMap({
       if(!force && lastCenter &&
         Math.abs(current.lng-lastCenter.lng)<0.0024 &&
         Math.abs(current.lat-lastCenter.lat)<0.0024 &&
-        Date.now()-lastCenter.at<60_000)return;
+        Date.now()-lastCenter.at<120000)return;
       lastCenter={lng:current.lng,lat:current.lat,at:Date.now()};
       if(buildingsRequest) buildingsRequest.abort();
       if(renderingCheckTimer!==null){
@@ -1442,7 +1454,8 @@ export default function NaviboriMap({
               : tr("Error desconocido al cargar edificios.","Unknown building loading error.")
         );
         // Allow a fresh request after a failed provider attempt.
-        lastCenter=null;
+        // Keep the timestamp on error: GPS motion must not hammer Overpass.
+        lastCenter={lng:current.lng,lat:current.lat,at:Date.now()};
       }finally{
         clearTimeout(requestTimeout);
         if(buildingsRequest===controller)buildingsRequest=null;
@@ -1450,11 +1463,12 @@ export default function NaviboriMap({
     };
     const queueBuildingsRefresh=(force=false)=>{
       if(disposed||mapModeRef.current!=="3d")return;
+      if(!force && (gpsActiveRef.current || buildingsRequest || countVectorBuildings()>0))return;
       if(refreshTimer!==null)clearTimeout(refreshTimer);
       refreshTimer=setTimeout(()=>{
         refreshTimer=null;
         void update3DBuildings(force);
-      },force ? 50 : 650);
+      },force ? 50 : 800);
     };
     buildingRefreshRef.current=queueBuildingsRefresh;
     const setupMap=()=>{
@@ -1482,12 +1496,30 @@ export default function NaviboriMap({
       map.setLayoutProperty(NAVIBORI_BUILDINGS_ID,"visibility",initialMode==="3d"?"visible":"none");
       setMapReady(true);
       setBasemapState("ready");
-      if(initialMode==="3d")queueBuildingsRefresh(true);
+      // Give the official vector source a chance to render before falling
+      // back to rate-limited Overpass. Loading always resolves to a state.
+      if(initialMode==="3d"){
+        vectorWatchdog=setTimeout(()=>{
+          if(disposed||mapModeRef.current!=="3d")return;
+          if(countVectorBuildings()>0){
+            setBuildingRenderedCount(countVectorBuildings());
+            setBuildings3DState("ready");
+            setBuildingError("");
+          }else{
+            setBuildings3DState("no-data");
+            setBuildingError(tr(
+              "No llegaron edificios vectoriales. Puedes reintentar desde el menú.",
+              "Vector building tiles have not arrived. You can retry from the menu."
+            ));
+            queueBuildingsRefresh();
+          }
+        },8000);
+      }
     };
     map.on("load",setupMap);
     map.on("moveend",()=>{
       if(mapModeRef.current!=="3d")return;
-      queueBuildingsRefresh();
+      if(!gpsActiveRef.current)queueBuildingsRefresh();
       if(gpsActiveRef.current)return;
       const desiredPitch=adaptiveStreetPitch(map.getZoom());
       if(Math.abs(map.getPitch()-desiredPitch)>1&&!map.isMoving()){
@@ -1518,6 +1550,19 @@ export default function NaviboriMap({
       ))return;
       for(const id of [ROUTE_GLOW_ID,ROUTE_CASING_ID,ROUTE_LINE_ID,ROUTE_ARROW_ID]){
         if(map.getLayer(id))map.moveLayer(id);
+      }
+    });
+    // GPS follow never becomes idle on many iPhones. Sample visible faces
+    // sparingly during render events, even while the camera is moving.
+    map.on("render",()=>{
+      if(disposed||mapModeRef.current!=="3d"||Date.now()-visualMonitorAt<1500)return;
+      visualMonitorAt=Date.now();
+      const vectorVisible=countVectorBuildings();
+      if(vectorVisible>0 && vectorVisible!==lastReported3DCount){
+        lastReported3DCount=vectorVisible;
+        setBuildingRenderedCount(vectorVisible);
+        setBuildings3DState("ready");
+        setBuildingError("");
       }
     });
     map.on("idle",()=>{
@@ -1567,6 +1612,7 @@ export default function NaviboriMap({
       disposed=true;
       buildingRefreshRef.current=null;
       if(refreshTimer!==null)clearTimeout(refreshTimer);
+      if(vectorWatchdog!==null)clearTimeout(vectorWatchdog);
       if(renderingCheckTimer!==null)clearTimeout(renderingCheckTimer);
       buildingsRequest?.abort();
       map.getCanvas().removeEventListener("pointerdown",handleManualMapInteraction);
@@ -1758,7 +1804,7 @@ export default function NaviboriMap({
     map.setPaintProperty(layer,"fill-extrusion-opacity",gpsActive ? 0.50 : 0.86);
     if(map.getLayer(NAVIBORI_VECTOR_BUILDINGS_LAYER)){
       map.setPaintProperty(NAVIBORI_VECTOR_BUILDINGS_LAYER,
-        "fill-extrusion-opacity",gpsActive ? 0.48 : 0.82);
+        "fill-extrusion-opacity",gpsActive ? 0.67 : 0.91);
     }
   },[gpsActive,mapReady]);
 
@@ -1831,7 +1877,12 @@ export default function NaviboriMap({
     mapModeRef.current=next;
     setMode(next);
     if(next==="3d"){
-      buildingRefreshRef.current?.(true);
+      // Native OSMF tiles are preferred. Retry the auxiliary API only when
+      // the map lacks visible building polygons.
+      const vectorCount=map.getLayer(NAVIBORI_VECTOR_BUILDINGS_LAYER)
+        ? map.queryRenderedFeatures({layers:[NAVIBORI_VECTOR_BUILDINGS_LAYER]}).length
+        : 0;
+      if(vectorCount===0)buildingRefreshRef.current?.();
     }
     try{
       if(next==="2d" || next==="3d" || next==="globe"){
