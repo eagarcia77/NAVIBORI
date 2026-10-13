@@ -1246,11 +1246,13 @@ export default function NaviboriMap({
     // ?novasceneQA=1 test parameter. No GPS locations are exported.
     if(new URLSearchParams(window.location.search).get("novasceneQA")==="1"){
       (window as unknown as {__novaQA?:{
-        focus:()=>void; inspect:()=>Record<string,unknown>;
+        focus:(lng?:number,lat?:number)=>void; inspect:()=>Record<string,unknown>;
       }}).__novaQA={
-        focus:()=>map.jumpTo({center:JUANA_DIAZ_REFERENCE,zoom:17,pitch:58,bearing:-16}),
+        focus:(lng=-66.506,lat=18.052)=>map.jumpTo({center:[lng,lat],zoom:17,pitch:58,bearing:-16}),
         inspect:()=>({
           zoom:map.getZoom(),
+          longitude:map.getCenter().lng,
+          latitude:map.getCenter().lat,
           pitch:map.getPitch(),
           hasLayer:Boolean(map.getLayer(NAVIBORI_BUILDINGS_ID)),
           visibility:map.getLayer(NAVIBORI_BUILDINGS_ID)
