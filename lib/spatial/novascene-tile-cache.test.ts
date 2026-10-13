@@ -27,6 +27,17 @@ describe("NovaScene 2.1 expanded tile coverage",()=>{
     expect(manifest.bbox[2]).toBeGreaterThan(-66.486);
     expect(manifest.bbox[3]).toBeGreaterThan(18.068);
   });
+  it("rejects invalid manifests before loading 3D tile grids",()=>{
+    expect(validNovaSceneManifest({...manifest,bbox:[-66.4,18,-66.6,18.1]})).toBe(false);
+    expect(validNovaSceneManifest({...manifest,bbox:[-200,18,-66,19]})).toBe(false);
+    expect(validNovaSceneManifest({...manifest,step:0.00001,bbox:[-66,18,-65,19]})).toBe(false);
+    expect(validNovaSceneManifest({...manifest,tiles:[]})).toBe(false);
+  });
+  it("does not load tiles for invalid device viewport coordinates",()=>{
+    expect(visibleNovaSceneTileIds(manifest,{west:NaN,south:18,east:-66,north:19})).toEqual([]);
+    expect(visibleNovaSceneTileIds(manifest,{west:-66,south:19,east:-67,north:18})).toEqual([]);
+    expect(visibleNovaSceneTileIds(manifest,{west:-66,south:18,east:-65,north:19},-1)).toEqual([]);
+  });
   it("retains every unique real footprint even when it crosses cell boundaries",()=>{
     const ids=new Set<string>();
     let repeated=0;

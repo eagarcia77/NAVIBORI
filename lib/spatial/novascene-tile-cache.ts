@@ -30,12 +30,22 @@ export function validNovaSceneManifest(data:unknown):data is NovaSceneManifest{
     value.bbox.every(v=>typeof v==="number"&&Number.isFinite(v))&&
     typeof value.step==="number"&&value.step>0&&value.step<=0.05&&
     typeof value.uniqueBuildings==="number"&&value.uniqueBuildings>100&&
-    typeof value.license==="string"&&Boolean(value.tiles)&&typeof value.tiles==="object";
+    typeof value.license==="string"&&Boolean(value.tiles)&&typeof value.tiles==="object"&&
+    !Array.isArray(value.tiles)&&
+    value.bbox[0]>=-180&&value.bbox[2]<=180&&
+    value.bbox[1]>=-90&&value.bbox[3]<=90&&
+    value.bbox[0]<value.bbox[2]&&value.bbox[1]<value.bbox[3]&&
+    (value.bbox[2]-value.bbox[0])/value.step<=1000&&
+    (value.bbox[3]-value.bbox[1])/value.step<=1000;
 }
 
 export function visibleNovaSceneTileIds(
   manifest:NovaSceneManifest,viewport:SpatialBBox,padding=0.0015
 ):string[]{
+  if(!validNovaSceneManifest(manifest)||
+    ![viewport.west,viewport.south,viewport.east,viewport.north,padding].every(Number.isFinite)||
+    viewport.west>viewport.east||viewport.south>viewport.north||
+    padding<0||padding>0.1)return [];
   const [west,south,east,north]=manifest.bbox;
   const xCount=Math.ceil((east-west)/manifest.step);
   const yCount=Math.ceil((north-south)/manifest.step);
