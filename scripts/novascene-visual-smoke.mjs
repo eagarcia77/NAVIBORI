@@ -15,10 +15,18 @@ try{
     });
     const page=await context.newPage();
     page.on("pageerror",error=>errors.push(config.label+": "+error.message));
-    await page.goto("http://127.0.0.1:3200",{
+    page.on("console",message=>{
+      if(message.type()==="error")console.log(config.label+" console error:",message.text().slice(0,250));
+    });
+    await page.goto("http://127.0.0.1:3200/?novasceneQA=1",{
       waitUntil:"domcontentloaded",timeout:45000
     });
     await page.waitForSelector(".map-panel[data-novascene-total]",{timeout:45000});
+    // Startup business overview can zoom below extrusion threshold. Verify
+    // the actual neighborhood at street zoom (as GPS navigation shows it).
+    await page.waitForFunction(()=>
+      typeof window.__novaQA?.focus==="function",undefined,{timeout:10000});
+    await page.evaluate(()=>window.__novaQA.focus());
     let result;
     try{
       await page.waitForFunction(()=>{
@@ -35,7 +43,9 @@ try{
       total:el.getAttribute("data-novascene-total")
     }));
     await page.screenshot({path:"/tmp/novascene-"+config.label+".png",fullPage:false});
-    console.log("NovaScene "+config.label+" WebGL "+result+":",JSON.stringify(diagnostics));
+    const renderer=await page.evaluate(()=>window.__novaQA?.inspect?.());
+    console.log("NovaScene "+config.label+" WebGL "+result+":",
+      JSON.stringify(diagnostics),"renderer:",JSON.stringify(renderer));
     if(result!=="visible")errors.push(
       "No extruded 3D feature in "+config.label+" viewport: "+JSON.stringify(diagnostics)
     );
