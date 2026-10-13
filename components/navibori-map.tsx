@@ -906,7 +906,7 @@ export default function NaviboriMap({
         document.documentElement.dataset.motion!=="reduced"
       ){
         const bearing=getRouteBearingNearPoint(route,estimate.coordinate);
-        if(map.isEasing())return;
+        if(map.isMoving())return;
         map.easeTo({
           center:[
             estimate.coordinate.longitude,
@@ -3194,7 +3194,7 @@ export default function NaviboriMap({
         // Let an in-flight camera animation finish. Interrupting it from a
         // second geolocation callback can invalidate MapLibre's ease frame.
         // The GPS marker itself updates on *every* accepted location fix.
-        if(map&&!map.isEasing())map.easeTo({
+        if(map&&!map.isMoving())map.easeTo({
           center:[cameraCenter.longitude,cameraCenter.latitude],
           zoom:mapModeRef.current==="3d"
             ? nearTurnZoom(cameraProfile.zoom,cameraCue?.distanceMeters ?? null)
