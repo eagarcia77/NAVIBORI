@@ -39,7 +39,16 @@ try{
       geolocation:!!navigator.geolocation,
       userAgent:navigator.userAgent
     }));
+    const direct=await successPage.evaluate(()=>new Promise(resolve=>{
+      navigator.geolocation.getCurrentPosition(
+        position=>resolve({timestamp:position.timestamp,now:Date.now(),
+          accuracy:position.coords.accuracy}),
+        error=>resolve({error:error.code,message:error.message}),
+        {enableHighAccuracy:true,maximumAge:0,timeout:6000}
+      );
+    })).catch(error=>({exception:String(error)}));
     failures.push(name+" allowed GPS did not reach received: "+state+
+      " raw="+JSON.stringify(direct)+
       " overlay="+overlay.replaceAll("\n"," ")+
       " details="+details.slice(-500).replaceAll("\n"," ")+
       " browser="+JSON.stringify(browserFacts));
