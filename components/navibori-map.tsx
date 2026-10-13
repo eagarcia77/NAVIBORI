@@ -1281,7 +1281,7 @@ export default function NaviboriMap({
       (window as unknown as {__novaQA?:{
         focus:(lng?:number,lat?:number)=>void; inspect:()=>Record<string,unknown>;
       }}).__novaQA={
-        focus:(lng=-66.506,lat=18.052)=>map.jumpTo({center:[lng,lat],zoom:17,pitch:58,bearing:-16}),
+        focus:(lng=-66.506,lat=18.052)=>map.jumpTo({center:[lng,lat],zoom:17.5,pitch:58,bearing:-16}),
         inspect:()=>({
           zoom:map.getZoom(),
           longitude:map.getCenter().lng,
@@ -1294,6 +1294,8 @@ export default function NaviboriMap({
           styleLoaded:map.isStyleLoaded(),
           rendered:map.getLayer(NAVIBORI_BUILDINGS_ID)
             ?map.queryRenderedFeatures({layers:[NAVIBORI_BUILDINGS_ID]}).length:0,
+          renderedRoofs:map.getLayer(NAVIBORI_ROOF_ID)
+            ?map.queryRenderedFeatures({layers:[NAVIBORI_ROOF_ID]}).length:0,
           routeAboveBuildings:(()=>{
             const ids=map.getStyle().layers?.map(layer=>layer.id)??[];
             const buildingIndex=ids.indexOf(NAVIBORI_BUILDINGS_ID);
