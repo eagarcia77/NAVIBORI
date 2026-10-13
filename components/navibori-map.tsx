@@ -1222,6 +1222,9 @@ export default function NaviboriMap({
 
     if(!mapNode.current || mapRef.current) return;
 
+    // Fix the Next.js/Turbopack MapLibre v6 default ESM Worker URL.
+    // GeoJSON (and therefore all 3D walls) cannot render without this worker.
+    maplibregl.setWorkerUrl("/maplibre/maplibre-gl-worker.mjs");
     const map=new maplibregl.Map({
       container:mapNode.current,
       style:RASTER_BASEMAP,
