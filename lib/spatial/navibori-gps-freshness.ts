@@ -29,6 +29,10 @@ export function normalizeGeolocationTimestamp(timestamp:number):number|null{
     return timestamp*1000;
   if(timestamp>=1_000_000_000_000&&timestamp<100_000_000_000_000)
     return timestamp;
+  // Some WebKit testing/embedded providers expose microsecond epoch values.
+  // Convert only plausible epochs, never relax the incoming-age deadline.
+  if(timestamp>=1_000_000_000_000_000&&timestamp<100_000_000_000_000_000)
+    return timestamp/1000;
   return null;
 }
 
