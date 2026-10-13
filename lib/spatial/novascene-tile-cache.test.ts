@@ -7,6 +7,7 @@ import {
   newTileFetchCache,
   validNovaSceneManifest,
   validNovaSceneTile,
+  novaSceneTileMatchesManifest,
   type NovaSceneManifest,
   type NovaSceneCollection
 } from "./novascene-tile-cache";
@@ -39,6 +40,16 @@ describe("NovaScene 2.1 expanded tile coverage",()=>{
     expect(visibleNovaSceneTileIds(manifest,{west:-66,south:19,east:-67,north:18})).toEqual([]);
     expect(visibleNovaSceneTileIds(manifest,{west:-66,south:18,east:-65,north:19},-1)).toEqual([]);
   });
+  it("rejects incomplete or mismatched tile deliveries",()=>{
+    const first=Object.keys(manifest.tiles)[0];
+    const tile=load(first);
+    const count=manifest.tiles[first].count;
+    expect(novaSceneTileMatchesManifest(tile,count)).toBe(true);
+    expect(novaSceneTileMatchesManifest(tile,count+1)).toBe(false);
+    expect(novaSceneTileMatchesManifest(tile,-1)).toBe(false);
+    expect(novaSceneTileMatchesManifest(tile,1.5)).toBe(false);
+    expect(novaSceneTileMatchesManifest({type:"FeatureCollection",features:[]},count)).toBe(false);
+  });
   it("rejects broken building rings, invalid heights, and invalid positions",()=>{
     const polygon={type:"Feature",properties:{height:8,base:0,estimated:true},
       geometry:{type:"Polygon",coordinates:[[[-66.5,18.05],[-66.49,18.05],
@@ -63,6 +74,7 @@ describe("NovaScene 2.1 expanded tile coverage",()=>{
       const data=load(key);
       expect(data.type).toBe("FeatureCollection");
       expect(validNovaSceneTile(data)).toBe(true);
+      expect(novaSceneTileMatchesManifest(data,tile.count)).toBe(true);
       expect(data.features.length).toBe(tile.count);
       for(const feature of data.features){
         const id=String(feature.id);
