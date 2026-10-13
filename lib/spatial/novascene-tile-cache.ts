@@ -95,6 +95,14 @@ export function validNovaSceneTile(data:unknown):data is NovaSceneCollection{
   });
 }
 
+/** Check complete tile delivery against the locally published tile index. */
+export function novaSceneTileMatchesManifest(
+  data:unknown,expectedCount:number
+):data is NovaSceneCollection{
+  return Number.isSafeInteger(expectedCount)&&expectedCount>=0&&
+    validNovaSceneTile(data)&&data.features.length===expectedCount;
+}
+
 export function mergeNovaSceneFeatures(collections:NovaSceneCollection[]):NovaSceneCollection{
   const seen=new Set<string>();
   const features:NovaSceneFeature[]=[];
