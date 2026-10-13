@@ -17,18 +17,32 @@ export function gpsFixStatus(
   return age>=0&&age<=GPS_SIGNAL_STALE_MS?"current":"stale";
 }
 
-/** Do not move the map or recalculate from an out-of-order, cached or
- * invalid position delivered after a new accurate sample.
+/**
+ * The web GeolocationPosition timestamp specification uses epoch milliseconds.
+ * Some WebKit embedders have historically exposed the provider's epoch seconds
+ * instead. Normalize only plausible absolute epoch values and STILL enforce
+ * freshness; never substitute the callback's arrival time for an old fix.
  */
+export function normalizeGeolocationTimestamp(timestamp:number):number|null{
+  if(!Number.isFinite(timestamp)||timestamp<=0)return null;
+  if(timestamp>=1_000_000_000&&timestamp<100_000_000_000)
+    return timestamp*1000;
+  if(timestamp>=1_000_000_000_000&&timestamp<100_000_000_000_000)
+    return timestamp;
+  return null;
+}
+
+/** Do not move the map or reroute from cached or out-of-order positions. */
 export function acceptGpsPositionTimestamp(
   timestamp:number,
   latestAcceptedTimestamp:number|null,
   now:number
 ):boolean{
-  if(!Number.isFinite(timestamp)||timestamp<=0||!Number.isFinite(now))return false;
-  const age=now-timestamp;
+  const normalized=normalizeGeolocationTimestamp(timestamp);
+  if(normalized===null||!Number.isFinite(now))return false;
+  const age=now-normalized;
   if(age>GPS_INCOMING_MAX_AGE_MS||age< -5000)return false;
-  return latestAcceptedTimestamp===null||timestamp>latestAcceptedTimestamp;
+  return latestAcceptedTimestamp===null||normalized>latestAcceptedTimestamp;
 }
 
 /** When no live fix arrives, a previously cached starting point must never
