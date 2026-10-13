@@ -89,5 +89,5 @@ export function novaSceneRoofPaint(appearance:NovaSceneAppearance){
     "fill-extrusion-height":["+",height,0.025],
     "fill-extrusion-opacity":appearance==="natural"?0.93:0.91,
     "fill-extrusion-vertical-gradient":false
-  } as FillExtrusionLayerSpecification["paint"];
+  } as unknown as NonNullable<FillExtrusionLayerSpecification["paint"]>;
 }
