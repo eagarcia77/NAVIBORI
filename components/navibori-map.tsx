@@ -19,7 +19,7 @@ import {
 } from "@/lib/spatial/novascene-appearance";
 import {nearTurnZoom,nextRouteCorridor} from "@/lib/spatial/novascene-route-focus";
 import {gpsSignalQuality,shouldDrawSvgFallback,stabilizedCameraBearing} from "@/lib/spatial/novascene-gps-stability";
-import {acceptGpsPositionTimestamp,hasLiveGpsFix} from "@/lib/spatial/navibori-gps-freshness";
+import {acceptGpsPositionTimestamp,hasLiveGpsFix,normalizeGeolocationTimestamp} from "@/lib/spatial/navibori-gps-freshness";
 import {navigationSignalCopy,navigationSignalState} from "@/lib/spatial/navibori-navigation-signal";
 import {
   buildAppleMapsDirectionsUrl,
@@ -2962,7 +2962,7 @@ export default function NaviboriMap({
 
       receivedFix=true;
       receivedLiveFix=true;
-      latestPositionTimestampRef.current=position.timestamp;
+      latestPositionTimestampRef.current=normalizeGeolocationTimestamp(position.timestamp);
       gpsLastLiveFixAtRef.current=now;
       setGpsSignalHeartbeat(now);
       setGpsResumePending(false);
