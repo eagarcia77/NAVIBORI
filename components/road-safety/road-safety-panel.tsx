@@ -231,9 +231,9 @@ export default function RoadSafetyPanel(){
 
   function saveReport(kind:RoadAlertKind){
     const current=lastFix.current;
+    const now=Date.now();
     if(!current || now-current.receivedAt>30000 || (current.accuracy??Infinity)>125 ||
       (current.speedMps!==null && current.speedMps>=2.5)){setNotice(t.safe);return;}
-    const now=Date.now();
     const duplicate=reports.some(report=>report.kind===kind&&validReport(report,now)&&
       metersBetween(current,report)<45);
     if(duplicate){setNotice(t.duplicate);return;}
