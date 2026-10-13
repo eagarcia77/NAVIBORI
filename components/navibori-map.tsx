@@ -7,7 +7,7 @@ import {
   mergeNovaSceneFeatures,
   newTileFetchCache,
   validNovaSceneManifest,
-  validNovaSceneTile,
+  novaSceneTileMatchesManifest,
   visibleNovaSceneTileIds,
   type NovaSceneCollection,
   type NovaSceneManifest
@@ -1428,8 +1428,8 @@ export default function NaviboriMap({
         const response=await fetch(target.path,{signal:controller.signal,cache:"force-cache"});
         if(!response.ok)throw Error("Tile "+key+" HTTP "+response.status);
         const data=await response.json() as NovaSceneCollection;
-        if(!validNovaSceneTile(data)){
-          throw Error("Tile "+key+" has invalid building geometry");
+        if(!novaSceneTileMatchesManifest(data,target.count)){
+          throw Error("Tile "+key+" has missing or invalid building data");
         }
         tileCache.set(key,data);
         return data;
