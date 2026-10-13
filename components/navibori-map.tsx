@@ -1312,7 +1312,8 @@ export default function NaviboriMap({
       const old=inflight.get(key);
       if(old)return old;
       const target=currentManifest.tiles[key];
-      if(!target || !/^\\/data\\/novascene\\/tiles\\/v2\\/[0-9]+-[0-9]+\\.geojson$/.test(target.path)){
+      // Only load the expected same-origin filename for this numeric cell ID.
+      if(!target || target.path!=="/data/novascene/tiles/v2/"+key+".geojson"){
         throw Error("NovaScene tile path invalid");
       }
       const controller=new AbortController();
