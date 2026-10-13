@@ -1815,11 +1815,15 @@ export default function NaviboriMap({
 
     const focused=mappedBusinesses.find((business)=>business.slug===selectedSlug);
     if(focused?.mapLocation && !routeResult){
-      map.easeTo({
-        center:[focused.mapLocation.longitude,focused.mapLocation.latitude],
-        zoom:17,
-        duration:700
-      });
+      // During one-tap GPS launch, the follow camera takes priority over
+      // selection previews. Never interrupt an active map animation.
+      if(!pendingNavigation&&!activeNavigationModeRef.current&&
+         !gpsActiveRef.current&&!map.isMoving()){
+        map.easeTo({
+          center:[focused.mapLocation.longitude,focused.mapLocation.latitude],
+          zoom:17,duration:700
+        });
+      }
     }else if(mappedBusinesses.length>1 && !bounds.isEmpty() && !selectedSlug){
       map.fitBounds(bounds,{padding:70,maxZoom:16,duration:700});
     }else if(mappedBusinesses.length===1 && !selectedSlug){
@@ -1831,6 +1835,7 @@ export default function NaviboriMap({
     mapReady,
     routeResult,
     selectedSlug,
+    pendingNavigation,
     copy.destination,
     deviceLocale.language
   ]);
@@ -2052,14 +2057,18 @@ export default function NaviboriMap({
     setPendingNavigation(null);
     pendingSpeechKeyRef.current="";
     lastSpokenInstructionRef.current="";
+    const alreadySelected=selectedSlug===business.slug;
     setSelectedSlug(business.slug);
-
-    mapRef.current?.easeTo({
-      center:[location.longitude,location.latitude],
-      zoom:17,
-      pitch:mode==="3d" ? 58 : 0,
-      duration:650
-    });
+    // The selection effect normally owns focus animations. Triggering
+    // a second ease here interrupts the first MapLibre render frame.
+    if(alreadySelected && mapRef.current&&!mapRef.current.isMoving()){
+      mapRef.current.easeTo({
+        center:[location.longitude,location.latitude],
+        zoom:17,
+        pitch:mode==="3d"?58:0,
+        duration:650
+      });
+    }
   }
 
   function navigateToNearbyBusiness(
