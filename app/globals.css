@@ -3116,3 +3116,41 @@ html[data-motion="reduced"] .navibori-drift-bridge-marker i{
     max-width:calc(100vw - 16px);
   }
 }
+
+
+/* NovaScene 3D: clear immersive depth visual language, not an obstructive HUD. */
+.map-panel .navibori-3d-indicator[data-view="3d"]{
+  border:1px solid rgba(82,205,222,.76);
+  background:linear-gradient(116deg,rgba(250,255,255,.98),rgba(227,243,255,.94));
+  box-shadow:0 14px 32px rgba(0,79,121,.18),0 0 0 2px rgba(68,188,221,.10);
+}
+.map-panel .navibori-3d-indicator[data-view="3d"] .navibori-3d-orb{
+  background:linear-gradient(145deg,#025b94 0%,#009eba 48%,#64daca 100%);
+  box-shadow:0 7px 20px rgba(2,121,159,.30);
+}
+.map-panel[data-navigation-active="true"] .navibori-3d-navigation-status{
+  border-color:rgba(117,213,229,.76);
+  background:linear-gradient(115deg,rgba(251,255,255,.97),rgba(231,247,253,.96));
+  color:#124160;
+  box-shadow:0 8px 26px rgba(0,86,129,.19);
+}
+.map-panel .navibori-3d-diagnostic-menu{
+  background:linear-gradient(150deg,#f7fdff,#eaf5fa);
+  border-color:rgba(72,154,186,.34);
+}
+.map-panel .navibori-3d-diagnostic-menu>strong{
+  color:#0f587e;
+  font-weight:850;
+}
+@media(prefers-reduced-motion:no-preference){
+  @keyframes novascene-halo{
+    0%,100%{box-shadow:0 7px 20px rgba(2,121,159,.25)}
+    50%{box-shadow:0 7px 26px rgba(2,166,199,.42)}
+  }
+  .map-panel .navibori-3d-indicator[data-view="3d"] .navibori-3d-orb{
+    animation:novascene-halo 3.6s ease-in-out infinite;
+  }
+}
+@media(prefers-reduced-motion:reduce){
+  .map-panel .navibori-3d-indicator .navibori-3d-orb{animation:none}
+}
