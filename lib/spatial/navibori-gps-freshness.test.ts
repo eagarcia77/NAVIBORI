@@ -18,6 +18,9 @@ describe("NAVIBORI 2.6 live GPS signal integrity",()=>{
     const seconds=Math.floor(now/1000);
     expect(normalizeGeolocationTimestamp(seconds)).toBe(seconds*1000);
     expect(normalizeGeolocationTimestamp(now)).toBe(now);
+    expect(normalizeGeolocationTimestamp(now*1000)).toBe(now);
+    expect(acceptGpsPositionTimestamp(now*1000,null,now)).toBe(true);
+    expect(acceptGpsPositionTimestamp((now-30_000)*1000,null,now)).toBe(false);
     expect(normalizeGeolocationTimestamp(0)).toBeNull();
     expect(acceptGpsPositionTimestamp(seconds,null,now)).toBe(true);
     expect(acceptGpsPositionTimestamp(seconds-120,null,now)).toBe(false);
