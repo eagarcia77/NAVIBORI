@@ -1895,9 +1895,11 @@ export default function NaviboriMap({
       map.off("idle",handleStyleReady);
     };
 
-    if(gpsActive && followGps && userLocation){
-      // The foreground GPS tracker owns the adaptive camera during navigation.
-      // Avoid a competing easeTo() here, which resets its look-ahead and zoom.
+    // Progress updates re-render the route while the GPS session is active.
+    // Never re-fit bounds for every progress tick: that starts overlapping
+    // MapLibre ease frames and can crash Chromium's _onEaseFrame callback.
+    // Preview/follow actions own the camera separately.
+    if(gpsActive || gpsActiveRef.current){
       return cleanup;
     }
 
