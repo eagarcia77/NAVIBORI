@@ -31,8 +31,18 @@ try{
     }
     console.log(name+" mobile geolocation allowed:",status.replaceAll("\n"," "));
   }catch{
-    failures.push("Allowed GPS did not reach received: "+
-      await successPage.locator(".map-panel").getAttribute("data-gps-probe"));
+    const state=await successPage.locator(".map-panel").getAttribute("data-gps-probe");
+    const overlay=await successPage.locator(".navibori-gps-probe").innerText().catch(()=>"(no overlay)");
+    const details=await successPage.locator(".business-route-card").innerText().catch(()=>"(no details)");
+    const browserFacts=await successPage.evaluate(()=>({
+      secure:window.isSecureContext,
+      geolocation:!!navigator.geolocation,
+      userAgent:navigator.userAgent
+    }));
+    failures.push(name+" allowed GPS did not reach received: "+state+
+      " overlay="+overlay.replaceAll("\n"," ")+
+      " details="+details.slice(-500).replaceAll("\n"," ")+
+      " browser="+JSON.stringify(browserFacts));
   }
   await successPage.screenshot({path:"/tmp/navibori-gps-"+name+"-allowed.png"});
   await approved.close();
