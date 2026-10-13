@@ -19,6 +19,7 @@ import {
 } from "@/lib/spatial/novascene-appearance";
 import {nearTurnZoom,nextRouteCorridor} from "@/lib/spatial/novascene-route-focus";
 import {gpsSignalQuality,shouldDrawSvgFallback,stabilizedCameraBearing} from "@/lib/spatial/novascene-gps-stability";
+import {acceptGpsPositionTimestamp,gpsFixStatus,hasLiveGpsFix} from "@/lib/spatial/navibori-gps-freshness";
 import {
   buildAppleMapsDirectionsUrl,
   buildGoogleDirectionsUrl,
@@ -408,6 +409,11 @@ export default function NaviboriMap({
   const orientationHandlerRef=useRef<((event:DeviceOrientationEvent)=>void)|null>(null);
   const routeAbortRef=useRef<AbortController|null>(null);
   const gpsWatchRef=useRef<number|null>(null);
+  const gpsSessionRef=useRef(0);
+  const latestPositionTimestampRef=useRef<number|null>(null);
+  const gpsLastLiveFixAtRef=useRef<number|null>(null);
+  const gpsResumeFixRef=useRef<(()=>void)|null>(null);
+  const gpsResumeRequestPendingRef=useRef(false);
   const gpsBootstrapTimerRef=useRef<ReturnType<typeof setTimeout>|null>(null);
   const routePreviewTimerRef=useRef<ReturnType<typeof setTimeout>|null>(null);
   const activeNavigationModeRef=useRef<InMapRouteMode|null>(null);
@@ -483,6 +489,8 @@ export default function NaviboriMap({
   const [gpsActive,setGpsActive]=useState(false);
   const [gpsAccuracy,setGpsAccuracy]=useState<number|null>(null);
   const [gpsSpeedKph,setGpsSpeedKph]=useState<number|null>(null);
+  const [gpsSignalHeartbeat,setGpsSignalHeartbeat]=useState(0);
+  const [gpsResumePending,setGpsResumePending]=useState(false);
   const [navigationBearingDegrees,setNavigationBearingDegrees]=useState<number|null>(null);
   const [trajectoryPrediction,setTrajectoryPrediction]=useState<TrajectoryPrediction|null>(null);
   const [gravityLensPhase,setGravityLensPhase]=useState<GravityLensPhase>("cruise");
@@ -1211,22 +1219,40 @@ export default function NaviboriMap({
 
   useEffect(()=>{
     const handleVisibility=()=>{
-      if(
-        document.visibilityState==="visible" &&
-        gpsActiveRef.current &&
-        "wakeLock" in navigator
-      ){
-        void navigator.wakeLock.request("screen")
-          .then((sentinel)=>{
-            wakeLockRef.current=sentinel;
-          })
-          .catch(()=>{});
+      if(document.visibilityState!=="visible")return;
+      if(gpsActiveRef.current){
+        if("wakeLock" in navigator && !wakeLockRef.current){
+          void navigator.wakeLock.request("screen")
+            .then((sentinel)=>{
+              if(gpsActiveRef.current)wakeLockRef.current=sentinel;
+              else void sentinel.release().catch(()=>{});
+            }).catch(()=>{});
+        }
+        // Safari may suspend geolocation while another app is foreground.
+        // Ask for one fresh fix when resuming; do not create a second watch.
+        gpsResumeFixRef.current?.();
       }
     };
-
     document.addEventListener("visibilitychange",handleVisibility);
-    return ()=>document.removeEventListener("visibilitychange",handleVisibility);
+    window.addEventListener("pageshow",handleVisibility);
+    return ()=>{
+      document.removeEventListener("visibilitychange",handleVisibility);
+      window.removeEventListener("pageshow",handleVisibility);
+    };
   },[]);
+
+  useEffect(()=>{
+    if(!gpsActive){
+      setGpsResumePending(false);
+      return;
+    }
+    const ticker=window.setInterval(()=>{
+      if(document.visibilityState==="visible"){
+        setGpsSignalHeartbeat(Date.now());
+      }
+    },4000);
+    return ()=>window.clearInterval(ticker);
+  },[gpsActive]);
 
   useEffect(()=>{
     if(
@@ -2714,6 +2740,12 @@ export default function NaviboriMap({
   }
 
   function stopGpsNavigation(options:{preservePhase?:boolean}={}){
+    gpsSessionRef.current+=1;
+    gpsResumeFixRef.current=null;
+    gpsResumeRequestPendingRef.current=false;
+    gpsLastLiveFixAtRef.current=null;
+    latestPositionTimestampRef.current=null;
+    setGpsResumePending(false);
     if(gpsBootstrapTimerRef.current!==null){
       clearTimeout(gpsBootstrapTimerRef.current);
       gpsBootstrapTimerRef.current=null;
@@ -2781,6 +2813,8 @@ export default function NaviboriMap({
     }
 
     stopGpsNavigation();
+    const sessionId=gpsSessionRef.current;
+    const sessionStartedAt=Date.now();
     // A globe overview must not be used for street-level GPS guidance.
     if(mapModeRef.current==="globe"){
       mapRef.current?.setProjection({type:"mercator"});
@@ -2824,6 +2858,7 @@ export default function NaviboriMap({
 
     let firstFix=cachedOrigin===null;
     let receivedFix=cachedOrigin!==null;
+    let receivedLiveFix=false;
     let fallbackRequested=false;
 
     const previewThenFollow=async(origin:RouteCoordinate)=>{
@@ -2862,6 +2897,14 @@ export default function NaviboriMap({
     }
 
     const handlePosition=(position:GeolocationPosition)=>{
+      if(gpsSessionRef.current!==sessionId)return;
+      const now=Date.now();
+      if(!acceptGpsPositionTimestamp(
+        position.timestamp,latestPositionTimestampRef.current,now
+      )){
+        setGpsSignalHeartbeat(now);
+        return;
+      }
       const next={
         latitude:position.coords.latitude,
         longitude:position.coords.longitude
@@ -2896,6 +2939,12 @@ export default function NaviboriMap({
       }
 
       receivedFix=true;
+      receivedLiveFix=true;
+      latestPositionTimestampRef.current=position.timestamp;
+      gpsLastLiveFixAtRef.current=now;
+      setGpsSignalHeartbeat(now);
+      setGpsResumePending(false);
+      gpsResumeRequestPendingRef.current=false;
       if(gpsBootstrapTimerRef.current!==null){
         clearTimeout(gpsBootstrapTimerRef.current);
         gpsBootstrapTimerRef.current=null;
@@ -3204,7 +3253,24 @@ export default function NaviboriMap({
     };
 
     const handleWatchError=(error:GeolocationPositionError)=>{
-      if(receivedFix) return;
+      if(gpsSessionRef.current!==sessionId)return;
+      if(error.code===error.PERMISSION_DENIED){
+        setRouteBusy(null);
+        setNavigationPhase("error");
+        setLocationStatus(geolocationErrorMessage(error));
+        stopGpsNavigation({preservePhase:true});
+        return;
+      }
+      if(receivedLiveFix){
+        setGpsResumePending(false);
+        setLocationStatus(tr(
+          "La señal GPS se interrumpió. Manteniendo la última ubicación hasta recibir una nueva lectura.",
+          "GPS signal interrupted. Holding the last location until a new fix arrives."
+        ));
+        setGpsSignalHeartbeat(Date.now());
+        return;
+      }
+      if(receivedFix)return;
 
       if(error.code===error.PERMISSION_DENIED){
         setRouteBusy(null);
@@ -3215,6 +3281,33 @@ export default function NaviboriMap({
       }
 
       requestLowAccuracyFallback();
+    };
+
+    gpsResumeFixRef.current=()=>{
+      if(gpsSessionRef.current!==sessionId ||
+        document.visibilityState!=="visible" ||
+        !navigator.geolocation || gpsResumeRequestPendingRef.current)return;
+      gpsResumeRequestPendingRef.current=true;
+      setGpsResumePending(true);
+      setGpsSignalHeartbeat(Date.now());
+      navigator.geolocation.getCurrentPosition(
+        (position)=>{
+          if(gpsSessionRef.current!==sessionId)return;
+          gpsResumeRequestPendingRef.current=false;
+          setGpsResumePending(false);
+          handlePosition(position);
+        },
+        (error)=>{
+          if(gpsSessionRef.current!==sessionId)return;
+          gpsResumeRequestPendingRef.current=false;
+          setGpsResumePending(false);
+          setGpsSignalHeartbeat(Date.now());
+          if(error.code===error.PERMISSION_DENIED){
+            setLocationStatus(geolocationErrorMessage(error));
+          }
+        },
+        {enableHighAccuracy:true,timeout:12000,maximumAge:0}
+      );
     };
 
     gpsWatchRef.current=navigator.geolocation.watchPosition(
@@ -3247,7 +3340,17 @@ export default function NaviboriMap({
     );
 
     gpsBootstrapTimerRef.current=setTimeout(()=>{
-      if(receivedFix) return;
+      if(gpsSessionRef.current!==sessionId)return;
+      if(receivedLiveFix || hasLiveGpsFix(gpsLastLiveFixAtRef.current,sessionStartedAt))return;
+      if(receivedFix){
+        setGpsSignalHeartbeat(Date.now());
+        setGpsResumePending(false);
+        setLocationStatus(tr(
+          "La ruta está preparada, pero aún no hay una posición GPS actual confirmada.",
+          "Route prepared, but a current live GPS position is not yet confirmed."
+        ));
+        return;
+      }
       setRouteBusy(null);
       setNavigationPhase("error");
       setLocationStatus(
@@ -3333,11 +3436,18 @@ export default function NaviboriMap({
                 :buildings3DState==="no-data"
                   ?tr("Sin edificios visibles","No visible buildings")
                   :tr("Edificios no disponibles","Buildings unavailable")}</strong>
-            <small className={"novascene-gps-signal "+gpsSignalQuality(gpsAccuracy)}
-              title={tr("Precisión GPS informada por el dispositivo","Device-reported GPS accuracy")}>
-              {gpsAccuracy!==null&&Number.isFinite(gpsAccuracy)
-                ? "GPS ±"+Math.round(gpsAccuracy)+" m"
-                : tr("GPS por verificar","GPS not verified")}
+            <small className={"novascene-gps-signal "+(
+              gpsFixStatus(gpsLastLiveFixAtRef.current,gpsSignalHeartbeat||Date.now())==="stale"
+                ? "weak" : gpsSignalQuality(gpsAccuracy)
+            )}
+              title={tr("Estado de la señal GPS del dispositivo","Device GPS signal status")}>
+              {gpsResumePending
+                ?tr("Reconectando GPS","Reconnecting GPS")
+                :gpsFixStatus(gpsLastLiveFixAtRef.current,gpsSignalHeartbeat||Date.now())!=="current"
+                  ?tr("GPS sin señal reciente","GPS fix not current")
+                  :gpsAccuracy!==null&&Number.isFinite(gpsAccuracy)
+                    ? "GPS ±"+Math.round(gpsAccuracy)+" m"
+                    :tr("GPS por verificar","GPS not verified")}
             </small>
           </div>
         )}
