@@ -1231,6 +1231,28 @@ export default function NaviboriMap({
       bearing:-16,
       canvasContextAttributes:{antialias:true}
     });
+    // Browser-only acceptance diagnostics, enabled only by the explicit
+    // ?novasceneQA=1 test parameter. No GPS locations are exported.
+    if(new URLSearchParams(window.location.search).get("novasceneQA")==="1"){
+      (window as unknown as {__novaQA?:{
+        focus:()=>void; inspect:()=>Record<string,unknown>;
+      }}).__novaQA={
+        focus:()=>map.jumpTo({center:JUANA_DIAZ_REFERENCE,zoom:17,pitch:58,bearing:-16}),
+        inspect:()=>({
+          zoom:map.getZoom(),
+          pitch:map.getPitch(),
+          hasLayer:Boolean(map.getLayer(NAVIBORI_BUILDINGS_ID)),
+          visibility:map.getLayer(NAVIBORI_BUILDINGS_ID)
+            ?map.getLayoutProperty(NAVIBORI_BUILDINGS_ID,"visibility"):null,
+          hasSource:Boolean(map.getSource(NAVIBORI_BUILDINGS_SOURCE)),
+          styleLoaded:map.isStyleLoaded(),
+          rendered:map.getLayer(NAVIBORI_BUILDINGS_ID)
+            ?map.queryRenderedFeatures({layers:[NAVIBORI_BUILDINGS_ID]}).length:0,
+          sourceFeatures:map.getSource(NAVIBORI_BUILDINGS_SOURCE)
+            ?map.querySourceFeatures(NAVIBORI_BUILDINGS_SOURCE).length:0
+        })
+      };
+    }
     let disposed=false;
     let mapInitialized=false;
     let buildingsRequest:AbortController|null=null;
