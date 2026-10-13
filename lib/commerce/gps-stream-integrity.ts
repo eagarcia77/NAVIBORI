@@ -1,5 +1,5 @@
 import {distanceBetweenCoordinates,type RoutingCoordinate}
-  from "@/lib/commerce/in-map-routing";
+  from "./in-map-routing";
 
 /** Protection against a single sudden GNSS multipath jump.
  * Only accepted device readings may update navigation or trigger rerouting.
