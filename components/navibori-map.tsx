@@ -124,10 +124,20 @@ function create3DBuildings(map:maplibregl.Map){
       source:NAVIBORI_BUILDINGS_SOURCE,minzoom:14.5,
       layout:{visibility:"visible"},
       paint:{
-        "fill-extrusion-color":["case",["boolean",["get","estimated"],true],"#79b9d4","#3385b9"],
-        "fill-extrusion-height":["interpolate",["linear"],["zoom"],14.5,0,15.5,["max",5,["coalesce",["get","height"],9]]],
-        "fill-extrusion-base":["coalesce",["get","base"],0],
-        "fill-extrusion-opacity":0.96,
+        // Use a height-aware color gradient to distinguish roofs from walls.
+        // Estimated and measured height palettes remain subtly distinct;
+        // neither is a claim about the building's actual appearance.
+        "fill-extrusion-color":[
+          "case",["boolean",["get","estimated"],true],
+          ["interpolate",["linear"],["coalesce",["to-number",["get","height"]],9],
+            5,"#bad9e6",7.5,"#99c3d6",10,"#75adc7",14,"#5a95b5",35,"#3f7c9e"],
+          ["interpolate",["linear"],["coalesce",["to-number",["get","height"]],9],
+            5,"#a9d4db",8,"#77b7ca",14,"#4298b7",35,"#277495"]
+        ],
+        "fill-extrusion-height":["interpolate",["linear"],["zoom"],14.5,0,15.5,
+          ["max",5,["coalesce",["to-number",["get","height"]],9]]],
+        "fill-extrusion-base":["coalesce",["to-number",["get","base"]],0],
+        "fill-extrusion-opacity":0.94,
         "fill-extrusion-vertical-gradient":true
       }
     });
@@ -1261,6 +1271,12 @@ export default function NaviboriMap({
           styleLoaded:map.isStyleLoaded(),
           rendered:map.getLayer(NAVIBORI_BUILDINGS_ID)
             ?map.queryRenderedFeatures({layers:[NAVIBORI_BUILDINGS_ID]}).length:0,
+          routeAboveBuildings:(()=>{
+            const ids=map.getStyle().layers?.map(layer=>layer.id)??[];
+            const buildingIndex=ids.indexOf(NAVIBORI_BUILDINGS_ID);
+            const routeIndex=ids.indexOf(ROUTE_LINE_ID);
+            return buildingIndex>=0 && routeIndex>buildingIndex;
+          })(),
           sourceFeatures:map.getSource(NAVIBORI_BUILDINGS_SOURCE)
             ?map.querySourceFeatures(NAVIBORI_BUILDINGS_SOURCE).length:0
         })
@@ -1783,7 +1799,9 @@ export default function NaviboriMap({
     const map=mapRef.current;
     const layer=buildingsLayerRef.current;
     if(!map||!layer||!map.getLayer(layer)) return;
-    map.setPaintProperty(layer,"fill-extrusion-opacity",gpsActive ? 0.50 : 0.86);
+    // Preserve building depth while keeping the turn-by-turn route legible.
+    // Route lines are explicitly ordered above extrusion geometry.
+    map.setPaintProperty(layer,"fill-extrusion-opacity",gpsActive ? 0.77 : 0.94);
     if(map.getLayer(NAVIBORI_VECTOR_BUILDINGS_LAYER)){
       map.setPaintProperty(NAVIBORI_VECTOR_BUILDINGS_LAYER,
         "fill-extrusion-opacity",gpsActive ? 0.67 : 0.91);
@@ -3187,7 +3205,7 @@ export default function NaviboriMap({
           <div className="navibori-3d-navigation-status" role="status">
             <span>◈ NOVASCENE 3D</span>
             <strong>{buildings3DState==="ready"
-              ?tr(buildingRenderedCount+" edificios visibles",buildingRenderedCount+" buildings visible")
+              ?tr(buildingRenderedCount+" elementos 3D visibles",buildingRenderedCount+" visible 3D features")
               :buildings3DState==="loading"
                 ?tr("Cargando edificios","Loading buildings")
                 :buildings3DState==="no-data"
@@ -3204,7 +3222,7 @@ export default function NaviboriMap({
                 :mode==="3d"&&buildings3DState==="no-data"
                   ?tr("No hay edificios 3D en esta zona","No 3D buildings in this area")
                   :mode==="3d"&&buildings3DState==="ready"
-                    ?tr(buildingRenderedCount+" edificios 3D visibles · modelo local",buildingRenderedCount+" 3D buildings visible · local model")
+                    ?tr(buildingRenderedCount+" elementos 3D visibles · modelo local",buildingRenderedCount+" visible 3D features · local model")
                   :mode==="3d"&&buildings3DState==="loading"
                     ?tr("Cargando edificios locales…","Loading local buildings…")
                   :mode==="3d"
