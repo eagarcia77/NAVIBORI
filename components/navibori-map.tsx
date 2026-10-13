@@ -2905,7 +2905,11 @@ export default function NaviboriMap({
       const route=await calculateRoute(routeMode,origin);
       if(!route) return;
 
-      showFullRoute();
+      // A first accepted GPS fix or business selection may already have
+      // started a camera transition. An automatic full-route fit at that
+      // moment would interrupt MapLibre's queued ease frame. Skip the
+      // overview if the map is moving; the follow camera will still resume.
+      if(!mapRef.current?.isMoving())showFullRoute();
       setRouteStatus(
         routeModeLabel(routeMode,deviceLocale.locale)+
         " · "+copy.routeReady+" · "+formatDistance(route.distanceMeters)+
