@@ -3316,3 +3316,25 @@ html[data-motion="reduced"] .navibori-drift-bridge-marker i{
 @media(max-width:600px){
   .navibori-gps-probe{top:130px;right:8px;width:min(245px,calc(100vw - 16px))}
 }
+
+/* NAVIBORI 2.9: compact, accurate freshness telemetry in GPS cockpit. */
+.novascene-fix-age{
+  display:inline-flex;
+  align-items:center;
+  border:1px solid rgba(17,119,132,.26);
+  border-radius:999px;
+  padding:2px 7px;
+  background:rgba(239,251,250,.91);
+  color:#206174;
+  font-size:.59rem;
+  font-weight:780;
+  white-space:nowrap;
+}
+.novascene-fix-age.stale{
+  background:#fff0e9;
+  color:#973e29;
+  border-color:rgba(188,83,50,.26);
+}
+@media(max-width:600px){
+  .novascene-fix-age{font-size:.54rem}
+}
