@@ -2379,7 +2379,6 @@ export default function NaviboriMap({
       const cameraOptions:maplibregl.JumpToOptions={
         center:[target.longitude,target.latitude],
         zoom,
-        offset:[0,orbitalLookahead ? 130 : 110],
         pitch:mapModeRef.current==="3d"
           ? adaptiveStreetPitch(zoom)
           : mapModeRef.current==="2d"
@@ -2396,7 +2395,7 @@ export default function NaviboriMap({
         window.matchMedia("(prefers-reduced-motion: reduce)").matches){
         map.jumpTo(cameraOptions);
       }else{
-        map.easeTo({...cameraOptions,duration:450});
+        map.easeTo({...cameraOptions,offset:[0,orbitalLookahead ? 130 : 110],duration:450});
       }
     }
 
@@ -3236,7 +3235,6 @@ export default function NaviboriMap({
             zoom:mapModeRef.current==="3d"
               ? nearTurnZoom(cameraProfile.zoom,cameraCue?.distanceMeters ?? null)
               : cameraProfile.zoom,
-            offset:[0,cameraProfile.offsetY],
             bearing:cameraBearing ?? map.getBearing(),
             pitch:mapModeRef.current==="3d"
               ? approachTurnPitch(adaptiveStreetPitch(cameraProfile.zoom),
@@ -3247,6 +3245,7 @@ export default function NaviboriMap({
             map.jumpTo(cameraOptions);
           }else{
             map.easeTo({...cameraOptions,
+              offset:[0,cameraProfile.offsetY],
               duration:firstFix?650:Math.min(650,cameraProfile.duration)
             });
           }
