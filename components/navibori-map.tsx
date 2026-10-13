@@ -1232,6 +1232,7 @@ export default function NaviboriMap({
       canvasContextAttributes:{antialias:true}
     });
     let disposed=false;
+    let mapInitialized=false;
     let buildingsRequest:AbortController|null=null;
     let refreshTimer:ReturnType<typeof setTimeout>|null=null;
     let renderingCheckTimer:ReturnType<typeof setTimeout>|null=null;
@@ -1366,7 +1367,8 @@ export default function NaviboriMap({
     };
     buildingRefreshRef.current=queueBuildingsRefresh;
     const setupMap=()=>{
-      if(disposed)return;
+      if(disposed||mapInitialized)return;
+      mapInitialized=true;
       buildingsLayerRef.current=create3DBuildings(map);
       ensureRouteInfrastructure(map);
       let initialMode:RealityMode="3d";
@@ -1411,6 +1413,7 @@ export default function NaviboriMap({
         },8000);
       }
     };
+    map.on("style.load",setupMap);
     map.on("load",setupMap);
     map.on("moveend",()=>{
       if(mapModeRef.current!=="3d")return;
@@ -3091,6 +3094,9 @@ export default function NaviboriMap({
       data-exodock-state={exoDockState}
       data-gravity-lens={gravityLensPhase}
       data-navigation-active={gpsActive ? "true" : "false"}
+      data-novascene-state={buildings3DState}
+      data-novascene-visible={buildingRenderedCount}
+      data-novascene-total={buildingCount}
       aria-label={tr("Mapa de comercios NAVIBORI","NAVIBORI business map")}
     >
       <div className="map-stage full-map-stage">
