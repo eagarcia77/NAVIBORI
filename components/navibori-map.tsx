@@ -1321,8 +1321,7 @@ export default function NaviboriMap({
       ).slice(0,2500).map(v=>v.feature);
       const source=map.getSource(NAVIBORI_BUILDINGS_SOURCE) as maplibregl.GeoJSONSource|undefined;
       if(!source)return;
-      source.setData({type:"FeatureCollection",features:visible}
-        as unknown as Parameters<maplibregl.GeoJSONSource["setData"]>[0]);
+      source.setData({type:"FeatureCollection",features:visible} as never);
       setBuildingCount(visible.length);
       setBuildingRenderedCount(0);
       setBuildings3DState(visible.length?"loading":"no-data");
