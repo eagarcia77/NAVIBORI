@@ -51,6 +51,5 @@ jobs:
           name: novascene-visual-qa
           if-no-files-found: ignore
           path: |
-            /tmp/novascene-desktop.png
-            /tmp/novascene-mobile.png
+            /tmp/novascene-*.png
             /tmp/navibori-next.log
