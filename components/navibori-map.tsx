@@ -2377,7 +2377,7 @@ export default function NaviboriMap({
     const map=mapRef.current;
     if(map){
       const zoom=Math.max(map.getZoom(),16.8);
-      const cameraOptions:maplibregl.EaseToOptions={
+      const cameraOptions:maplibregl.JumpToOptions={
         center:[target.longitude,target.latitude],
         zoom,
         offset:[0,orbitalLookahead ? 130 : 110],
@@ -3232,7 +3232,7 @@ export default function NaviboriMap({
         if(map&&decision!=="skip"){
           const method=gpsCameraUpdateMethod(decision);
           lastFollowCameraAtRef.current=Date.now();
-          const cameraOptions:maplibregl.EaseToOptions={
+          const cameraOptions:maplibregl.JumpToOptions={
             center:[cameraCenter.longitude,cameraCenter.latitude],
             zoom:mapModeRef.current==="3d"
               ? nearTurnZoom(cameraProfile.zoom,cameraCue?.distanceMeters ?? null)
