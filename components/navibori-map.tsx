@@ -19,7 +19,8 @@ import {
 } from "@/lib/spatial/novascene-appearance";
 import {nearTurnZoom,nextRouteCorridor} from "@/lib/spatial/novascene-route-focus";
 import {gpsSignalQuality,shouldDrawSvgFallback,stabilizedCameraBearing} from "@/lib/spatial/novascene-gps-stability";
-import {acceptGpsPositionTimestamp,gpsFixStatus,hasLiveGpsFix} from "@/lib/spatial/navibori-gps-freshness";
+import {acceptGpsPositionTimestamp,hasLiveGpsFix} from "@/lib/spatial/navibori-gps-freshness";
+import {navigationSignalCopy,navigationSignalState} from "@/lib/spatial/navibori-navigation-signal";
 import {
   buildAppleMapsDirectionsUrl,
   buildGoogleDirectionsUrl,
@@ -648,6 +649,12 @@ export default function NaviboriMap({
   const canRoute=canNavigateCommerce(selected,source);
 
   const demoRoute=Boolean(source==="demo" && selected?.demo && selected?.mapLocation);
+  const signal=navigationSignalState(
+    demoRoute,gpsLastLiveFixAtRef.current,gpsSignalHeartbeat||Date.now()
+  );
+  const signalCopy=navigationSignalCopy(
+    signal,deviceLocale.language,gpsAccuracy,gpsResumePending
+  );
 
   const navigationProgress=useMemo(
     ()=>routeResult && userLocation
@@ -1220,8 +1227,8 @@ export default function NaviboriMap({
   useEffect(()=>{
     const handleVisibility=()=>{
       if(document.visibilityState!=="visible")return;
-      if(gpsActiveRef.current){
-        if("wakeLock" in navigator && !wakeLockRef.current){
+      if(gpsResumeFixRef.current){
+        if(gpsActiveRef.current && "wakeLock" in navigator && !wakeLockRef.current){
           void navigator.wakeLock.request("screen")
             .then((sentinel)=>{
               if(gpsActiveRef.current)wakeLockRef.current=sentinel;
@@ -1242,7 +1249,7 @@ export default function NaviboriMap({
   },[]);
 
   useEffect(()=>{
-    if(!gpsActive){
+    if(!gpsActive&&navigationPhase==="idle"){
       setGpsResumePending(false);
       return;
     }
@@ -1252,7 +1259,7 @@ export default function NaviboriMap({
       }
     },4000);
     return ()=>window.clearInterval(ticker);
-  },[gpsActive]);
+  },[gpsActive,navigationPhase]);
 
   useEffect(()=>{
     if(
@@ -2883,14 +2890,22 @@ export default function NaviboriMap({
 
       routePreviewTimerRef.current=setTimeout(()=>{
         routePreviewTimerRef.current=null;
-        followGpsRef.current=true;
-        setFollowGps(true);
-        recenterGpsCamera();
+        // A cached route preview must not masquerade as live GPS follow.
+        if(gpsLastLiveFixAtRef.current!==null){
+          followGpsRef.current=true;
+          setFollowGps(true);
+          recenterGpsCamera();
+        }else{
+          setLocationStatus(tr(
+            "Ruta de vista previa · esperando ubicación GPS actual.",
+            "Preview route · waiting for a current device GPS position."
+          ));
+        }
       },1800);
     };
 
     if(cachedOrigin){
-      setGpsActive(true);
+      // A known last position can preview the route; it is NOT a live fix.
       setRouteBusy(null);
       showUserLocation(cachedOrigin);
       void previewThenFollow(cachedOrigin);
@@ -2954,6 +2969,10 @@ export default function NaviboriMap({
         ? position.coords.accuracy
         : null;
 
+      if(cachedOrigin && !gpsActiveRef.current){
+        followGpsRef.current=true;
+        setFollowGps(true);
+      }
       setGpsActive(true);
       setRouteBusy(null);
       setNavigationPhase("gps");
@@ -3414,7 +3433,8 @@ export default function NaviboriMap({
     <section
       className="map-panel spatial-cockpit full-map-cockpit"
       data-native-route-visible={nativeRouteVisible ? "true" : "false"}
-      data-gps-signal={gpsSignalQuality(gpsAccuracy)}
+      data-gps-signal={signal.fix}
+      data-route-kind={signal.routeKind}
       data-cockpit-phase={lagrangePhase}
       data-exodock-state={exoDockState}
       data-gravity-lens={gravityLensPhase}
@@ -3437,18 +3457,19 @@ export default function NaviboriMap({
                   ?tr("Sin edificios visibles","No visible buildings")
                   :tr("Edificios no disponibles","Buildings unavailable")}</strong>
             <small className={"novascene-gps-signal "+(
-              gpsFixStatus(gpsLastLiveFixAtRef.current,gpsSignalHeartbeat||Date.now())==="stale"
-                ? "weak" : gpsSignalQuality(gpsAccuracy)
+              signal.current ? gpsSignalQuality(gpsAccuracy)
+                :signal.fix==="stale"?"weak":"searching"
             )}
-              title={tr("Estado de la señal GPS del dispositivo","Device GPS signal status")}>
-              {gpsResumePending
-                ?tr("Reconectando GPS","Reconnecting GPS")
-                :gpsFixStatus(gpsLastLiveFixAtRef.current,gpsSignalHeartbeat||Date.now())!=="current"
-                  ?tr("GPS sin señal reciente","GPS fix not current")
-                  :gpsAccuracy!==null&&Number.isFinite(gpsAccuracy)
-                    ? "GPS ±"+Math.round(gpsAccuracy)+" m"
-                    :tr("GPS por verificar","GPS not verified")}
+              title={tr("GPS del dispositivo, independiente del destino DEMO","Device GPS, separate from DEMO destination")}>
+              {signalCopy.gps}
             </small>
+            {signal.retryRecommended&&!gpsResumePending&&(
+              <button type="button" className="novascene-gps-retry"
+                aria-label={tr("Solicitar ubicación GPS actual","Request current GPS fix")}
+                onClick={()=>gpsResumeFixRef.current?.()}>
+                {tr("Reintentar GPS","Retry GPS")}
+              </button>
+            )}
           </div>
         )}
         {!gpsActive&&(
@@ -3856,7 +3877,7 @@ export default function NaviboriMap({
           <strong>NAVIBORI</strong>
           <span>
             {gpsActive
-              ? demoRoute ? "GPS DEMO" : "GPS LIVE"
+              ? signalCopy.route
               : source==="live" ? "Comercios LIVE" : "Comercios DEMO"}
           </span>
           <small title={tr("Identificador de la versión instalada","Installed build identifier")}>v{buildRevision}</small>
@@ -3908,7 +3929,8 @@ export default function NaviboriMap({
               <dl>
                 <div><dt>{tr("Versión","Version")}</dt><dd>{buildRevision}</dd></div>
                 <div><dt>{tr("Mapa","Map")}</dt><dd>{basemapState}</dd></div>
-                <div><dt>GPS</dt><dd>{gpsActive ? (demoRoute ? "DEMO" : "LIVE") : tr("Inactivo","Inactive")}</dd></div>
+                <div><dt>{tr("Destino","Destination")}</dt><dd>{demoRoute?signalCopy.route:tr("Comercio","Business")}</dd></div>
+                <div><dt>GPS</dt><dd>{gpsActive||navigationPhase!=="idle"?signalCopy.gps:tr("Inactivo","Inactive")}</dd></div>
                 <div><dt>{tr("Precisión","Accuracy")}</dt><dd>{gpsAccuracy===null ? "—" : "±"+Math.round(gpsAccuracy)+" m"}</dd></div>
                 <div><dt>{tr("Seguimiento","Follow mode")}</dt><dd>{followGps ? tr("Activado","On") : tr("Pausado","Paused")}</dd></div>
                 <div><dt>{tr("Ruta","Route")}</dt><dd>{routeResult ? tr("Calculada","Calculated") : tr("Sin ruta","No route")}</dd></div>
@@ -3942,7 +3964,8 @@ export default function NaviboriMap({
                     "NAVIBORI diagnostics",
                     "Build: "+buildRevision,
                     "Map: "+basemapState,
-                    "GPS: "+(gpsActive ? (demoRoute ? "DEMO" : "LIVE") : "inactive"),
+                    "Destination type: "+signal.routeKind,
+                    "GPS state: "+signal.fix,
                     "Accuracy: "+(gpsAccuracy===null ? "unknown" : Math.round(gpsAccuracy)+" m"),
                     "GPS permission: "+gpsDiagnostics.permission,
                     "Geolocation available: "+String(gpsDiagnostics.geolocation),
@@ -4365,7 +4388,7 @@ export default function NaviboriMap({
                 </span>
                 {gpsActive && (
                   <span className="gps-live-badge">
-                    {demoRoute ? "GPS DEMO" : "GPS LIVE"}
+                    {signalCopy.route} · {signalCopy.gps}
                   </span>
                 )}
               </div>
