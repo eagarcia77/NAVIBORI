@@ -21,7 +21,7 @@ import {nearTurnZoom,nextRouteCorridor} from "@/lib/spatial/novascene-route-focu
 import {gpsSignalQuality,shouldDrawSvgFallback,stabilizedCameraBearing} from "@/lib/spatial/novascene-gps-stability";
 import {acceptGpsPositionTimestamp,hasLiveGpsFix,normalizeGeolocationTimestamp} from "@/lib/spatial/navibori-gps-freshness";
 import {navigationSignalCopy,navigationSignalState} from "@/lib/spatial/navibori-navigation-signal";
-import {cameraFollowDecision} from "@/lib/spatial/gps-camera-follow";
+import {cameraFollowDecision,gpsCameraUpdateMethod} from "@/lib/spatial/gps-camera-follow";
 import {evaluateAutomaticReroute,gpsFixAgeSeconds,reliableGpsForRouting} from "@/lib/commerce/automatic-reroute-guard";
 import {evaluateGpsStreamFix,type StreamGpsFix} from "@/lib/commerce/gps-stream-integrity";
 import {
@@ -2373,21 +2373,32 @@ export default function NaviboriMap({
       }
     }
     const target=orbitalLookahead?.coordinate ?? userLocation;
-    mapRef.current?.easeTo({
-      center:[target.longitude,target.latitude],
-      zoom:Math.max(mapRef.current?.getZoom() ?? 16,16.8),
-      offset:[0,orbitalLookahead ? 130 : 110],
-      pitch:mapModeRef.current==="3d"
-        ? adaptiveStreetPitch(Math.max(mapRef.current?.getZoom() ?? 16,16.8))
-        : mapModeRef.current==="2d"
-          ? 0
-          : activeMode==="driving"
-            ? 42
-            : activeMode==="walking"
-              ? 15
-              : 28,
-      duration:window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 450
-    });
+    const map=mapRef.current;
+    if(map){
+      const zoom=Math.max(map.getZoom(),16.8);
+      const cameraOptions:maplibregl.EaseToOptions={
+        center:[target.longitude,target.latitude],
+        zoom,
+        offset:[0,orbitalLookahead ? 130 : 110],
+        pitch:mapModeRef.current==="3d"
+          ? adaptiveStreetPitch(zoom)
+          : mapModeRef.current==="2d"
+            ? 0
+            : activeMode==="driving"
+              ? 42
+              : activeMode==="walking"
+                ? 15
+                : 28
+      };
+      // A previous ease may still own a WebGL render frame.
+      // Do not replace it with another ease in the same render cycle.
+      if(map.isMoving()||
+        window.matchMedia("(prefers-reduced-motion: reduce)").matches){
+        map.jumpTo(cameraOptions);
+      }else{
+        map.easeTo({...cameraOptions,duration:450});
+      }
+    }
 
     setLocationStatus(
       tr("Seguimiento visual GPS reactivado.","GPS camera follow restored.")+
@@ -3218,26 +3229,27 @@ export default function NaviboriMap({
           reducedMotion:window.matchMedia("(prefers-reduced-motion: reduce)").matches
         }):"skip";
         if(map&&decision!=="skip"){
-          if(decision==="replace")map.stop();
+          const method=gpsCameraUpdateMethod(decision);
           lastFollowCameraAtRef.current=Date.now();
-          map.easeTo({
-          center:[cameraCenter.longitude,cameraCenter.latitude],
-          zoom:mapModeRef.current==="3d"
-            ? nearTurnZoom(cameraProfile.zoom,cameraCue?.distanceMeters ?? null)
-            : cameraProfile.zoom,
-          offset:[0,cameraProfile.offsetY],
-          bearing:
-            cameraBearing ??
-            map?.getBearing() ??
-            0,
-          pitch:mapModeRef.current==="3d"
-            ? approachTurnPitch(adaptiveStreetPitch(cameraProfile.zoom),
-                cameraCue?.distanceMeters ?? null)
-            : mapModeRef.current==="2d"
-              ? 0
-              : cameraProfile.pitch,
-          duration:decision==="jump"?0:firstFix?650:Math.min(650,cameraProfile.duration)
-          });
+          const cameraOptions:maplibregl.EaseToOptions={
+            center:[cameraCenter.longitude,cameraCenter.latitude],
+            zoom:mapModeRef.current==="3d"
+              ? nearTurnZoom(cameraProfile.zoom,cameraCue?.distanceMeters ?? null)
+              : cameraProfile.zoom,
+            offset:[0,cameraProfile.offsetY],
+            bearing:cameraBearing ?? map.getBearing(),
+            pitch:mapModeRef.current==="3d"
+              ? approachTurnPitch(adaptiveStreetPitch(cameraProfile.zoom),
+                  cameraCue?.distanceMeters ?? null)
+              : mapModeRef.current==="2d" ? 0 : cameraProfile.pitch
+          };
+          if(method==="jump"){
+            map.jumpTo(cameraOptions);
+          }else{
+            map.easeTo({...cameraOptions,
+              duration:firstFix?650:Math.min(650,cameraProfile.duration)
+            });
+          }
         }
       }
 
