@@ -22,6 +22,7 @@ import {gpsSignalQuality,shouldDrawSvgFallback,stabilizedCameraBearing} from "@/
 import {acceptGpsPositionTimestamp,hasLiveGpsFix,normalizeGeolocationTimestamp} from "@/lib/spatial/navibori-gps-freshness";
 import {navigationSignalCopy,navigationSignalState} from "@/lib/spatial/navibori-navigation-signal";
 import {evaluateAutomaticReroute,gpsFixAgeSeconds,reliableGpsForRouting} from "@/lib/commerce/automatic-reroute-guard";
+import {evaluateGpsStreamFix,type StreamGpsFix} from "@/lib/commerce/gps-stream-integrity";
 import {
   buildAppleMapsDirectionsUrl,
   buildGoogleDirectionsUrl,
@@ -411,6 +412,8 @@ export default function NaviboriMap({
   const orientationHandlerRef=useRef<((event:DeviceOrientationEvent)=>void)|null>(null);
   const routeAbortRef=useRef<AbortController|null>(null);
   const gpsWatchRef=useRef<number|null>(null);
+  const lastContinuousFixRef=useRef<StreamGpsFix|null>(null);
+  const unconfirmedGpsJumpRef=useRef<StreamGpsFix|null>(null);
   const gpsSessionRef=useRef(0);
   const latestPositionTimestampRef=useRef<number|null>(null);
   const gpsLastLiveFixAtRef=useRef<number|null>(null);
@@ -493,6 +496,8 @@ export default function NaviboriMap({
   const [gpsAccuracy,setGpsAccuracy]=useState<number|null>(null);
   const [gpsSpeedKph,setGpsSpeedKph]=useState<number|null>(null);
   const [gpsSignalHeartbeat,setGpsSignalHeartbeat]=useState(0);
+  const [gpsStreamFixCount,setGpsStreamFixCount]=useState(0);
+  const [gpsUnconfirmedJump,setGpsUnconfirmedJump]=useState(false);
   const [gpsResumePending,setGpsResumePending]=useState(false);
   const [navigationBearingDegrees,setNavigationBearingDegrees]=useState<number|null>(null);
   const [trajectoryPrediction,setTrajectoryPrediction]=useState<TrajectoryPrediction|null>(null);
@@ -901,6 +906,7 @@ export default function NaviboriMap({
         document.documentElement.dataset.motion!=="reduced"
       ){
         const bearing=getRouteBearingNearPoint(route,estimate.coordinate);
+        if(map.isMoving())return;
         map.easeTo({
           center:[
             estimate.coordinate.longitude,
@@ -1809,11 +1815,15 @@ export default function NaviboriMap({
 
     const focused=mappedBusinesses.find((business)=>business.slug===selectedSlug);
     if(focused?.mapLocation && !routeResult){
-      map.easeTo({
-        center:[focused.mapLocation.longitude,focused.mapLocation.latitude],
-        zoom:17,
-        duration:700
-      });
+      // During one-tap GPS launch, the follow camera takes priority over
+      // selection previews. Never interrupt an active map animation.
+      if(!pendingNavigation&&!activeNavigationModeRef.current&&
+         !gpsActiveRef.current&&!map.isMoving()){
+        map.easeTo({
+          center:[focused.mapLocation.longitude,focused.mapLocation.latitude],
+          zoom:17,duration:700
+        });
+      }
     }else if(mappedBusinesses.length>1 && !bounds.isEmpty() && !selectedSlug){
       map.fitBounds(bounds,{padding:70,maxZoom:16,duration:700});
     }else if(mappedBusinesses.length===1 && !selectedSlug){
@@ -1825,6 +1835,7 @@ export default function NaviboriMap({
     mapReady,
     routeResult,
     selectedSlug,
+    pendingNavigation,
     copy.destination,
     deviceLocale.language
   ]);
@@ -2046,14 +2057,18 @@ export default function NaviboriMap({
     setPendingNavigation(null);
     pendingSpeechKeyRef.current="";
     lastSpokenInstructionRef.current="";
+    const alreadySelected=selectedSlug===business.slug;
     setSelectedSlug(business.slug);
-
-    mapRef.current?.easeTo({
-      center:[location.longitude,location.latitude],
-      zoom:17,
-      pitch:mode==="3d" ? 58 : 0,
-      duration:650
-    });
+    // The selection effect normally owns focus animations. Triggering
+    // a second ease here interrupts the first MapLibre render frame.
+    if(alreadySelected && mapRef.current&&!mapRef.current.isMoving()){
+      mapRef.current.easeTo({
+        center:[location.longitude,location.latitude],
+        zoom:17,
+        pitch:mode==="3d"?58:0,
+        duration:650
+      });
+    }
   }
 
   function navigateToNearbyBusiness(
@@ -2761,6 +2776,10 @@ export default function NaviboriMap({
     gpsResumeFixRef.current=null;
     gpsResumeRequestPendingRef.current=false;
     gpsLastLiveFixAtRef.current=null;
+    lastContinuousFixRef.current=null;
+    unconfirmedGpsJumpRef.current=null;
+    setGpsStreamFixCount(0);
+    setGpsUnconfirmedJump(false);
     latestPositionTimestampRef.current=null;
     setGpsResumePending(false);
     if(gpsBootstrapTimerRef.current!==null){
@@ -2788,6 +2807,7 @@ export default function NaviboriMap({
     lastRouteRefreshAtRef.current=0;
     consecutiveOffRouteFixesRef.current=0;
     lastOffRouteCandidateAtRef.current=null;
+    gpsActiveRef.current=false;
     setGpsActive(false);
     setGpsAccuracy(null);
     setGpsSpeedKph(null);
@@ -2894,7 +2914,11 @@ export default function NaviboriMap({
       const route=await calculateRoute(routeMode,origin);
       if(!route) return;
 
-      showFullRoute();
+      // A first accepted GPS fix or business selection may already have
+      // started a camera transition. An automatic full-route fit at that
+      // moment would interrupt MapLibre's queued ease frame. Skip the
+      // overview if the map is moving; the follow camera will still resume.
+      if(!mapRef.current?.isMoving())showFullRoute();
       setRouteStatus(
         routeModeLabel(routeMode,deviceLocale.locale)+
         " · "+copy.routeReady+" · "+formatDistance(route.distanceMeters)+
@@ -2966,9 +2990,31 @@ export default function NaviboriMap({
         return;
       }
 
+      const fixTimestamp=normalizeGeolocationTimestamp(position.timestamp);
+      if(fixTimestamp===null)return;
+      const streamDecision=evaluateGpsStreamFix(
+        lastContinuousFixRef.current,{
+          coordinate:next,
+          timestamp:fixTimestamp,
+          accuracyMeters:Number.isFinite(incomingAccuracy)?incomingAccuracy:null
+        },unconfirmedGpsJumpRef.current
+      );
+      if(!streamDecision.accepted){
+        unconfirmedGpsJumpRef.current=streamDecision.pendingJump;
+        setGpsUnconfirmedJump(streamDecision.reason==="unverified-jump");
+        setGpsSignalHeartbeat(now);
+        return;
+      }
+      lastContinuousFixRef.current={
+        coordinate:next,timestamp:fixTimestamp,
+        accuracyMeters:Number.isFinite(incomingAccuracy)?incomingAccuracy:null
+      };
+      unconfirmedGpsJumpRef.current=null;
+      setGpsUnconfirmedJump(false);
+      setGpsStreamFixCount(count=>count+1);
       receivedFix=true;
       receivedLiveFix=true;
-      latestPositionTimestampRef.current=normalizeGeolocationTimestamp(position.timestamp);
+      latestPositionTimestampRef.current=fixTimestamp;
       gpsLastLiveFixAtRef.current=now;
       setGpsSignalHeartbeat(now);
       setGpsResumePending(false);
@@ -2986,6 +3032,10 @@ export default function NaviboriMap({
         followGpsRef.current=true;
         setFollowGps(true);
       }
+      // Update the synchronous ref before MapLibre events can fire: its
+      // moveend handler must not start competing tilt animations while GPS
+      // follow-camera movement is being processed.
+      gpsActiveRef.current=true;
       setGpsActive(true);
       setRouteBusy(null);
       setNavigationPhase("gps");
@@ -3154,7 +3204,10 @@ export default function NaviboriMap({
 
       if(followGpsRef.current){
         const map=mapRef.current;
-        map?.easeTo({
+        // Let an in-flight camera animation finish. Interrupting it from a
+        // second geolocation callback can invalidate MapLibre's ease frame.
+        // The GPS marker itself updates on *every* accepted location fix.
+        if(map&&!map.isMoving())map.easeTo({
           center:[cameraCenter.longitude,cameraCenter.latitude],
           zoom:mapModeRef.current==="3d"
             ? nearTurnZoom(cameraProfile.zoom,cameraCue?.distanceMeters ?? null)
@@ -3446,6 +3499,8 @@ export default function NaviboriMap({
       data-native-route-visible={nativeRouteVisible ? "true" : "false"}
       data-gps-signal={gpsSignalQuality(gpsAccuracy)}
       data-gps-freshness={signal.fix}
+      data-gps-stream-fixes={gpsStreamFixCount}
+      data-gps-unconfirmed-jump={gpsUnconfirmedJump?"true":"false"}
       data-gps-probe={gpsProbeStatus}
       data-route-kind={signal.routeKind}
       data-cockpit-phase={lagrangePhase}
@@ -3479,6 +3534,17 @@ export default function NaviboriMap({
             {gpsAgeSeconds!==null&&(
               <small className={"novascene-fix-age "+(signal.current?"current":"stale")}>
                 {tr("Última lectura: ","Last fix: ")+gpsAgeSeconds+" s"}
+              </small>
+            )}
+            {gpsStreamFixCount>=2&&(
+              <small className="novascene-fix-age current">
+                {tr("Seguimiento: ","Tracking: ")+gpsStreamFixCount+
+                  tr(" lecturas"," fixes")}
+              </small>
+            )}
+            {gpsUnconfirmedJump&&(
+              <small className="novascene-fix-age stale" role="status">
+                {tr("Verificando salto GPS","Verifying GPS jump")}
               </small>
             )}
             {signal.retryRecommended&&!gpsResumePending&&(
@@ -3993,6 +4059,7 @@ export default function NaviboriMap({
                 <div><dt>{tr("Destino","Destination")}</dt><dd>{demoRoute?signalCopy.route:tr("Comercio","Business")}</dd></div>
                 <div><dt>GPS</dt><dd>{gpsActive||navigationPhase!=="idle"?signalCopy.gps:tr("Inactivo","Inactive")}</dd></div>
                 <div><dt>{tr("Última lectura","Last fix")}</dt><dd>{gpsAgeSeconds===null?"—":gpsAgeSeconds+" s"}</dd></div>
+                <div><dt>{tr("Lecturas seguidas","Accepted GPS fixes")}</dt><dd>{gpsStreamFixCount}</dd></div>
                 <div><dt>{tr("Recálculo automático","Automatic rerouting")}</dt><dd>{
                   confidentGpsForRerouting?tr("Disponible","Available"):
                   tr("En espera de GPS preciso","Waiting for accurate GPS")
@@ -4033,6 +4100,8 @@ export default function NaviboriMap({
                     "Destination type: "+signal.routeKind,
                     "GPS state: "+signal.fix,
                     "Last fix age seconds: "+(gpsAgeSeconds===null?"unknown":gpsAgeSeconds),
+                    "Continuous GPS fixes: "+gpsStreamFixCount,
+                    "Pending GPS position confirmation: "+String(gpsUnconfirmedJump),
                     "Auto rerouting confidence: "+String(confidentGpsForRerouting),
                     "Accuracy: "+(gpsAccuracy===null ? "unknown" : Math.round(gpsAccuracy)+" m"),
                     "GPS permission: "+gpsDiagnostics.permission,

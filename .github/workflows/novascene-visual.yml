@@ -46,6 +46,8 @@ jobs:
         run: node scripts/novascene-visual-smoke.mjs
       - name: Verify mobile GPS granted and denied behavior
         run: node scripts/navibori-gps-browser-smoke.mjs
+      - name: Verify continuous geolocation updates and false jumps
+        run: node scripts/navibori-gps-stream-smoke.mjs
       - name: Save spatial smoke screenshots and server log
         if: always()
         uses: actions/upload-artifact@v4
@@ -55,4 +57,5 @@ jobs:
           path: |
             /tmp/novascene-*.png
             /tmp/navibori-gps-*.png
+            /tmp/navibori-gps-stream-*.png
             /tmp/navibori-next.log
