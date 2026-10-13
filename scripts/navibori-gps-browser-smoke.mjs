@@ -22,6 +22,10 @@ try{
   const successPage=await approved.newPage();
   successPage.on("pageerror",error=>failures.push("Allowed GPS: "+error.message));
   await successPage.goto(host,{waitUntil:"domcontentloaded",timeout:45000});
+  // In WebKit, an emulated provider position may retain its original
+  // creation time throughout heavy map initialization. Inject a *new*
+  // synthetic reading immediately before the user's explicit request.
+  await approved.setGeolocation({...location});
   await successPage.getByRole("button",{name:"Obtener mi ubicación real"}).click();
   try{
     await successPage.waitForSelector('.map-panel[data-gps-probe="received"]',{timeout:20000});
