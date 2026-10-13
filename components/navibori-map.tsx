@@ -89,6 +89,8 @@ const ROUTE_ARROW_IMAGE_ID="navibori-route-arrow-image";
 // Extrusion is genuine MapLibre 3D geometry, not a pitched raster image.
 const NAVIBORI_BUILDINGS_ID="navibori-3d-buildings";
 const NAVIBORI_BUILDINGS_SOURCE="navibori-building-geojson";
+const NAVIBORI_VECTOR_BUILDINGS_SOURCE="navibori-building-vector";
+const NAVIBORI_VECTOR_BUILDINGS_LAYER="navibori-vector-building-extrusions";
 const RASTER_BASEMAP:maplibregl.StyleSpecification={
   version:8,
   sources:{
@@ -102,6 +104,46 @@ const RASTER_BASEMAP:maplibregl.StyleSpecification={
   layers:[{id:"osm-raster",type:"raster",source:"osm",minzoom:0,maxzoom:20}]
 };
 function create3DBuildings(map:maplibregl.Map){
+  // A second independent pathway renders native vector 3D buildings while
+  // the live OSM geometry API loads. The raster basemap remains unaffected.
+  try{
+    if(!map.getSource(NAVIBORI_VECTOR_BUILDINGS_SOURCE)){
+      map.addSource(NAVIBORI_VECTOR_BUILDINGS_SOURCE,{
+        type:"vector",
+        url:"https://tiles.openfreemap.org/planet",
+        attribution:"© OpenStreetMap contributors · OpenFreeMap"
+      });
+    }
+    if(!map.getLayer(NAVIBORI_VECTOR_BUILDINGS_LAYER)){
+      map.addLayer({
+        id:NAVIBORI_VECTOR_BUILDINGS_LAYER,
+        type:"fill-extrusion",
+        source:NAVIBORI_VECTOR_BUILDINGS_SOURCE,
+        "source-layer":"building",
+        minzoom:14.5,
+        filter:["!=",["get","hide_3d"],true],
+        layout:{visibility:"visible"},
+        paint:{
+          "fill-extrusion-color":"#90b8d4",
+          "fill-extrusion-height":["interpolate",["linear"],["zoom"],14.5,0,15.5,
+            ["min",300,["max",6,["coalesce",
+              ["to-number",["get","render_height"],null],
+              ["to-number",["get","height"],null],
+              ["*",3,["to-number",["get","building:levels"],null]],9
+            ]]]
+          ],
+          "fill-extrusion-base":["max",0,["coalesce",
+            ["to-number",["get","render_min_height"],null],
+            ["to-number",["get","min_height"],null],0
+          ]],
+          "fill-extrusion-opacity":0.82,
+          "fill-extrusion-vertical-gradient":true
+        }
+      });
+    }
+  }catch{
+    // Optional vector tiles must never take down GPS or raster streets.
+  }
   if(!map.getSource(NAVIBORI_BUILDINGS_SOURCE)){
     map.addSource(NAVIBORI_BUILDINGS_SOURCE,{
       type:"geojson",
@@ -1238,7 +1280,17 @@ export default function NaviboriMap({
     let renderingCheckTimer:ReturnType<typeof setTimeout>|null=null;
     let lastCenter:{lng:number;lat:number;at:number}|null=null;
     const update3DBuildings=async(force=false)=>{
-      if(disposed||!map.isStyleLoaded())return;
+      if(disposed)return;
+      // isStyleLoaded() is false whenever raster tiles are still loading,
+      // which previously caused silent, permanent 3D loading on mobile GPS.
+      if(!map.getSource(NAVIBORI_BUILDINGS_SOURCE)){
+        setBuildings3DState("unavailable");
+        setBuildingError(tr(
+          "La capa de edificios no está lista. Vuelve a intentarlo.",
+          "Building layer is not initialized. Please retry."
+        ));
+        return;
+      }
       if(map.getZoom()<15){
         setBuildings3DState("no-data");
         setBuildingCount(0);
@@ -1263,6 +1315,13 @@ export default function NaviboriMap({
       }
       const controller=new AbortController();
       buildingsRequest=controller;
+      // The iPhone must leave loading state even on a stalled network or
+      // Render cold-start. Differentiate a timeout from a camera abort.
+      let timedOut=false;
+      const requestTimeout=setTimeout(()=>{
+        timedOut=true;
+        controller.abort();
+      },18500);
       setBuildings3DState("loading");
       setBuildingError("");
       const bounds=map.getBounds();
@@ -1272,6 +1331,7 @@ export default function NaviboriMap({
       const west=Math.max(bounds.getWest(),current.lng-0.012);
       const east=Math.min(bounds.getEast(),current.lng+0.012);
       if(north-south<0.00002||east-west<0.00002){
+        clearTimeout(requestTimeout);
         setBuildings3DState("unavailable");
         setBuildingError(tr("La extensión del mapa no es válida.","Invalid map bounds."));
         lastCenter=null;
@@ -1307,6 +1367,8 @@ export default function NaviboriMap({
         const source=map.getSource(NAVIBORI_BUILDINGS_SOURCE) as maplibregl.GeoJSONSource|undefined;
         if(!source)throw Error("3D GeoJSON source missing from map");
         source.setData({type:"FeatureCollection",features:data.features});
+        // Hide overlapping vector roofs only after GeoJSON is confirmed
+        // visible. Until then native vector buildings remain available.
         setBuildingCount(data.features.length);
         setBuildingRenderedCount(0);
         setBuildings3DState(data.features.length>0?"loading":"no-data");
@@ -1328,17 +1390,29 @@ export default function NaviboriMap({
               return;
             }
             if(visible>0){
+              if(map.getLayer(NAVIBORI_VECTOR_BUILDINGS_LAYER)){
+                map.setLayoutProperty(NAVIBORI_VECTOR_BUILDINGS_LAYER,"visibility","none");
+              }
               setBuildingRenderedCount(visible);
               setBuildings3DState("ready");
               setBuildingError("");
             }else if(++attempts<5){
               renderingCheckTimer=setTimeout(verifyRendered,750);
             }else{
-              setBuildings3DState("no-data");
-              setBuildingError(tr(
-                "La API entregó edificios, pero no se ven paredes 3D. Verifica zoom y WebGL.",
-                "Building API returned geometry, but 3D walls are not visible. Check zoom and WebGL."
-              ));
+              const vectorVisible=map.getLayer(NAVIBORI_VECTOR_BUILDINGS_LAYER)
+                ? map.queryRenderedFeatures({layers:[NAVIBORI_VECTOR_BUILDINGS_LAYER]}).length
+                : 0;
+              if(vectorVisible>0){
+                setBuildingRenderedCount(vectorVisible);
+                setBuildings3DState("ready");
+                setBuildingError("");
+              }else{
+                setBuildings3DState("no-data");
+                setBuildingError(tr(
+                  "La API respondió, pero no hay edificios tridimensionales visibles.",
+                  "API responded, but no visible 3D building geometry was found."
+                ));
+              }
             }
           };
           renderingCheckTimer=setTimeout(verifyRendered,950);
@@ -1354,16 +1428,24 @@ export default function NaviboriMap({
           if(map.getLayer(id))map.moveLayer(id);
         }
       }catch(error){
-        if(disposed||controller.signal.aborted)return;
+        if(disposed || (controller.signal.aborted&&!timedOut))return;
+        const vectorVisible=map.getLayer(NAVIBORI_VECTOR_BUILDINGS_LAYER)
+          ? map.queryRenderedFeatures({layers:[NAVIBORI_VECTOR_BUILDINGS_LAYER]}).length
+          : 0;
         setBuildingCount(0);
-        setBuildingRenderedCount(0);
-        setBuildings3DState("unavailable");
+        setBuildingRenderedCount(vectorVisible);
+        setBuildings3DState(vectorVisible>0?"ready":"unavailable");
         setBuildingError(
-          error instanceof Error ? error.message.slice(0,160)
-            : tr("Error desconocido al cargar edificios.","Unknown building loading error.")
+          vectorVisible>0 ? "" : timedOut
+            ? tr("Tiempo de espera agotado al consultar edificios.","Building request timed out.")
+            : error instanceof Error ? error.message.slice(0,160)
+              : tr("Error desconocido al cargar edificios.","Unknown building loading error.")
         );
-        // Allow an explicit map movement to retry after provider failure.
+        // Allow a fresh request after a failed provider attempt.
         lastCenter=null;
+      }finally{
+        clearTimeout(requestTimeout);
+        if(buildingsRequest===controller)buildingsRequest=null;
       }
     };
     const queueBuildingsRefresh=(force=false)=>{
@@ -1400,7 +1482,7 @@ export default function NaviboriMap({
       map.setLayoutProperty(NAVIBORI_BUILDINGS_ID,"visibility",initialMode==="3d"?"visible":"none");
       setMapReady(true);
       setBasemapState("ready");
-      if(initialMode==="3d")queueBuildingsRefresh();
+      if(initialMode==="3d")queueBuildingsRefresh(true);
     };
     map.on("load",setupMap);
     map.on("moveend",()=>{
@@ -1430,7 +1512,10 @@ export default function NaviboriMap({
       }
     });
     map.on("sourcedata",(event)=>{
-      if(event.sourceId!==NAVIBORI_BUILDINGS_SOURCE||!event.isSourceLoaded)return;
+      if(!event.isSourceLoaded || (
+        event.sourceId!==NAVIBORI_BUILDINGS_SOURCE &&
+        event.sourceId!==NAVIBORI_VECTOR_BUILDINGS_SOURCE
+      ))return;
       for(const id of [ROUTE_GLOW_ID,ROUTE_CASING_ID,ROUTE_LINE_ID,ROUTE_ARROW_ID]){
         if(map.getLayer(id))map.moveLayer(id);
       }
@@ -1438,9 +1523,14 @@ export default function NaviboriMap({
     map.on("idle",()=>{
       if(disposed||mapModeRef.current!=="3d"||!map.getLayer(NAVIBORI_BUILDINGS_ID))return;
       try{
+        const native=map.getLayer(NAVIBORI_VECTOR_BUILDINGS_LAYER) &&
+          map.getLayoutProperty(NAVIBORI_VECTOR_BUILDINGS_LAYER,"visibility")!=="none"
+            ? map.queryRenderedFeatures({layers:[NAVIBORI_VECTOR_BUILDINGS_LAYER]})
+            : [];
         const features=map.queryRenderedFeatures({layers:[NAVIBORI_BUILDINGS_ID]});
-        if(features.length>0){
-          setBuildingRenderedCount(features.length);
+        const visibleCount=features.length||native.length;
+        if(visibleCount>0){
+          setBuildingRenderedCount(visibleCount);
           setBuildings3DState("ready");
           setBuildingError("");
         }
@@ -1665,11 +1755,11 @@ export default function NaviboriMap({
     const map=mapRef.current;
     const layer=buildingsLayerRef.current;
     if(!map||!layer||!map.getLayer(layer)) return;
-    map.setPaintProperty(
-      layer,
-      "fill-extrusion-opacity",
-      gpsActive ? 0.50 : 0.86
-    );
+    map.setPaintProperty(layer,"fill-extrusion-opacity",gpsActive ? 0.50 : 0.86);
+    if(map.getLayer(NAVIBORI_VECTOR_BUILDINGS_LAYER)){
+      map.setPaintProperty(NAVIBORI_VECTOR_BUILDINGS_LAYER,
+        "fill-extrusion-opacity",gpsActive ? 0.48 : 0.82);
+    }
   },[gpsActive,mapReady]);
 
   function adaptiveStreetPitch(zoom:number){
@@ -1730,6 +1820,13 @@ export default function NaviboriMap({
 
     if(buildingsLayerRef.current&&map.getLayer(buildingsLayerRef.current)){
       map.setLayoutProperty(buildingsLayerRef.current,"visibility",next==="3d"?"visible":"none");
+    }
+    if(map.getLayer(NAVIBORI_VECTOR_BUILDINGS_LAYER)){
+      // Keep vector hidden if GeoJSON roofs have already been rendered.
+      const geojsonRendered=map.getLayer(NAVIBORI_BUILDINGS_ID) &&
+        map.queryRenderedFeatures({layers:[NAVIBORI_BUILDINGS_ID]}).length>0;
+      map.setLayoutProperty(NAVIBORI_VECTOR_BUILDINGS_LAYER,"visibility",
+        next==="3d"&&!geojsonRendered?"visible":"none");
     }
     mapModeRef.current=next;
     setMode(next);

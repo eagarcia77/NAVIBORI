@@ -103,9 +103,14 @@ export async function GET(request:NextRequest){
   // Make provider failures discoverable from Render logs, without recording
   // exact device/GPS coordinates.
   const startedAt=Date.now();
+  // A mobile request must never wait for three sequential 16-second timeouts.
+  // Reserve a strict total upstream budget and move to the next mirror quickly.
+  const totalBudgetMs=13500;
   const viewportArea=(bounds.north-bounds.south)*(bounds.east-bounds.west);
   console.info("[navibori-3d] request area_degrees2="+viewportArea.toFixed(7));
   for(const endpoint of OVERPASS_ENDPOINTS){
+    const remaining=totalBudgetMs-(Date.now()-startedAt);
+    if(remaining<=1000)break;
     try{
       const response=await fetch(endpoint,{
         method:"POST",
@@ -115,7 +120,7 @@ export async function GET(request:NextRequest){
           "Accept":"application/json",
           "User-Agent":"NAVIBORI-3D/1.0 (OSM building-footprint visualization)"
         },
-        signal:AbortSignal.timeout(16000),
+        signal:AbortSignal.timeout(Math.min(4800,remaining)),
         cache:"no-store"
       });
       if(!response.ok){
@@ -160,7 +165,7 @@ export async function GET(request:NextRequest){
   }
   console.error(
     "[navibori-3d] all providers failed after "+
-    (Date.now()-startedAt)+" ms"
+    (Date.now()-startedAt)+" ms (max "+totalBudgetMs+" ms)"
   );
   return NextResponse.json({error:"No se pudo consultar la geometría 3D.",detail:lastError},
     {status:503,headers:{"Cache-Control":"no-store"}});
