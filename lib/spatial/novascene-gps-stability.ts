@@ -31,6 +31,15 @@ export function stabilizedCameraBearing(
     ?Math.max(0,speedKph):0;
   const accuracy=accuracyMeters!==null&&Number.isFinite(accuracyMeters)
     ?Math.max(0,accuracyMeters):null;
+  // Safari/iOS can report wildly oscillating compass headings while the
+  // device is stationary. Preserve the last camera direction rather than
+  // turning the map without actual movement. Never alter the GPS fix/route.
+  if(speedKph!==null&&Number.isFinite(speedKph)&&speed<2)
+    return normalizedBearing(previous);
+  // Very poor horizontal accuracy makes route-relative camera rotation
+  // misleading at pedestrian speeds; wait for a better location fix.
+  if(accuracy!==null&&accuracy>100&&speed<8)
+    return normalizedBearing(previous);
   const delta=shortestBearingDelta(previous,target);
   if(Math.abs(delta)<=1.4)return normalizedBearing(previous);
   // Travel-speed-aware damping: real turns converge within 1-3 GPS fixes.
