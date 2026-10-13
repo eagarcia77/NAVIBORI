@@ -30,7 +30,7 @@ jobs:
       - name: Install standalone visual browser
         run: |
           npm install --no-save playwright
-          npx playwright install --with-deps chromium
+          npx playwright install --with-deps chromium webkit
       - name: Build production application
         run: npm run build
       - name: Start local production server
