@@ -500,6 +500,10 @@ export default function NaviboriMap({
     "idle"|"active"|"blocked"|"unsupported"
   >("idle");
   const [gpsTestBusy,setGpsTestBusy]=useState(false);
+  const [gpsProbeStatus,setGpsProbeStatus]=useState<
+    "idle"|"testing"|"received"|"denied"|"unavailable"|"timeout"
+  >("idle");
+  const [gpsProbeAccuracy,setGpsProbeAccuracy]=useState<number|null>(null);
   const [navigationPhase,setNavigationPhase]=useState<
     "idle"|"permission"|"gps"|"routing"|"navigating"|"error"
   >("idle");
@@ -2445,83 +2449,81 @@ export default function NaviboriMap({
   }
 
   function testGps(){
+    // Geolocation must be requested synchronously from this user gesture.
+    // In particular, iOS embedded browsers may deny a request started
+    // indirectly from a useEffect or a page-load route parameter.
     if(!window.isSecureContext){
-      setNavigationPhase("error");
-      setLocationStatus(tr("El GPS requiere una conexión HTTPS segura.","GPS requires a secure HTTPS connection."));
+      setGpsProbeStatus("unavailable");
+      setLocationStatus(tr(
+        "La ubicación requiere HTTPS. Abre NAVIBORI directamente en Safari.",
+        "Location requires HTTPS. Open NAVIBORI directly in Safari."
+      ));
       return;
     }
     if(!navigator.geolocation){
+      setGpsProbeStatus("unavailable");
       setLocationStatus(tr(
-      "Este dispositivo o navegador no ofrece geolocalización.",
-      "This device or browser does not provide geolocation."
-    ));
+        "Este navegador no permite obtener tu ubicación. Abre el enlace en Safari.",
+        "This browser cannot get your location. Open the link in Safari."
+      ));
       return;
     }
-
+    if(gpsTestBusy)return;
+    setGpsProbeStatus("testing");
+    setGpsProbeAccuracy(null);
     setGpsTestBusy(true);
-    setLocationStatus(tr("Probando GPS del dispositivo…","Testing device GPS…"));
+    setLocationStatus(tr(
+      "Solicitando una ubicación nueva al dispositivo…",
+      "Requesting a fresh device location…"
+    ));
 
     const success=(position:GeolocationPosition)=>{
-      const next={
+      const coordinate={
         latitude:position.coords.latitude,
         longitude:position.coords.longitude
       };
-
-      if(!validRouteCoordinate(next)){
+      if(!validRouteCoordinate(coordinate) ||
+        !acceptGpsPositionTimestamp(position.timestamp,null,Date.now())){
         setGpsTestBusy(false);
-        setLocationStatus(tr("El navegador devolvió una ubicación inválida.","The browser returned an invalid location."));
+        setGpsProbeStatus("unavailable");
+        setLocationStatus(tr(
+          "La ubicación recibida era inválida o demasiado antigua. Vuelve a intentar.",
+          "The location was invalid or too old. Please retry."
+        ));
         return;
       }
-
       const accuracy=Number.isFinite(position.coords.accuracy)
-        ? position.coords.accuracy
-        : null;
-
-      setUserLocation(next);
+        ? Math.max(0,position.coords.accuracy) : null;
+      setGpsProbeStatus("received");
+      setGpsProbeAccuracy(accuracy);
+      setGpsTestBusy(false);
+      setUserLocation(coordinate);
       setGpsAccuracy(accuracy);
-      showUserLocation(next);
+      showUserLocation(coordinate);
       mapRef.current?.easeTo({
-        center:[next.longitude,next.latitude],
-        zoom:16,
-        duration:650
+        center:[coordinate.longitude,coordinate.latitude],
+        zoom:16.5,
+        duration:window.matchMedia("(prefers-reduced-motion: reduce)").matches?0:480
       });
+      setLocationStatus(tr(
+        "Ubicación actual recibida del dispositivo. Para seguir una ruta, selecciona Iniciar navegación.",
+        "Current device location received. To follow a route, select Start navigation."
+      )+(accuracy!==null?" ±"+Math.round(accuracy)+" m.":""));
+      // A one-shot fix verifies location capability, not continuous GPS.
+      // NEVER automatically start navigation to an unverified DEMO destination.
+    };
+    const error=(failure:GeolocationPositionError)=>{
       setGpsTestBusy(false);
-      setLocationStatus(
-        (selected && canRoute ? tr("✓ GPS funcionando · iniciando ruta","✓ GPS working · starting route") : tr("✓ GPS funcionando · selecciona un comercio","✓ GPS working · select a business"))+
-        (accuracy!==null ? " · precisión aproximada ±"+Math.round(accuracy)+" m" : "")
-      );
-
-      if(selected && canRoute){
-        window.setTimeout(()=>{
-          startGpsNavigation(lastRouteMode,next);
-        },0);
-      }
+      setGpsProbeStatus(failure.code===failure.PERMISSION_DENIED?"denied"
+        :failure.code===failure.TIMEOUT?"timeout":"unavailable");
+      setLocationStatus(geolocationErrorMessage(failure));
     };
 
-    const fallbackError=(error:GeolocationPositionError)=>{
-      setGpsTestBusy(false);
-      setLocationStatus(geolocationErrorMessage(error));
-    };
-
-    navigator.geolocation.getCurrentPosition(
-      success,
-      ()=>{
-        navigator.geolocation.getCurrentPosition(
-          success,
-          fallbackError,
-          {
-            enableHighAccuracy:false,
-            timeout:10000,
-            maximumAge:60000
-          }
-        );
-      },
-      {
-        enableHighAccuracy:true,
-        timeout:12000,
-        maximumAge:0
-      }
-    );
+    navigator.geolocation.getCurrentPosition(success,error,{
+      enableHighAccuracy:true,
+      maximumAge:0,
+      timeout:15000
+    });
   }
 
   function locateMe(afterLocate?:(coordinate:RouteCoordinate)=>void){
@@ -2823,6 +2825,8 @@ export default function NaviboriMap({
     }
 
     stopGpsNavigation();
+    // A one-shot location test is not a continuous GPS tracking session.
+    setGpsProbeStatus("idle");
     const sessionId=gpsSessionRef.current;
     const sessionStartedAt=Date.now();
     // A globe overview must not be used for street-level GPS guidance.
@@ -3438,6 +3442,7 @@ export default function NaviboriMap({
       data-native-route-visible={nativeRouteVisible ? "true" : "false"}
       data-gps-signal={gpsSignalQuality(gpsAccuracy)}
       data-gps-freshness={signal.fix}
+      data-gps-probe={gpsProbeStatus}
       data-route-kind={signal.routeKind}
       data-cockpit-phase={lagrangePhase}
       data-exodock-state={exoDockState}
@@ -3470,7 +3475,16 @@ export default function NaviboriMap({
             {signal.retryRecommended&&!gpsResumePending&&(
               <button type="button" className="novascene-gps-retry"
                 aria-label={tr("Solicitar ubicación GPS actual","Request current GPS fix")}
-                onClick={()=>gpsResumeFixRef.current?.()}>
+                onClick={()=>{
+                  if(gpsResumeFixRef.current){
+                    gpsResumeFixRef.current();
+                  }else if(selected&&canRoute){
+                    // A route preview may exist without a watchPosition session.
+                    startGpsNavigation(lastRouteMode);
+                  }else{
+                    testGps();
+                  }
+                }}>
                 {tr("Reintentar GPS","Retry GPS")}
               </button>
             )}
@@ -3503,13 +3517,40 @@ export default function NaviboriMap({
           </svg>
         )}
 
+        {gpsProbeStatus!=="idle"&&!gpsActive&&(
+          <div className={"navibori-gps-probe navibori-gps-probe-"+gpsProbeStatus}
+            role="status" aria-live="polite">
+            <strong>{gpsProbeStatus==="testing"
+              ?tr("Localizando el dispositivo…","Locating device…")
+              :gpsProbeStatus==="received"
+                ?tr("Ubicación recibida","Location received")
+                :gpsProbeStatus==="denied"
+                  ?tr("Permiso de ubicación denegado","Location permission denied")
+                  :gpsProbeStatus==="timeout"
+                    ?tr("Tiempo de espera agotado","Location request timed out")
+                    :tr("Ubicación no disponible","Location unavailable")}</strong>
+            <small>{gpsProbeStatus==="received"
+              ?tr("Lectura individual, no seguimiento continuo","One-time fix, not continuous tracking")+
+                (gpsProbeAccuracy!==null?" · ±"+Math.round(gpsProbeAccuracy)+" m":"")
+              :gpsProbeStatus==="testing"
+                ?tr("Permite ubicación precisa cuando se solicite.","Allow precise location when prompted.")
+                :tr("En iPhone, abre NAVIBORI directamente en Safari y permite ubicación precisa.",
+                    "On iPhone, open NAVIBORI directly in Safari and allow precise location.")}</small>
+            {gpsProbeStatus==="received"&&selected&&canRoute&&(
+              <button type="button"
+                onClick={()=>startGpsNavigation(lastRouteMode)}>
+                {tr("Iniciar navegación GPS","Start GPS navigation")}
+              </button>
+            )}
+          </div>
+        )}
         <button
           type="button"
           className={"full-map-gps-button "+(gpsActive ? "active" : "")}
           aria-label={
             gpsActive
               ? tr("Recentrar GPS","Recenter GPS")
-              : tr("Probar GPS","Test GPS")
+              : tr("Obtener mi ubicación real","Get my current location")
           }
           onClick={()=>{
             if(gpsActive && userLocation){
