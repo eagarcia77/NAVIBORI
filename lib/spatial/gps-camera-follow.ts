@@ -14,3 +14,14 @@ export function cameraFollowDecision(input:{
   if(input.reducedMotion)return "jump";
   return input.cameraMoving?"replace":"ease";
 }
+
+
+/** Interrupting an in-progress eased camera with stop()+easeTo() can
+ * leave a stale MapLibre render callback. Rebase the GPS camera atomically:
+ * jumpTo for a moving camera, easeTo only after an animation has settled.
+ * This does not modify the raw GPS fix, route, or direction.
+ */
+export function gpsCameraUpdateMethod(decision:ReturnType<typeof cameraFollowDecision>):
+  "skip"|"ease"|"jump"{
+  return decision==="replace"?"jump":decision;
+}
