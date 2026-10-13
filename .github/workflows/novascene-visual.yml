@@ -44,6 +44,8 @@ jobs:
           exit 1
       - name: Prove actual WebGL 3D walls in desktop and mobile contexts
         run: node scripts/novascene-visual-smoke.mjs
+      - name: Verify mobile GPS granted and denied behavior
+        run: node scripts/navibori-gps-browser-smoke.mjs
       - name: Save spatial smoke screenshots and server log
         if: always()
         uses: actions/upload-artifact@v4
@@ -52,4 +54,5 @@ jobs:
           if-no-files-found: ignore
           path: |
             /tmp/novascene-*.png
+            /tmp/navibori-gps-*.png
             /tmp/navibori-next.log
