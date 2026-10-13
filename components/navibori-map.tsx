@@ -1503,7 +1503,26 @@ export default function NaviboriMap({
       // pending request with a misleading no-data watchdog state.
     };
     map.on("style.load",setupMap);
-    map.on("load",setupMap);
+    // 'style.load' can fire before the route infrastructure may be added.
+    // Repair only when the fully loaded style has missing or hidden layers.
+    const repairRouteLayers=()=>{
+      if(disposed||!map.isStyleLoaded())return;
+      if(!map.getSource(ROUTE_SOURCE_ID)||!map.getLayer(ROUTE_LINE_ID)){
+        ensureRouteInfrastructure(map);
+      }
+      const layerIds=map.getStyle().layers?.map(layer=>layer.id)??[];
+      const buildingIndex=layerIds.indexOf(NAVIBORI_BUILDINGS_ID);
+      const routeIndex=layerIds.indexOf(ROUTE_LINE_ID);
+      if(buildingIndex>=0&&routeIndex>=0&&routeIndex<buildingIndex){
+        for(const id of [ROUTE_GLOW_ID,ROUTE_CASING_ID,ROUTE_LINE_ID,ROUTE_ARROW_ID]){
+          if(map.getLayer(id))map.moveLayer(id);
+        }
+      }
+    };
+    map.on("load",()=>{
+      setupMap();
+      repairRouteLayers();
+    });
     map.on("moveend",()=>{
       if(mapModeRef.current!=="3d")return;
       // Refresh when moving between tiles, including during GPS-follow.
@@ -1517,12 +1536,7 @@ export default function NaviboriMap({
         });
       }
     });
-    map.on("styledata",()=>{
-      if(map.isStyleLoaded()&&
-        (!map.getSource(ROUTE_SOURCE_ID)||!map.getLayer(ROUTE_LINE_ID))){
-        ensureRouteInfrastructure(map);
-      }
-    });
+    map.on("styledata",repairRouteLayers);
     map.on("error",(event)=>{
       if(!event.error||disposed)return;
       // Building provider errors are handled separately; GPS stays active.
@@ -1564,6 +1578,7 @@ export default function NaviboriMap({
       }
     });
     map.on("idle",()=>{
+      repairRouteLayers();
       if(disposed||mapModeRef.current!=="3d"||!map.getLayer(NAVIBORI_BUILDINGS_ID))return;
       try{
         const native=map.getLayer(NAVIBORI_VECTOR_BUILDINGS_LAYER) &&
