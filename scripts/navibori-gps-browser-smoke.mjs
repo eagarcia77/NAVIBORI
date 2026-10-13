@@ -1,14 +1,18 @@
-import {chromium} from "playwright";
+import {chromium,webkit} from "playwright";
 
 // Real browser geolocation API with synthetic coordinates. This proves that
 // UI wiring reacts to permission responses; it does NOT establish real GPS
 // reception on an iPhone or authorize on-road use.
 const host="http://127.0.0.1:3200";
-const browser=await chromium.launch({
-  headless:true,args:["--use-gl=angle","--use-angle=swiftshader"]
-});
+const launches=[
+  {name:"chromium",browser:await chromium.launch({
+    headless:true,args:["--use-gl=angle","--use-angle=swiftshader"]
+  })},
+  {name:"webkit",browser:await webkit.launch({headless:true})}
+];
 const failures=[];
 try{
+  for(const {name,browser} of launches){
   const location={latitude:18.052,longitude:-66.506,accuracy:9};
   const approved=await browser.newContext({
     viewport:{width:390,height:844},isMobile:true,hasTouch:true,
@@ -25,12 +29,12 @@ try{
     if(!status.includes("±9 m")||!status.includes("Ubicación recibida")){
       failures.push("Allowed GPS status missing location/accuracy: "+status);
     }
-    console.log("Mobile geolocation allowed:",status.replaceAll("\n"," "));
+    console.log(name+" mobile geolocation allowed:",status.replaceAll("\n"," "));
   }catch{
     failures.push("Allowed GPS did not reach received: "+
       await successPage.locator(".map-panel").getAttribute("data-gps-probe"));
   }
-  await successPage.screenshot({path:"/tmp/navibori-gps-allowed.png"});
+  await successPage.screenshot({path:"/tmp/navibori-gps-"+name+"-allowed.png"});
   await approved.close();
 
   const denied=await browser.newContext({
@@ -46,15 +50,16 @@ try{
     const status=await deniedPage.locator(".navibori-gps-probe").innerText();
     if(!status.includes("Permiso de ubicación denegado"))
       failures.push("Denied GPS displayed incorrect state: "+status);
-    console.log("Mobile geolocation denied:",status.replaceAll("\n"," "));
+    console.log(name+" mobile geolocation denied:",status.replaceAll("\n"," "));
   }catch{
     failures.push("Denied GPS did not show permissions error: "+
       await deniedPage.locator(".map-panel").getAttribute("data-gps-probe"));
   }
-  await deniedPage.screenshot({path:"/tmp/navibori-gps-denied.png"});
+  await deniedPage.screenshot({path:"/tmp/navibori-gps-"+name+"-denied.png"});
   await denied.close();
+  }
 }finally{
-  await browser.close();
+  await Promise.all(launches.map(async ({browser})=>browser.close()));
 }
 if(failures.length){
   console.error(failures.join("\n"));
