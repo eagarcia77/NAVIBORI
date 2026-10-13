@@ -29,6 +29,17 @@ describe("NovaScene 2.1 expanded tile coverage",()=>{
     expect(manifest.bbox[2]).toBeGreaterThan(-66.486);
     expect(manifest.bbox[3]).toBeGreaterThan(18.068);
   });
+  it("rejects malformed tile filenames, unsafe paths and invalid counts",()=>{
+    const [key,descriptor]=Object.entries(manifest.tiles)[0];
+    const replaceTile=(name:string,entry:unknown)=>({
+      ...manifest,tiles:{...manifest.tiles,[name]:entry}
+    });
+    expect(validNovaSceneManifest(replaceTile(key,{...descriptor,count:-1}))).toBe(false);
+    expect(validNovaSceneManifest(replaceTile(key,{...descriptor,count:1.5}))).toBe(false);
+    expect(validNovaSceneManifest(replaceTile(key,{...descriptor,path:"https://bad.example/tile"}))).toBe(false);
+    expect(validNovaSceneManifest(replaceTile("not-a-cell",descriptor))).toBe(false);
+    expect(validNovaSceneManifest(replaceTile(key,null))).toBe(false);
+  });
   it("rejects invalid manifests before loading 3D tile grids",()=>{
     expect(validNovaSceneManifest({...manifest,bbox:[-66.4,18,-66.6,18.1]})).toBe(false);
     expect(validNovaSceneManifest({...manifest,bbox:[-200,18,-66,19]})).toBe(false);
