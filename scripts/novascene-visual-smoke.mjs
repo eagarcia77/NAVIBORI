@@ -26,29 +26,44 @@ try{
     // the actual neighborhood at street zoom (as GPS navigation shows it).
     await page.waitForFunction(()=>
       typeof window.__novaQA?.focus==="function",undefined,{timeout:10000});
-    await page.evaluate(()=>window.__novaQA.focus());
-    let result;
-    try{
-      await page.waitForFunction(()=>{
-        const element=document.querySelector(".map-panel[data-novascene-total]");
-        return Number(element?.getAttribute("data-novascene-visible")??0)>0;
-      },undefined,{timeout:45000});
-      result="visible";
-    }catch{
-      result="not-visible";
+    const locations=[
+      {label:"central",lng:-66.506,lat:18.052},
+      // Previously beyond the original static snapshot coverage.
+      {label:"extended",lng:-66.55,lat:18.079}
+    ];
+    for(const location of locations){
+      await page.evaluate(({lng,lat})=>window.__novaQA.focus(lng,lat),location);
+      let result="not-visible";
+      try{
+        await page.waitForFunction(({lng,lat})=>{
+          const status=document.querySelector(".map-panel[data-novascene-total]");
+          const current=window.__novaQA?.inspect?.();
+          return Math.abs(current?.longitude-lng)<0.0002 &&
+            Math.abs(current?.latitude-lat)<0.0002 &&
+            Number(status?.getAttribute("data-novascene-visible")??0)>0 &&
+            Number(current?.rendered??0)>0;
+        },location,{timeout:35000});
+        result="visible";
+      }catch{
+        result="not-visible";
+      }
+      const diagnostics=await page.locator(".map-panel").evaluate(el=>({
+        state:el.getAttribute("data-novascene-state"),
+        visible:el.getAttribute("data-novascene-visible"),
+        total:el.getAttribute("data-novascene-total")
+      }));
+      await page.screenshot({
+        path:"/tmp/novascene-"+config.label+"-"+location.label+".png",
+        fullPage:false
+      });
+      const renderer=await page.evaluate(()=>window.__novaQA?.inspect?.());
+      console.log("NovaScene "+config.label+" "+location.label+" WebGL "+result+":",
+        JSON.stringify(diagnostics),"renderer:",JSON.stringify(renderer));
+      if(result!=="visible"||Number(diagnostics.total)<=0){
+        errors.push("No extruded buildings in "+config.label+" "+location.label+
+          " viewport: "+JSON.stringify(diagnostics));
+      }
     }
-    const diagnostics=await page.locator(".map-panel").evaluate(el=>({
-      state:el.getAttribute("data-novascene-state"),
-      visible:el.getAttribute("data-novascene-visible"),
-      total:el.getAttribute("data-novascene-total")
-    }));
-    await page.screenshot({path:"/tmp/novascene-"+config.label+".png",fullPage:false});
-    const renderer=await page.evaluate(()=>window.__novaQA?.inspect?.());
-    console.log("NovaScene "+config.label+" WebGL "+result+":",
-      JSON.stringify(diagnostics),"renderer:",JSON.stringify(renderer));
-    if(result!=="visible")errors.push(
-      "No extruded 3D feature in "+config.label+" viewport: "+JSON.stringify(diagnostics)
-    );
     await context.close();
   }
 }finally{
