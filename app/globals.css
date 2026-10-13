@@ -3154,3 +3154,50 @@ html[data-motion="reduced"] .navibori-drift-bridge-marker i{
 @media(prefers-reduced-motion:reduce){
   .map-panel .navibori-3d-indicator .navibori-3d-orb{animation:none}
 }
+
+
+/* NovaScene 2.3: optional architecture styles, with accessible compact controls. */
+.novascene-appearance-controls{
+  display:grid;
+  gap:8px;
+  padding:10px 11px;
+  border:1px solid rgba(49,133,161,.2);
+  border-radius:13px;
+  background:linear-gradient(135deg,rgba(252,251,247,.96),rgba(230,243,247,.91));
+}
+.novascene-appearance-controls>span{
+  color:#153f55;
+  font-size:.68rem;
+  font-weight:800;
+}
+.novascene-appearance-controls>div{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:8px;
+}
+.novascene-appearance-controls button{
+  min-height:39px;
+  padding:8px;
+  border:1px solid #b9cfd7;
+  border-radius:10px;
+  background:rgba(255,255,255,.93);
+  color:#184457;
+  font-size:.69rem;
+  font-weight:750;
+  cursor:pointer;
+}
+.novascene-appearance-controls button.active{
+  background:#e7f4f7;
+  color:#046b84;
+  border-color:#1e95b4;
+  box-shadow:inset 0 0 0 1px rgba(30,149,180,.15);
+}
+.novascene-appearance-controls button:focus-visible{
+  outline:3px solid #087f9d;
+  outline-offset:2px;
+}
+.novascene-appearance-controls>small{
+  color:#617784;
+  font-size:.62rem;
+  line-height:1.48;
+}
