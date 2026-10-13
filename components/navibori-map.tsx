@@ -3117,7 +3117,7 @@ export default function NaviboriMap({
                 :mode==="3d"&&buildings3DState==="no-data"
                   ?tr("No hay edificios 3D en esta zona","No 3D buildings in this area")
                   :mode==="3d"&&buildings3DState==="ready"
-                    ?tr(buildingRenderedCount+" visibles de "+buildingCount+" edificios",buildingRenderedCount+" visible of "+buildingCount+" buildings")
+                    ?tr(buildingRenderedCount+" edificios 3D visibles · modelo local",buildingRenderedCount+" 3D buildings visible · local model")
                   :mode==="3d"&&buildings3DState==="loading"
                     ?tr("Cargando edificios locales…","Loading local buildings…")
                   :mode==="3d"
@@ -3805,7 +3805,9 @@ export default function NaviboriMap({
                 </button>
               </div>
               <div className="navibori-3d-diagnostic-menu" role="status">
-                <strong>{tr("Diagnóstico 3D","3D diagnostics")}</strong>
+                <strong>{tr("NovaScene · motor 3D propio","NovaScene · built-in 3D engine")}</strong>
+                <small>{tr("7,512 contornos urbanos locales disponibles · alturas orientativas",
+                  "7,512 local building footprints available · heights illustrative")}</small>
                 <span>{mode!=="3d"
                   ?tr("Vista 2D o globo seleccionada","2D or globe view selected")
                   :buildings3DState==="loading"
