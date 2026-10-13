@@ -53,6 +53,38 @@ export function visibleNovaSceneTileIds(
   return result;
 }
 
+/** Prevent malformed tile payloads from reaching the MapLibre extrusion renderer. */
+export function validNovaSceneTile(data:unknown):data is NovaSceneCollection{
+  if(!data||typeof data!=="object")return false;
+  const tile=data as Partial<NovaSceneCollection>;
+  if(tile.type!=="FeatureCollection"||!Array.isArray(tile.features))return false;
+  const validPosition=(point:unknown):boolean=>
+    Array.isArray(point)&&point.length>=2&&
+    typeof point[0]==="number"&&Number.isFinite(point[0])&&
+    typeof point[1]==="number"&&Number.isFinite(point[1])&&
+    point[0]>=-180&&point[0]<=180&&point[1]>=-90&&point[1]<=90;
+  const validRing=(ring:unknown):boolean=>
+    Array.isArray(ring)&&ring.length>=4&&ring.every(validPosition)&&
+    (ring[0] as number[])[0]===(ring[ring.length-1] as number[])[0]&&
+    (ring[0] as number[])[1]===(ring[ring.length-1] as number[])[1];
+  const validPolygon=(polygon:unknown):boolean=>
+    Array.isArray(polygon)&&polygon.length>0&&polygon.every(validRing);
+  return tile.features.every(feature=>{
+    if(!feature||feature.type!=="Feature"||!feature.geometry||
+      !feature.properties)return false;
+    const {height,base,estimated}=feature.properties;
+    if(typeof height!=="number"||!Number.isFinite(height)||height<=0||
+      typeof base!=="number"||!Number.isFinite(base)||base<0||
+      typeof estimated!=="boolean")return false;
+    const geometry=feature.geometry;
+    return geometry.type==="Polygon"
+      ?validPolygon(geometry.coordinates)
+      :geometry.type==="MultiPolygon"&&
+        Array.isArray(geometry.coordinates)&&geometry.coordinates.length>0&&
+        geometry.coordinates.every(validPolygon);
+  });
+}
+
 export function mergeNovaSceneFeatures(collections:NovaSceneCollection[]):NovaSceneCollection{
   const seen=new Set<string>();
   const features:NovaSceneFeature[]=[];
