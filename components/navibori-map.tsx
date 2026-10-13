@@ -906,6 +906,7 @@ export default function NaviboriMap({
         document.documentElement.dataset.motion!=="reduced"
       ){
         const bearing=getRouteBearingNearPoint(route,estimate.coordinate);
+        if(map.isEasing())return;
         map.easeTo({
           center:[
             estimate.coordinate.longitude,
@@ -2797,6 +2798,7 @@ export default function NaviboriMap({
     lastRouteRefreshAtRef.current=0;
     consecutiveOffRouteFixesRef.current=0;
     lastOffRouteCandidateAtRef.current=null;
+    gpsActiveRef.current=false;
     setGpsActive(false);
     setGpsAccuracy(null);
     setGpsSpeedKph(null);
@@ -3017,6 +3019,10 @@ export default function NaviboriMap({
         followGpsRef.current=true;
         setFollowGps(true);
       }
+      // Update the synchronous ref before MapLibre events can fire: its
+      // moveend handler must not start competing tilt animations while GPS
+      // follow-camera movement is being processed.
+      gpsActiveRef.current=true;
       setGpsActive(true);
       setRouteBusy(null);
       setNavigationPhase("gps");
@@ -3185,7 +3191,10 @@ export default function NaviboriMap({
 
       if(followGpsRef.current){
         const map=mapRef.current;
-        map?.easeTo({
+        // Let an in-flight camera animation finish. Interrupting it from a
+        // second geolocation callback can invalidate MapLibre's ease frame.
+        // The GPS marker itself updates on *every* accepted location fix.
+        if(map&&!map.isEasing())map.easeTo({
           center:[cameraCenter.longitude,cameraCenter.latitude],
           zoom:mapModeRef.current==="3d"
             ? nearTurnZoom(cameraProfile.zoom,cameraCue?.distanceMeters ?? null)
