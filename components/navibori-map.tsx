@@ -3291,7 +3291,12 @@ export default function NaviboriMap({
       setGpsResumePending(true);
       setGpsSignalHeartbeat(Date.now());
       navigator.geolocation.getCurrentPosition(
-        handlePosition,
+        (position)=>{
+          if(gpsSessionRef.current!==sessionId)return;
+          gpsResumeRequestPendingRef.current=false;
+          setGpsResumePending(false);
+          handlePosition(position);
+        },
         (error)=>{
           if(gpsSessionRef.current!==sessionId)return;
           gpsResumeRequestPendingRef.current=false;
