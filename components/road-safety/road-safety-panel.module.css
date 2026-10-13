@@ -1,0 +1,44 @@
+.shell{min-height:100dvh;background:linear-gradient(160deg,#ecf6fa,#f7fafb 55%,#edf3f7);color:#153346;padding:clamp(12px,2vw,26px)}
+.header{width:min(1440px,100%);margin:0 auto 18px;display:flex;align-items:center;justify-content:space-between;gap:12px}
+.header h1{margin:3px 0;font-size:clamp(1.55rem,3vw,2.5rem);letter-spacing:-.035em}
+.header p{color:#506a7a;margin:0;font-size:.92rem}
+.brand{font-weight:900;color:#005f8f;font-size:.75rem;letter-spacing:.16em}
+.brand b{font-weight:700;color:#008b80}
+.back{display:inline-flex;align-items:center;justify-content:center;text-decoration:none;background:white;border:1px solid #d3e3ea;border-radius:13px;min-height:44px;padding:0 14px;color:#17445b;font-size:.84rem;font-weight:700;white-space:nowrap}
+.layout{width:min(1440px,100%);margin:0 auto;display:grid;grid-template-columns:minmax(0,1.8fr) minmax(290px,1fr);gap:16px;align-items:start}
+.mapCard,.card{background:white;border:1px solid #dce7eb;border-radius:20px;box-shadow:0 12px 35px #113b5110;overflow:hidden}
+.mapCard{position:sticky;top:12px}
+.map{width:100%;height:min(70dvh,760px);min-height:420px;background:#e1eaee}
+.statusBar{display:flex;flex-wrap:wrap;align-items:center;gap:12px;padding:12px 14px;border-top:1px solid #e2e9ed;font-size:.8rem;color:#557080}
+.connected{color:#05744c;font-weight:800}
+.disconnected{color:#805c29;font-weight:800}
+.mapActions{padding:0 14px 14px;display:flex;gap:8px;flex-wrap:wrap}
+.mapActions button,.reportButtons button,.savedList button{border:1px solid #d2e0e7;background:#f8fafb;border-radius:12px;color:#17384b;font-weight:750;padding:9px 12px;font-size:.85rem;min-height:44px;cursor:pointer}
+.mapActions button:hover,.reportButtons button:hover:not(:disabled),.savedList button:hover:not(:disabled){border-color:#167999;background:#eef8fa}
+.mapActions button:focus-visible,.reportButtons button:focus-visible,.savedList button:focus-visible,.back:focus-visible{outline:3px solid #ffa45f;outline-offset:2px}
+.mapActions .primary{background:#00648b;color:white;border-color:#00648b}
+.mapActions button:disabled,.reportButtons button:disabled,.savedList button:disabled{opacity:.46;cursor:not-allowed}
+.sidebar{display:grid;gap:14px;min-width:0}
+.card{padding:18px}
+.card h2{margin:0 0 10px;font-size:1.04rem;color:#153b51;letter-spacing:-.02em}
+.headingRow{display:flex;align-items:center;justify-content:space-between}
+.headingRow span{background:#e5f5f5;border-radius:999px;color:#016b6b;min-width:27px;padding:4px 6px;text-align:center;font-size:.82rem;font-weight:800}
+.empty,.help{margin:7px 0 13px;color:#617786;font-size:.85rem;line-height:1.5}
+.list,.savedList{list-style:none;padding:0;margin:0}
+.alertRow{display:flex;align-items:center;gap:10px;padding:12px 0;border-top:1px solid #ecf1f4}
+.emoji{display:grid;place-items:center;width:42px;height:42px;border-radius:12px;background:#f3f7f9;font-size:1.2rem;flex:0 0 auto}
+.alertText{display:grid;min-width:0;gap:3px}
+.alertText b{font-size:.86rem;line-height:1.35}
+.alertText small{color:#667f8b;font-size:.76rem}
+.reportButtons{display:grid;gap:8px}
+.reportButtons button{text-align:left;min-height:46px}
+.savedList li{border-top:1px solid #eaf0f2;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 0;font-size:.81rem}
+.savedList button{min-height:36px;padding:5px 9px;font-size:.75rem}
+.notice{font-size:.8rem;background:#eef9f4;border-radius:10px;padding:10px;color:#195b44}
+.warning{margin:0 14px 14px;padding:11px;border-radius:12px;background:#fff2e6;color:#8a3a11;font-size:.85rem}
+.reportPin{font-size:21px;display:grid;place-items:center;width:43px;height:43px;background:white;border:2px solid #e7b64b;border-radius:50%;box-shadow:0 4px 14px #17364855}
+.youPin{width:19px;height:19px;border-radius:50%;background:#1377f2;border:3px solid white;box-shadow:0 0 0 9px #1377f240,0 4px 12px #082c5f33}
+.footnotes{max-width:1440px;margin:16px auto 0;padding:8px 18px 12px;border-radius:14px;background:#eaf5f6;color:#416273;font-size:.8rem;line-height:1.55}
+.footnotes p{margin:6px 0}
+@media(max-width:900px){.layout{grid-template-columns:1fr}.mapCard{position:relative;top:auto}.map{height:52dvh;min-height:350px}}
+@media(max-width:540px){.header{align-items:flex-start;flex-wrap:wrap}.back{min-height:40px}.shell{padding:9px}.map{height:49dvh;min-height:320px}.mapActions button{flex:1 1 40%}.card{padding:14px}.statusBar{gap:7px;font-size:.75rem}}
