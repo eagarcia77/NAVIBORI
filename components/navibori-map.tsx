@@ -21,6 +21,7 @@ import {nearTurnZoom,nextRouteCorridor} from "@/lib/spatial/novascene-route-focu
 import {gpsSignalQuality,shouldDrawSvgFallback,stabilizedCameraBearing} from "@/lib/spatial/novascene-gps-stability";
 import {acceptGpsPositionTimestamp,hasLiveGpsFix,normalizeGeolocationTimestamp} from "@/lib/spatial/navibori-gps-freshness";
 import {navigationSignalCopy,navigationSignalState} from "@/lib/spatial/navibori-navigation-signal";
+import {cameraFollowDecision} from "@/lib/spatial/gps-camera-follow";
 import {evaluateAutomaticReroute,gpsFixAgeSeconds,reliableGpsForRouting} from "@/lib/commerce/automatic-reroute-guard";
 import {evaluateGpsStreamFix,type StreamGpsFix} from "@/lib/commerce/gps-stream-integrity";
 import {
@@ -428,6 +429,7 @@ export default function NaviboriMap({
   const lastOffRouteCandidateAtRef=useRef<number|null>(null);
   const routeResultRef=useRef<InMapRouteResult|null>(null);
   const followGpsRef=useRef(true);
+  const lastFollowCameraAtRef=useRef(0);
   const gpsActiveRef=useRef(false);
   const voiceEnabledRef=useRef(false);
   const lastSpokenInstructionRef=useRef("");
@@ -2356,6 +2358,7 @@ export default function NaviboriMap({
 
     followGpsRef.current=true;
     setFollowGps(true);
+    lastFollowCameraAtRef.current=Date.now();
 
     const activeMode=activeNavigationModeRef.current;
     // GPS guidance requires a street-level projection, not the globe overview.
@@ -2807,6 +2810,7 @@ export default function NaviboriMap({
     lastRouteRefreshAtRef.current=0;
     consecutiveOffRouteFixesRef.current=0;
     lastOffRouteCandidateAtRef.current=null;
+    lastFollowCameraAtRef.current=0;
     gpsActiveRef.current=false;
     setGpsActive(false);
     setGpsAccuracy(null);
@@ -3204,10 +3208,19 @@ export default function NaviboriMap({
 
       if(followGpsRef.current){
         const map=mapRef.current;
-        // Let an in-flight camera animation finish. Interrupting it from a
-        // second geolocation callback can invalidate MapLibre's ease frame.
-        // The GPS marker itself updates on *every* accepted location fix.
-        if(map&&!map.isMoving())map.easeTo({
+        // Dense position updates must not permanently starve the camera
+        // while its own animation is running. Manual gestures turn off follow.
+        const decision=map?cameraFollowDecision({
+          follow:followGpsRef.current,
+          visible:document.visibilityState==="visible",
+          now:Date.now(),lastCameraAt:lastFollowCameraAtRef.current,
+          cameraMoving:map.isMoving(),
+          reducedMotion:window.matchMedia("(prefers-reduced-motion: reduce)").matches
+        }):"skip";
+        if(map&&decision!=="skip"){
+          if(decision==="replace")map.stop();
+          lastFollowCameraAtRef.current=Date.now();
+          map.easeTo({
           center:[cameraCenter.longitude,cameraCenter.latitude],
           zoom:mapModeRef.current==="3d"
             ? nearTurnZoom(cameraProfile.zoom,cameraCue?.distanceMeters ?? null)
@@ -3223,10 +3236,9 @@ export default function NaviboriMap({
             : mapModeRef.current==="2d"
               ? 0
               : cameraProfile.pitch,
-          duration:window.matchMedia("(prefers-reduced-motion: reduce)").matches
-            ? 0
-            : firstFix ? 650 : cameraProfile.duration
-        });
+          duration:decision==="jump"?0:firstFix?650:Math.min(650,cameraProfile.duration)
+          });
+        }
       }
 
       if(firstFix){
