@@ -18,6 +18,7 @@ import {
   type NovaSceneAppearance
 } from "@/lib/spatial/novascene-appearance";
 import {nearTurnZoom,nextRouteCorridor} from "@/lib/spatial/novascene-route-focus";
+import {gpsSignalQuality,shouldDrawSvgFallback,stabilizedCameraBearing} from "@/lib/spatial/novascene-gps-stability";
 import {
   buildAppleMapsDirectionsUrl,
   buildGoogleDirectionsUrl,
@@ -403,6 +404,7 @@ export default function NaviboriMap({
   const trajectoryGhostRef=useRef<maplibregl.Marker|null>(null);
   const driftBridgeMarkerRef=useRef<maplibregl.Marker|null>(null);
   const deviceHeadingRef=useRef<number|null>(null);
+  const stableCameraBearingRef=useRef<number|null>(null);
   const orientationHandlerRef=useRef<((event:DeviceOrientationEvent)=>void)|null>(null);
   const routeAbortRef=useRef<AbortController|null>(null);
   const gpsWatchRef=useRef<number|null>(null);
@@ -462,6 +464,7 @@ export default function NaviboriMap({
   const [sceneAppearance,setSceneAppearance]=useState<NovaSceneAppearance>("natural");
   const [buildingCount,setBuildingCount]=useState(0);
   const [buildingRenderedCount,setBuildingRenderedCount]=useState(0);
+  const [nativeRouteVisible,setNativeRouteVisible]=useState(false);
   const [buildingError,setBuildingError]=useState("");
   const buildingRefreshRef=useRef<((force?:boolean)=>void)|null>(null);
   const streetZoomBeforeGlobeRef=useRef<number|null>(null);
@@ -1316,6 +1319,8 @@ export default function NaviboriMap({
     let renderingCheckTimer:ReturnType<typeof setTimeout>|null=null;
     let vectorWatchdog:ReturnType<typeof setTimeout>|null=null;
     let visualMonitorAt=0;
+    let lastRouteMonitorAt=0;
+    let lastNativeRouteVisible=false;
     let lastReported3DCount=-1;
     let manifest: NovaSceneManifest|null=null;
     let manifestLoading:Promise<NovaSceneManifest|null>|null=null;
@@ -1611,6 +1616,23 @@ export default function NaviboriMap({
         setBuildingRenderedCount(vectorVisible);
         setBuildings3DState("ready");
         setBuildingError("");
+      }
+    });
+    // Inspect actual WebGL route faces, not just source/layer existence.
+    // The SVG is a backup rather than a second permanent road stripe.
+    map.on("render",()=>{
+      if(disposed||Date.now()-lastRouteMonitorAt<1100)return;
+      lastRouteMonitorAt=Date.now();
+      let visible=false;
+      if(routeResultRef.current&&map.getLayer(ROUTE_LINE_ID)){
+        try{
+          visible=map.getLayoutProperty(ROUTE_LINE_ID,"visibility")!=="none" &&
+            map.queryRenderedFeatures({layers:[ROUTE_LINE_ID]}).length>0;
+        }catch{visible=false;}
+      }
+      if(visible!==lastNativeRouteVisible){
+        lastNativeRouteVisible=visible;
+        setNativeRouteVisible(visible);
       }
     });
     map.on("idle",()=>{
@@ -1971,6 +1993,7 @@ export default function NaviboriMap({
     stopGpsNavigation();
     routeAbortRef.current?.abort();
     routeResultRef.current=null;
+    stableCameraBearingRef.current=null;
     setRouteResult(null);
     setRouteStatus("");
     setArrived(false);
@@ -2996,6 +3019,11 @@ export default function NaviboriMap({
         deviceHeading:deviceHeadingRef.current,
         routeHeading
       });
+      // Stabilize only the visual camera, never the GPS fix or route.
+      const cameraBearing=stabilizedCameraBearing(
+        stableCameraBearingRef.current,navigationBearing,speedKphNow,accuracy
+      );
+      stableCameraBearingRef.current=cameraBearing;
       setNavigationBearingDegrees(navigationBearing);
 
       const prediction=
@@ -3052,7 +3080,7 @@ export default function NaviboriMap({
             : cameraProfile.zoom,
           offset:[0,cameraProfile.offsetY],
           bearing:
-            navigationBearing ??
+            cameraBearing ??
             map?.getBearing() ??
             0,
           pitch:mapModeRef.current==="3d"
@@ -3238,6 +3266,7 @@ export default function NaviboriMap({
     routeAbortRef.current=null;
     stopGpsNavigation();
     routeResultRef.current=null;
+    stableCameraBearingRef.current=null;
     setRouteResult(null);
     setRouteStatus("");
     setRouteBusy(null);
@@ -3281,6 +3310,8 @@ export default function NaviboriMap({
   return (
     <section
       className="map-panel spatial-cockpit full-map-cockpit"
+      data-native-route-visible={nativeRouteVisible ? "true" : "false"}
+      data-gps-signal={gpsSignalQuality(gpsAccuracy)}
       data-cockpit-phase={lagrangePhase}
       data-exodock-state={exoDockState}
       data-gravity-lens={gravityLensPhase}
@@ -3302,6 +3333,12 @@ export default function NaviboriMap({
                 :buildings3DState==="no-data"
                   ?tr("Sin edificios visibles","No visible buildings")
                   :tr("Edificios no disponibles","Buildings unavailable")}</strong>
+            <small className={"novascene-gps-signal "+gpsSignalQuality(gpsAccuracy)}
+              title={tr("Precisión GPS informada por el dispositivo","Device-reported GPS accuracy")}>
+              {gpsAccuracy!==null&&Number.isFinite(gpsAccuracy)
+                ? "GPS ±"+Math.round(gpsAccuracy)+" m"
+                : tr("GPS por verificar","GPS not verified")}
+            </small>
           </div>
         )}
         {!gpsActive&&(
@@ -3323,7 +3360,9 @@ export default function NaviboriMap({
           </div>
         )}
         {routeResult && (
-          <svg ref={routeSvgRef} className="navibori-route-svg-fallback" aria-hidden="true" preserveAspectRatio="none">
+          <svg ref={routeSvgRef} className="navibori-route-svg-fallback"
+            style={shouldDrawSvgFallback(nativeRouteVisible)?undefined:{display:"none"}}
+            aria-hidden="true" preserveAspectRatio="none">
             <polyline fill="none" stroke="#ffffff" strokeWidth="10" strokeLinejoin="round" strokeLinecap="round" />
             <polyline fill="none" stroke={routeLineColor(routeResult.mode)} strokeWidth="6" strokeLinejoin="round" strokeLinecap="round" />
           </svg>

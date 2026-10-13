@@ -3201,3 +3201,46 @@ html[data-motion="reduced"] .navibori-drift-bridge-marker i{
   font-size:.62rem;
   line-height:1.48;
 }
+
+
+/* NovaScene 2.5: actual GPS accuracy remains visible in navigation status.
+   Avoid implying that a DEMO route is proof of real-world GNSS accuracy. */
+.navibori-3d-navigation-status{
+  flex-wrap:wrap;
+  row-gap:4px;
+  max-width:min(320px,calc(100vw - 30px));
+}
+.novascene-gps-signal{
+  display:inline-flex;
+  align-items:center;
+  border:1px solid rgba(17,124,114,.25);
+  border-radius:999px;
+  padding:2px 7px;
+  color:#126454;
+  background:rgba(230,250,243,.85);
+  font-size:.59rem;
+  font-weight:850;
+  white-space:nowrap;
+}
+.novascene-gps-signal.moderate{
+  color:#70591f;
+  border-color:rgba(156,122,36,.25);
+  background:#fff7df;
+}
+.novascene-gps-signal.weak{
+  color:#8f3c20;
+  border-color:rgba(183,80,49,.3);
+  background:#fff0e9;
+}
+.novascene-gps-signal.searching{
+  color:#566b75;
+  background:#edf3f6;
+}
+@media(max-width:500px){
+  .navibori-3d-navigation-status{
+    gap:5px;
+    padding:7px 9px;
+    font-size:.58rem;
+  }
+  .novascene-gps-signal{font-size:.54rem}
+}
