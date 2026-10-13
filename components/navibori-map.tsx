@@ -413,6 +413,7 @@ export default function NaviboriMap({
   const latestPositionTimestampRef=useRef<number|null>(null);
   const gpsLastLiveFixAtRef=useRef<number|null>(null);
   const gpsResumeFixRef=useRef<(()=>void)|null>(null);
+  const gpsResumeRequestPendingRef=useRef(false);
   const gpsBootstrapTimerRef=useRef<ReturnType<typeof setTimeout>|null>(null);
   const routePreviewTimerRef=useRef<ReturnType<typeof setTimeout>|null>(null);
   const activeNavigationModeRef=useRef<InMapRouteMode|null>(null);
@@ -2741,6 +2742,7 @@ export default function NaviboriMap({
   function stopGpsNavigation(options:{preservePhase?:boolean}={}){
     gpsSessionRef.current+=1;
     gpsResumeFixRef.current=null;
+    gpsResumeRequestPendingRef.current=false;
     gpsLastLiveFixAtRef.current=null;
     latestPositionTimestampRef.current=null;
     setGpsResumePending(false);
@@ -2942,6 +2944,7 @@ export default function NaviboriMap({
       gpsLastLiveFixAtRef.current=now;
       setGpsSignalHeartbeat(now);
       setGpsResumePending(false);
+      gpsResumeRequestPendingRef.current=false;
       if(gpsBootstrapTimerRef.current!==null){
         clearTimeout(gpsBootstrapTimerRef.current);
         gpsBootstrapTimerRef.current=null;
@@ -3251,6 +3254,13 @@ export default function NaviboriMap({
 
     const handleWatchError=(error:GeolocationPositionError)=>{
       if(gpsSessionRef.current!==sessionId)return;
+      if(error.code===error.PERMISSION_DENIED){
+        setRouteBusy(null);
+        setNavigationPhase("error");
+        setLocationStatus(geolocationErrorMessage(error));
+        stopGpsNavigation({preservePhase:true});
+        return;
+      }
       if(receivedLiveFix){
         setGpsResumePending(false);
         setLocationStatus(tr(
@@ -3276,13 +3286,15 @@ export default function NaviboriMap({
     gpsResumeFixRef.current=()=>{
       if(gpsSessionRef.current!==sessionId ||
         document.visibilityState!=="visible" ||
-        !navigator.geolocation)return;
+        !navigator.geolocation || gpsResumeRequestPendingRef.current)return;
+      gpsResumeRequestPendingRef.current=true;
       setGpsResumePending(true);
       setGpsSignalHeartbeat(Date.now());
       navigator.geolocation.getCurrentPosition(
         handlePosition,
         (error)=>{
           if(gpsSessionRef.current!==sessionId)return;
+          gpsResumeRequestPendingRef.current=false;
           setGpsResumePending(false);
           setGpsSignalHeartbeat(Date.now());
           if(error.code===error.PERMISSION_DENIED){
