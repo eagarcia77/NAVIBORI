@@ -10,7 +10,9 @@
     "build": "next build",
     "start": "next start",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "prebuild": "node scripts/sync-maplibre-worker.mjs",
+    "predev": "node scripts/sync-maplibre-worker.mjs"
   },
   "dependencies": {
     "maplibre-gl": "6.11.2",

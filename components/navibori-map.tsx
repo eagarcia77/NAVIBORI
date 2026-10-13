@@ -103,66 +103,29 @@ const RASTER_BASEMAP:maplibregl.StyleSpecification={
   },
   layers:[{id:"osm-raster",type:"raster",source:"osm",minzoom:0,maxzoom:20}]
 };
+// NovaScene owns the 3D renderer and locally stored footprints.
 function create3DBuildings(map:maplibregl.Map){
-  // A second independent pathway renders native vector 3D buildings while
-  // the live OSM geometry API loads. The raster basemap remains unaffected.
-  try{
-    if(!map.getSource(NAVIBORI_VECTOR_BUILDINGS_SOURCE)){
-      map.addSource(NAVIBORI_VECTOR_BUILDINGS_SOURCE,{
-        type:"vector",
-        // OSMF's official Shortbread v1.1 vector tiles have a documented
-        // "buildings" polygon layer from zoom 14 onward.
-        url:"https://vector.openstreetmap.org/shortbread_v1/tilejson.json",
-        attribution:"© OpenStreetMap contributors"
-      });
-    }
-    if(!map.getLayer(NAVIBORI_VECTOR_BUILDINGS_LAYER)){
-      map.addLayer({
-        id:NAVIBORI_VECTOR_BUILDINGS_LAYER,
-        type:"fill-extrusion",
-        source:NAVIBORI_VECTOR_BUILDINGS_SOURCE,
-        "source-layer":"buildings",
-        minzoom:14.5,
-        layout:{visibility:"visible"},
-        paint:{
-          "fill-extrusion-color":["interpolate",["linear"],["zoom"],15,"#a6cada",17,"#73a9cc",19,"#4781b9"],
-          // Shortbread carries outlines but no real heights. Approximate
-          // two-storey volume for visual context, NOT measured clearance.
-          "fill-extrusion-height":["interpolate",["linear"],["zoom"],14.5,0,15.5,8.7],
-          "fill-extrusion-base":0,
-          "fill-extrusion-opacity":0.91,
-          "fill-extrusion-vertical-gradient":true
-        }
-      });
-    }
-  }catch{
-    // Optional vector tiles must never take down GPS or raster streets.
-  }
   if(!map.getSource(NAVIBORI_BUILDINGS_SOURCE)){
     map.addSource(NAVIBORI_BUILDINGS_SOURCE,{
-      type:"geojson",
-      data:{type:"FeatureCollection",features:[]}
+      type:"geojson",data:{type:"FeatureCollection",features:[]}
     });
   }
   if(!map.getLayer(NAVIBORI_BUILDINGS_ID)){
     map.addLayer({
-      id:NAVIBORI_BUILDINGS_ID,
-      type:"fill-extrusion",
-      source:NAVIBORI_BUILDINGS_SOURCE,
-      minzoom:14.5,
+      id:NAVIBORI_BUILDINGS_ID,type:"fill-extrusion",
+      source:NAVIBORI_BUILDINGS_SOURCE,minzoom:14.5,
       layout:{visibility:"visible"},
       paint:{
-        "fill-extrusion-color":["case",["boolean",["get","estimated"],false],"#78badb","#3e94bd"],
-        "fill-extrusion-height":["interpolate",["linear"],["zoom"],14.5,0,15.5,["get","height"]],
+        "fill-extrusion-color":["case",["boolean",["get","estimated"],true],"#79b9d4","#3385b9"],
+        "fill-extrusion-height":["interpolate",["linear"],["zoom"],14.5,0,15.5,["max",5,["coalesce",["get","height"],9]]],
         "fill-extrusion-base":["coalesce",["get","base"],0],
-        "fill-extrusion-opacity":0.88,
+        "fill-extrusion-opacity":0.96,
         "fill-extrusion-vertical-gradient":true
       }
     });
   }
   return NAVIBORI_BUILDINGS_ID;
 }
-
 type RealityMode="2d"|"3d"|"globe"|"time";
 type MapCategory="all"|CommerceCategory;
 
@@ -1259,6 +1222,9 @@ export default function NaviboriMap({
 
     if(!mapNode.current || mapRef.current) return;
 
+    // Fix the Next.js/Turbopack MapLibre v6 default ESM Worker URL.
+    // GeoJSON (and therefore all 3D walls) cannot render without this worker.
+    maplibregl.setWorkerUrl("/maplibre/maplibre-gl-worker.mjs");
     const map=new maplibregl.Map({
       container:mapNode.current,
       style:RASTER_BASEMAP,
@@ -1268,197 +1234,151 @@ export default function NaviboriMap({
       bearing:-16,
       canvasContextAttributes:{antialias:true}
     });
+    // Browser-only acceptance diagnostics, enabled only by the explicit
+    // ?novasceneQA=1 test parameter. No GPS locations are exported.
+    if(new URLSearchParams(window.location.search).get("novasceneQA")==="1"){
+      (window as unknown as {__novaQA?:{
+        focus:()=>void; inspect:()=>Record<string,unknown>;
+      }}).__novaQA={
+        focus:()=>map.jumpTo({center:JUANA_DIAZ_REFERENCE,zoom:17,pitch:58,bearing:-16}),
+        inspect:()=>({
+          zoom:map.getZoom(),
+          pitch:map.getPitch(),
+          hasLayer:Boolean(map.getLayer(NAVIBORI_BUILDINGS_ID)),
+          visibility:map.getLayer(NAVIBORI_BUILDINGS_ID)
+            ?map.getLayoutProperty(NAVIBORI_BUILDINGS_ID,"visibility"):null,
+          hasSource:Boolean(map.getSource(NAVIBORI_BUILDINGS_SOURCE)),
+          styleLoaded:map.isStyleLoaded(),
+          rendered:map.getLayer(NAVIBORI_BUILDINGS_ID)
+            ?map.queryRenderedFeatures({layers:[NAVIBORI_BUILDINGS_ID]}).length:0,
+          sourceFeatures:map.getSource(NAVIBORI_BUILDINGS_SOURCE)
+            ?map.querySourceFeatures(NAVIBORI_BUILDINGS_SOURCE).length:0
+        })
+      };
+    }
     let disposed=false;
+    let mapInitialized=false;
     let buildingsRequest:AbortController|null=null;
     let refreshTimer:ReturnType<typeof setTimeout>|null=null;
     let renderingCheckTimer:ReturnType<typeof setTimeout>|null=null;
     let lastCenter:{lng:number;lat:number;at:number}|null=null;
     let apiStartedAt=0;
+    let novaData:Array<{feature:Record<string,unknown>;lon:number;lat:number}>|null=null;
     let vectorWatchdog:ReturnType<typeof setTimeout>|null=null;
     let visualMonitorAt=0;
     let lastReported3DCount=-1;
+
     const countVectorBuildings=()=>{
-      if(!map.getLayer(NAVIBORI_VECTOR_BUILDINGS_LAYER)||
-        map.getLayoutProperty(NAVIBORI_VECTOR_BUILDINGS_LAYER,"visibility")==="none")return 0;
-      try{
-        return map.queryRenderedFeatures({layers:[NAVIBORI_VECTOR_BUILDINGS_LAYER]}).length;
-      }catch{return 0;}
+      if(!map.getLayer(NAVIBORI_BUILDINGS_ID)||
+         map.getLayoutProperty(NAVIBORI_BUILDINGS_ID,"visibility")==="none")return 0;
+      try{return map.queryRenderedFeatures({layers:[NAVIBORI_BUILDINGS_ID]}).length;}
+      catch{return 0;}
     };
     const update3DBuildings=async(force=false)=>{
       if(disposed)return;
-      // Do not launch a fresh Overpass request on each GPS camera movement.
-      // Keep the existing request alive and rate-limit failures per viewport.
-      if(!force){
-        if(buildingsRequest||Date.now()-apiStartedAt<120000)return;
-        if(countVectorBuildings()>0)return;
-      }
-      apiStartedAt=Date.now();
-      // isStyleLoaded() is false whenever raster tiles are still loading,
-      // which previously caused silent, permanent 3D loading on mobile GPS.
       if(!map.getSource(NAVIBORI_BUILDINGS_SOURCE)){
         setBuildings3DState("unavailable");
-        setBuildingError(tr(
-          "La capa de edificios no está lista. Vuelve a intentarlo.",
-          "Building layer is not initialized. Please retry."
-        ));
-        return;
-      }
-      if(map.getZoom()<15){
-        setBuildings3DState("no-data");
-        setBuildingCount(0);
-        setBuildingRenderedCount(0);
-        setBuildingError(tr(
-          "Acerca el mapa para cargar edificios (zoom mínimo: 15).",
-          "Zoom in to load buildings (minimum zoom: 15)."
-        ));
+        setBuildingError("NovaScene source unavailable");
         return;
       }
       const current=map.getCenter();
-      // Avoid repeated requests for nearby GPS positions and animated pitch.
       if(!force && lastCenter &&
-        Math.abs(current.lng-lastCenter.lng)<0.0024 &&
-        Math.abs(current.lat-lastCenter.lat)<0.0024 &&
-        Date.now()-lastCenter.at<120000)return;
+         Math.abs(current.lng-lastCenter.lng)<0.002 &&
+         Math.abs(current.lat-lastCenter.lat)<0.002 &&
+         Date.now()-lastCenter.at<12000)return;
+      if(buildingsRequest)return;
       lastCenter={lng:current.lng,lat:current.lat,at:Date.now()};
-      if(buildingsRequest) buildingsRequest.abort();
-      if(renderingCheckTimer!==null){
-        clearTimeout(renderingCheckTimer);
-        renderingCheckTimer=null;
+
+      if(!novaData){
+        const controller=new AbortController();
+        buildingsRequest=controller;
+        const deadline=setTimeout(()=>controller.abort(),12000);
+        setBuildings3DState("loading");
+        setBuildingError("");
+        try{
+          const response=await fetch("/data/novascene/juana-diaz.geojson",{
+            signal:controller.signal,cache:"force-cache"
+          });
+          if(!response.ok)throw Error("NovaScene file HTTP "+response.status);
+          const payload=await response.json() as {
+            type:string;
+            features:Array<{
+              type:string;
+              geometry:{type:string;coordinates:number[][][]|number[][][][]};
+              properties:Record<string,unknown>;
+            }>;
+          };
+          if(disposed||controller.signal.aborted)return;
+          if(payload.type!=="FeatureCollection"||!Array.isArray(payload.features)||
+             payload.features.length<100)throw Error("NovaScene local building map unavailable");
+          novaData=payload.features.flatMap(feature=>{
+            const ring=feature.geometry?.type==="Polygon"
+              ?(feature.geometry.coordinates as number[][][])[0]
+              :(feature.geometry.coordinates as number[][][][])[0]?.[0];
+            if(!ring||ring.length<4)return [];
+            const lon=ring.reduce((sum,p)=>sum+p[0],0)/ring.length;
+            const lat=ring.reduce((sum,p)=>sum+p[1],0)/ring.length;
+            return Number.isFinite(lon)&&Number.isFinite(lat)
+              ?[{feature:feature as unknown as Record<string,unknown>,lon,lat}]:[];
+          });
+        }catch(error){
+          if(disposed)return;
+          setBuildings3DState("unavailable");
+          setBuildingError(error instanceof Error?error.message.slice(0,140):
+            tr("Fallo al abrir cartografía local.","Local 3D file failed to load."));
+          lastCenter=null;
+          return;
+        }finally{
+          clearTimeout(deadline);
+          buildingsRequest=null;
+        }
       }
-      const controller=new AbortController();
-      buildingsRequest=controller;
-      // The iPhone must leave loading state even on a stalled network or
-      // Render cold-start. Differentiate a timeout from a camera abort.
-      let timedOut=false;
-      const requestTimeout=setTimeout(()=>{
-        timedOut=true;
-        controller.abort();
-      },18500);
-      setBuildings3DState("loading");
-      setBuildingError("");
+      if(disposed||!novaData)return;
       const bounds=map.getBounds();
-      // Keep the requested viewport small enough for the Overpass rate limits.
-      const south=Math.max(bounds.getSouth(),current.lat-0.012);
-      const north=Math.min(bounds.getNorth(),current.lat+0.012);
-      const west=Math.max(bounds.getWest(),current.lng-0.012);
-      const east=Math.min(bounds.getEast(),current.lng+0.012);
-      if(north-south<0.00002||east-west<0.00002){
-        clearTimeout(requestTimeout);
-        setBuildings3DState("unavailable");
-        setBuildingError(tr("La extensión del mapa no es válida.","Invalid map bounds."));
-        lastCenter=null;
+      if(map.getZoom()<14.5){
+        setBuildings3DState("no-data");
+        setBuildingError(tr("Acerca el mapa para ver edificios.","Zoom in to view buildings."));
         return;
       }
-      const query=new URLSearchParams({
-        south:south.toFixed(6),west:west.toFixed(6),
-        north:north.toFixed(6),east:east.toFixed(6)
-      });
-      try{
-        const response=await fetch("/api/map/buildings?"+query.toString(),{
-          signal:controller.signal,
-          cache:"default"
-        });
-        if(!response.ok){
-          const failed=await response.json().catch(()=>null) as {detail?:string}|null;
-          throw Error(
-            "HTTP "+response.status+
-            (failed?.detail ? " · "+String(failed.detail).slice(0,115) : "")
-          );
-        }
-        const data=await response.json() as {
-          type:"FeatureCollection";
-          features:Array<{
-            type:"Feature";
-            id:string;
-            properties:{height:number;base:number;estimated:boolean};
-            geometry:{type:"Polygon";coordinates:number[][][]};
-          }>;
+      // Cull to visible footprint polygons; responsive even on older iPhones.
+      const visible=novaData.filter(v=>
+        v.lon>=bounds.getWest()-0.0025&&v.lon<=bounds.getEast()+0.0025&&
+        v.lat>=bounds.getSouth()-0.0025&&v.lat<=bounds.getNorth()+0.0025
+      ).slice(0,2500).map(v=>v.feature);
+      const source=map.getSource(NAVIBORI_BUILDINGS_SOURCE) as maplibregl.GeoJSONSource|undefined;
+      if(!source)return;
+      source.setData({type:"FeatureCollection",features:visible} as never);
+      setBuildingCount(visible.length);
+      setBuildingRenderedCount(0);
+      setBuildings3DState(visible.length?"loading":"no-data");
+      setBuildingError(visible.length?"":tr(
+        "No hay edificios almacenados en esta parte del mapa.",
+        "No locally stored buildings cover this map area."
+      ));
+      if(renderingCheckTimer!==null)clearTimeout(renderingCheckTimer);
+      if(visible.length){
+        let attempts=0;
+        const check=()=>{
+          if(disposed||mapModeRef.current!=="3d")return;
+          const count=countVectorBuildings();
+          if(count>0){
+            setBuildingRenderedCount(count);
+            setBuildings3DState("ready");
+            setBuildingError("");
+          }else if(++attempts<9){
+            renderingCheckTimer=setTimeout(check,600);
+          }else{
+            setBuildings3DState("no-data");
+            setBuildingError(tr(
+              "Los datos se cargaron, pero WebGL no dibujó paredes.",
+              "Data loaded but WebGL could not draw building walls."
+            ));
+          }
         };
-        if(disposed||controller.signal.aborted)return;
-        if(!Array.isArray(data.features))throw Error("Invalid GeoJSON response");
-        const source=map.getSource(NAVIBORI_BUILDINGS_SOURCE) as maplibregl.GeoJSONSource|undefined;
-        if(!source)throw Error("3D GeoJSON source missing from map");
-        source.setData({type:"FeatureCollection",features:data.features});
-        // Hide overlapping vector roofs only after GeoJSON is confirmed
-        // visible. Until then native vector buildings remain available.
-        setBuildingCount(data.features.length);
-        setBuildingRenderedCount(0);
-        setBuildings3DState(data.features.length>0?"loading":"no-data");
-        // Verify actual GPU-visible extrusion faces after MapLibre processes
-        // the GeoJSON update, even if a moving GPS camera prevents 'idle'.
-        if(data.features.length>0){
-          let attempts=0;
-          const verifyRendered=()=>{
-            if(disposed||controller.signal.aborted)return;
-            let visible=0;
-            try{
-              visible=map.queryRenderedFeatures({layers:[NAVIBORI_BUILDINGS_ID]}).length;
-            }catch(error){
-              setBuildings3DState("unavailable");
-              setBuildingError(
-                error instanceof Error ? error.message.slice(0,150)
-                  : "MapLibre 3D feature inspection failed"
-              );
-              return;
-            }
-            if(visible>0){
-              if(map.getLayer(NAVIBORI_VECTOR_BUILDINGS_LAYER)){
-                map.setLayoutProperty(NAVIBORI_VECTOR_BUILDINGS_LAYER,"visibility","none");
-              }
-              setBuildingRenderedCount(visible);
-              setBuildings3DState("ready");
-              setBuildingError("");
-            }else if(++attempts<5){
-              renderingCheckTimer=setTimeout(verifyRendered,750);
-            }else{
-              const vectorVisible=map.getLayer(NAVIBORI_VECTOR_BUILDINGS_LAYER)
-                ? map.queryRenderedFeatures({layers:[NAVIBORI_VECTOR_BUILDINGS_LAYER]}).length
-                : 0;
-              if(vectorVisible>0){
-                setBuildingRenderedCount(vectorVisible);
-                setBuildings3DState("ready");
-                setBuildingError("");
-              }else{
-                setBuildings3DState("no-data");
-                setBuildingError(tr(
-                  "La API respondió, pero no hay edificios tridimensionales visibles.",
-                  "API responded, but no visible 3D building geometry was found."
-                ));
-              }
-            }
-          };
-          renderingCheckTimer=setTimeout(verifyRendered,950);
-        }
-        if(data.features.length===0){
-          setBuildingError(tr(
-            "El proveedor respondió, pero no encontró edificios en esta zona.",
-            "Provider responded, but found no buildings in this area."
-          ));
-        }
-        // The route layer must always remain visible above the 3D buildings.
-        for(const id of [ROUTE_GLOW_ID,ROUTE_CASING_ID,ROUTE_LINE_ID,ROUTE_ARROW_ID]){
-          if(map.getLayer(id))map.moveLayer(id);
-        }
-      }catch(error){
-        if(disposed || (controller.signal.aborted&&!timedOut))return;
-        const vectorVisible=map.getLayer(NAVIBORI_VECTOR_BUILDINGS_LAYER)
-          ? map.queryRenderedFeatures({layers:[NAVIBORI_VECTOR_BUILDINGS_LAYER]}).length
-          : 0;
-        setBuildingCount(0);
-        setBuildingRenderedCount(vectorVisible);
-        setBuildings3DState(vectorVisible>0?"ready":"unavailable");
-        setBuildingError(
-          vectorVisible>0 ? "" : timedOut
-            ? tr("Tiempo de espera agotado al consultar edificios.","Building request timed out.")
-            : error instanceof Error ? error.message.slice(0,160)
-              : tr("Error desconocido al cargar edificios.","Unknown building loading error.")
-        );
-        // Allow a fresh request after a failed provider attempt.
-        // Keep the timestamp on error: GPS motion must not hammer Overpass.
-        lastCenter={lng:current.lng,lat:current.lat,at:Date.now()};
-      }finally{
-        clearTimeout(requestTimeout);
-        if(buildingsRequest===controller)buildingsRequest=null;
+        renderingCheckTimer=setTimeout(check,550);
+      }
+      for(const id of [ROUTE_GLOW_ID,ROUTE_CASING_ID,ROUTE_LINE_ID,ROUTE_ARROW_ID]){
+        if(map.getLayer(id))map.moveLayer(id);
       }
     };
     const queueBuildingsRefresh=(force=false)=>{
@@ -1472,7 +1392,8 @@ export default function NaviboriMap({
     };
     buildingRefreshRef.current=queueBuildingsRefresh;
     const setupMap=()=>{
-      if(disposed)return;
+      if(disposed||mapInitialized)return;
+      mapInitialized=true;
       buildingsLayerRef.current=create3DBuildings(map);
       ensureRouteInfrastructure(map);
       let initialMode:RealityMode="3d";
@@ -1496,8 +1417,9 @@ export default function NaviboriMap({
       map.setLayoutProperty(NAVIBORI_BUILDINGS_ID,"visibility",initialMode==="3d"?"visible":"none");
       setMapReady(true);
       setBasemapState("ready");
-      // Give the official vector source a chance to render before falling
-      // back to rate-limited Overpass. Loading always resolves to a state.
+      // Offline-first NovaScene: real building data lives on NAVIBORI itself.
+      queueBuildingsRefresh(true);
+      // Check whether extrusion faces actually become visible on this device.
       if(initialMode==="3d"){
         vectorWatchdog=setTimeout(()=>{
           if(disposed||mapModeRef.current!=="3d")return;
@@ -1508,14 +1430,15 @@ export default function NaviboriMap({
           }else{
             setBuildings3DState("no-data");
             setBuildingError(tr(
-              "No llegaron edificios vectoriales. Puedes reintentar desde el menú.",
-              "Vector building tiles have not arrived. You can retry from the menu."
+              "El modelo 3D local continúa preparándose.",
+              "Local 3D model is still preparing."
             ));
             queueBuildingsRefresh();
           }
         },8000);
       }
     };
+    map.on("style.load",setupMap);
     map.on("load",setupMap);
     map.on("moveend",()=>{
       if(mapModeRef.current!=="3d")return;
@@ -3196,13 +3119,16 @@ export default function NaviboriMap({
       data-exodock-state={exoDockState}
       data-gravity-lens={gravityLensPhase}
       data-navigation-active={gpsActive ? "true" : "false"}
+      data-novascene-state={buildings3DState}
+      data-novascene-visible={buildingRenderedCount}
+      data-novascene-total={buildingCount}
       aria-label={tr("Mapa de comercios NAVIBORI","NAVIBORI business map")}
     >
       <div className="map-stage full-map-stage">
         <div ref={mapNode} className="map-canvas full-map-canvas" />
         {gpsActive&&mode==="3d"&&(
           <div className="navibori-3d-navigation-status" role="status">
-            <span>◈ 3D</span>
+            <span>◈ NOVASCENE 3D</span>
             <strong>{buildings3DState==="ready"
               ?tr(buildingRenderedCount+" edificios visibles",buildingRenderedCount+" buildings visible")
               :buildings3DState==="loading"
@@ -3215,15 +3141,15 @@ export default function NaviboriMap({
         {!gpsActive&&(
           <div className="navibori-3d-indicator" data-view={mode} role="status">
             <span className="navibori-3d-orb" aria-hidden="true">◈</span>
-            <span><strong>{mode==="3d"?"NAVIBORI 3D":tr("Vista de mapa","Map view")}</strong>
+            <span><strong>{mode==="3d"?"NOVASCENE 3D":tr("Vista de mapa","Map view")}</strong>
               <small>{buildings3DState==="unavailable"
                 ?tr("Edificios 3D no disponibles","3D buildings unavailable")
                 :mode==="3d"&&buildings3DState==="no-data"
                   ?tr("No hay edificios 3D en esta zona","No 3D buildings in this area")
                   :mode==="3d"&&buildings3DState==="ready"
-                    ?tr(buildingRenderedCount+" visibles de "+buildingCount+" edificios",buildingRenderedCount+" visible of "+buildingCount+" buildings")
+                    ?tr(buildingRenderedCount+" edificios 3D visibles · modelo local",buildingRenderedCount+" 3D buildings visible · local model")
                   :mode==="3d"&&buildings3DState==="loading"
-                    ?tr("Cargando edificios reales…","Loading real buildings…")
+                    ?tr("Cargando edificios locales…","Loading local buildings…")
                   :mode==="3d"
                     ?tr("Vista espacial activada","Spatial view enabled")
                     :tr("Activa el mapa tridimensional","Enable 3D map")}</small>
@@ -3909,7 +3835,9 @@ export default function NaviboriMap({
                 </button>
               </div>
               <div className="navibori-3d-diagnostic-menu" role="status">
-                <strong>{tr("Diagnóstico 3D","3D diagnostics")}</strong>
+                <strong>{tr("NovaScene · motor 3D propio","NovaScene · built-in 3D engine")}</strong>
+                <small>{tr("7,512 contornos urbanos locales disponibles · alturas orientativas",
+                  "7,512 local building footprints available · heights illustrative")}</small>
                 <span>{mode!=="3d"
                   ?tr("Vista 2D o globo seleccionada","2D or globe view selected")
                   :buildings3DState==="loading"
