@@ -21,6 +21,7 @@ import {nearTurnZoom,nextRouteCorridor} from "@/lib/spatial/novascene-route-focu
 import {gpsSignalQuality,shouldDrawSvgFallback,stabilizedCameraBearing} from "@/lib/spatial/novascene-gps-stability";
 import {acceptGpsPositionTimestamp,hasLiveGpsFix,normalizeGeolocationTimestamp} from "@/lib/spatial/navibori-gps-freshness";
 import {navigationSignalCopy,navigationSignalState} from "@/lib/spatial/navibori-navigation-signal";
+import {evaluateAutomaticReroute,gpsFixAgeSeconds,reliableGpsForRouting} from "@/lib/commerce/automatic-reroute-guard";
 import {
   buildAppleMapsDirectionsUrl,
   buildGoogleDirectionsUrl,
@@ -421,6 +422,7 @@ export default function NaviboriMap({
   const lastRouteOriginRef=useRef<RouteCoordinate|null>(null);
   const lastRouteRefreshAtRef=useRef(0);
   const consecutiveOffRouteFixesRef=useRef(0);
+  const lastOffRouteCandidateAtRef=useRef<number|null>(null);
   const routeResultRef=useRef<InMapRouteResult|null>(null);
   const followGpsRef=useRef(true);
   const gpsActiveRef=useRef(false);
@@ -659,6 +661,9 @@ export default function NaviboriMap({
   const signalCopy=navigationSignalCopy(
     signal,deviceLocale.language,gpsAccuracy,gpsResumePending
   );
+  const gpsAgeSeconds=gpsFixAgeSeconds(gpsLastLiveFixAtRef.current,
+    gpsSignalHeartbeat||Date.now());
+  const confidentGpsForRerouting=signal.current&&reliableGpsForRouting(gpsAccuracy);
   const navigationSessionVisible=Boolean(
     gpsActive||(navigationPhase!=="idle"&&navigationPhase!=="error"&&selected)
   );
@@ -2782,6 +2787,7 @@ export default function NaviboriMap({
     lastRouteOriginRef.current=null;
     lastRouteRefreshAtRef.current=0;
     consecutiveOffRouteFixesRef.current=0;
+    lastOffRouteCandidateAtRef.current=null;
     setGpsActive(false);
     setGpsAccuracy(null);
     setGpsSpeedKph(null);
@@ -3193,30 +3199,27 @@ export default function NaviboriMap({
           }
         }
 
-        const offRoute=
-          currentRoute!==null &&
+        const offRoute=currentRoute!==null &&
           isOffNavigationRoute(next,currentRoute,accuracy);
-
-        // Require two consecutive off-route GPS fixes to avoid rerouting
-        // on a single noisy location reading near intersections.
-        consecutiveOffRouteFixesRef.current=offRoute
-          ? Math.min(2,consecutiveOffRouteFixesRef.current+1)
-          : 0;
-        if(offRoute && consecutiveOffRouteFixesRef.current>=2 && now-lastRouteRefreshAtRef.current>=6000){
-          consecutiveOffRouteFixesRef.current=0;
-          setRouteStatus(tr("Fuera de ruta · recalculando…","Off route · recalculating…"));
+        const decision=evaluateAutomaticReroute({
+          offRoute,accuracyMeters:accuracy,
+          lastConfirmedOffRouteAt:lastOffRouteCandidateAtRef.current,
+          consecutiveCount:consecutiveOffRouteFixesRef.current,
+          lastRouteRefreshAt:lastRouteRefreshAtRef.current,
+          now,routeRequestPending:routeAbortRef.current!==null
+        });
+        consecutiveOffRouteFixesRef.current=decision.consecutiveCount;
+        lastOffRouteCandidateAtRef.current=decision.lastConfirmedOffRouteAt;
+        if(decision.shouldReroute){
+          setRouteStatus(tr("Desvío confirmado · recalculando la ruta…",
+            "Confirmed deviation · recalculating route…"));
           void calculateRoute(activeMode,next,{quiet:true});
-        }else if(
-          !offRoute && shouldRefreshNavigationRoute(
-            lastRouteOriginRef.current,
-            next,
-            lastRouteRefreshAtRef.current,
-            now
-          )
-        ){
-          void calculateRoute(activeMode,next,{
-            quiet:currentRoute!==null
-          });
+        }else if(!offRoute && reliableGpsForRouting(accuracy) &&
+          routeAbortRef.current===null &&
+          shouldRefreshNavigationRoute(
+            lastRouteOriginRef.current,next,lastRouteRefreshAtRef.current,now
+          )){
+          void calculateRoute(activeMode,next,{quiet:currentRoute!==null});
         }
       }
 
@@ -3391,6 +3394,7 @@ export default function NaviboriMap({
 
   function clearRoute(){
     consecutiveOffRouteFixesRef.current=0;
+    lastOffRouteCandidateAtRef.current=null;
     routeAbortRef.current?.abort();
     routeAbortRef.current=null;
     stopGpsNavigation();
