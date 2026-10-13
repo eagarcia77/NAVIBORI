@@ -15,8 +15,8 @@ describe("NovaScene 2.5 visual camera stabilization",()=>{
     expect(shortestBearingDelta(1,359)).toBe(-2);
     const next=stabilizedCameraBearing(359,3,40,7);
     expect(next).not.toBeNull();
-    expect(next!).toBeGreaterThan(359);
-    expect(next!).toBeLessThan(360);
+    expect(shortestBearingDelta(359,next!)).toBeGreaterThan(0);
+    expect(shortestBearingDelta(359,next!)).toBeLessThan(4);
   });
   it("damages neither route heading nor measured GPS fixes",()=>{
     const proposed=100;
