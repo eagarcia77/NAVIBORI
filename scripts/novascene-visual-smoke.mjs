@@ -59,6 +59,10 @@ try{
       const renderer=await page.evaluate(()=>window.__novaQA?.inspect?.());
       console.log("NovaScene "+config.label+" "+location.label+" WebGL "+result+":",
         JSON.stringify(diagnostics),"renderer:",JSON.stringify(renderer));
+      if(renderer?.routeAboveBuildings!==true){
+        errors.push("Route line must render above NovaScene walls in "+
+          config.label+" "+location.label+" viewport");
+      }
       if(result!=="visible"||Number(diagnostics.total)<=0){
         errors.push("No extruded buildings in "+config.label+" "+location.label+
           " viewport: "+JSON.stringify(diagnostics));
