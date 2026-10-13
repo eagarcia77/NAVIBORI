@@ -22,6 +22,7 @@ import {gpsSignalQuality,shouldDrawSvgFallback,stabilizedCameraBearing} from "@/
 import {acceptGpsPositionTimestamp,hasLiveGpsFix,normalizeGeolocationTimestamp} from "@/lib/spatial/navibori-gps-freshness";
 import {navigationSignalCopy,navigationSignalState} from "@/lib/spatial/navibori-navigation-signal";
 import {evaluateAutomaticReroute,gpsFixAgeSeconds,reliableGpsForRouting} from "@/lib/commerce/automatic-reroute-guard";
+import {evaluateGpsStreamFix,type StreamGpsFix} from "@/lib/commerce/gps-stream-integrity";
 import {
   buildAppleMapsDirectionsUrl,
   buildGoogleDirectionsUrl,
@@ -411,6 +412,8 @@ export default function NaviboriMap({
   const orientationHandlerRef=useRef<((event:DeviceOrientationEvent)=>void)|null>(null);
   const routeAbortRef=useRef<AbortController|null>(null);
   const gpsWatchRef=useRef<number|null>(null);
+  const lastContinuousFixRef=useRef<StreamGpsFix|null>(null);
+  const unconfirmedGpsJumpRef=useRef<StreamGpsFix|null>(null);
   const gpsSessionRef=useRef(0);
   const latestPositionTimestampRef=useRef<number|null>(null);
   const gpsLastLiveFixAtRef=useRef<number|null>(null);
@@ -493,6 +496,8 @@ export default function NaviboriMap({
   const [gpsAccuracy,setGpsAccuracy]=useState<number|null>(null);
   const [gpsSpeedKph,setGpsSpeedKph]=useState<number|null>(null);
   const [gpsSignalHeartbeat,setGpsSignalHeartbeat]=useState(0);
+  const [gpsStreamFixCount,setGpsStreamFixCount]=useState(0);
+  const [gpsUnconfirmedJump,setGpsUnconfirmedJump]=useState(false);
   const [gpsResumePending,setGpsResumePending]=useState(false);
   const [navigationBearingDegrees,setNavigationBearingDegrees]=useState<number|null>(null);
   const [trajectoryPrediction,setTrajectoryPrediction]=useState<TrajectoryPrediction|null>(null);
@@ -2761,6 +2766,10 @@ export default function NaviboriMap({
     gpsResumeFixRef.current=null;
     gpsResumeRequestPendingRef.current=false;
     gpsLastLiveFixAtRef.current=null;
+    lastContinuousFixRef.current=null;
+    unconfirmedGpsJumpRef.current=null;
+    setGpsStreamFixCount(0);
+    setGpsUnconfirmedJump(false);
     latestPositionTimestampRef.current=null;
     setGpsResumePending(false);
     if(gpsBootstrapTimerRef.current!==null){
@@ -2966,9 +2975,31 @@ export default function NaviboriMap({
         return;
       }
 
+      const fixTimestamp=normalizeGeolocationTimestamp(position.timestamp);
+      if(fixTimestamp===null)return;
+      const streamDecision=evaluateGpsStreamFix(
+        lastContinuousFixRef.current,{
+          coordinate:next,
+          timestamp:fixTimestamp,
+          accuracyMeters:Number.isFinite(incomingAccuracy)?incomingAccuracy:null
+        },unconfirmedGpsJumpRef.current
+      );
+      if(!streamDecision.accepted){
+        unconfirmedGpsJumpRef.current=streamDecision.pendingJump;
+        setGpsUnconfirmedJump(streamDecision.reason==="unverified-jump");
+        setGpsSignalHeartbeat(now);
+        return;
+      }
+      lastContinuousFixRef.current={
+        coordinate:next,timestamp:fixTimestamp,
+        accuracyMeters:Number.isFinite(incomingAccuracy)?incomingAccuracy:null
+      };
+      unconfirmedGpsJumpRef.current=null;
+      setGpsUnconfirmedJump(false);
+      setGpsStreamFixCount(count=>count+1);
       receivedFix=true;
       receivedLiveFix=true;
-      latestPositionTimestampRef.current=normalizeGeolocationTimestamp(position.timestamp);
+      latestPositionTimestampRef.current=fixTimestamp;
       gpsLastLiveFixAtRef.current=now;
       setGpsSignalHeartbeat(now);
       setGpsResumePending(false);
@@ -3446,6 +3477,8 @@ export default function NaviboriMap({
       data-native-route-visible={nativeRouteVisible ? "true" : "false"}
       data-gps-signal={gpsSignalQuality(gpsAccuracy)}
       data-gps-freshness={signal.fix}
+      data-gps-stream-fixes={gpsStreamFixCount}
+      data-gps-unconfirmed-jump={gpsUnconfirmedJump?"true":"false"}
       data-gps-probe={gpsProbeStatus}
       data-route-kind={signal.routeKind}
       data-cockpit-phase={lagrangePhase}
@@ -3479,6 +3512,17 @@ export default function NaviboriMap({
             {gpsAgeSeconds!==null&&(
               <small className={"novascene-fix-age "+(signal.current?"current":"stale")}>
                 {tr("Última lectura: ","Last fix: ")+gpsAgeSeconds+" s"}
+              </small>
+            )}
+            {gpsStreamFixCount>=2&&(
+              <small className="novascene-fix-age current">
+                {tr("Seguimiento: ","Tracking: ")+gpsStreamFixCount+
+                  tr(" lecturas"," fixes")}
+              </small>
+            )}
+            {gpsUnconfirmedJump&&(
+              <small className="novascene-fix-age stale" role="status">
+                {tr("Verificando salto GPS","Verifying GPS jump")}
               </small>
             )}
             {signal.retryRecommended&&!gpsResumePending&&(
@@ -3993,6 +4037,7 @@ export default function NaviboriMap({
                 <div><dt>{tr("Destino","Destination")}</dt><dd>{demoRoute?signalCopy.route:tr("Comercio","Business")}</dd></div>
                 <div><dt>GPS</dt><dd>{gpsActive||navigationPhase!=="idle"?signalCopy.gps:tr("Inactivo","Inactive")}</dd></div>
                 <div><dt>{tr("Última lectura","Last fix")}</dt><dd>{gpsAgeSeconds===null?"—":gpsAgeSeconds+" s"}</dd></div>
+                <div><dt>{tr("Lecturas seguidas","Accepted GPS fixes")}</dt><dd>{gpsStreamFixCount}</dd></div>
                 <div><dt>{tr("Recálculo automático","Automatic rerouting")}</dt><dd>{
                   confidentGpsForRerouting?tr("Disponible","Available"):
                   tr("En espera de GPS preciso","Waiting for accurate GPS")
@@ -4033,6 +4078,8 @@ export default function NaviboriMap({
                     "Destination type: "+signal.routeKind,
                     "GPS state: "+signal.fix,
                     "Last fix age seconds: "+(gpsAgeSeconds===null?"unknown":gpsAgeSeconds),
+                    "Continuous GPS fixes: "+gpsStreamFixCount,
+                    "Pending GPS position confirmation: "+String(gpsUnconfirmedJump),
                     "Auto rerouting confidence: "+String(confidentGpsForRerouting),
                     "Accuracy: "+(gpsAccuracy===null ? "unknown" : Math.round(gpsAccuracy)+" m"),
                     "GPS permission: "+gpsDiagnostics.permission,
