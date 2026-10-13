@@ -17,7 +17,7 @@ try{
     });
     await context.grantPermissions(["geolocation"],{origin:host});
     const page=await context.newPage();
-    page.on("pageerror",err=>failures.push(name+": "+err.message));
+    page.on("pageerror",err=>failures.push(name+": "+(err.stack||err.message)));
     let routeCount=0;
     await page.route("**/api/routing",async route=>{
       routeCount++;
