@@ -1,6 +1,7 @@
 import {describe,expect,it} from "vitest";
 import {
   acceptGpsPositionTimestamp,
+  normalizeGeolocationTimestamp,
   gpsFixStatus,
   hasLiveGpsFix,
   GPS_INCOMING_MAX_AGE_MS,
@@ -12,6 +13,16 @@ describe("NAVIBORI 2.6 live GPS signal integrity",()=>{
   it("accepts a fresh first position and newer fixes from Safari",()=>{
     expect(acceptGpsPositionTimestamp(now,null,now)).toBe(true);
     expect(acceptGpsPositionTimestamp(now+1000,now,now+1000)).toBe(true);
+  });
+  it("handles WebKit embedded epoch-second timestamps with real freshness checks",()=>{
+    const seconds=Math.floor(now/1000);
+    expect(normalizeGeolocationTimestamp(seconds)).toBe(seconds*1000);
+    expect(normalizeGeolocationTimestamp(now)).toBe(now);
+    expect(normalizeGeolocationTimestamp(0)).toBeNull();
+    expect(acceptGpsPositionTimestamp(seconds,null,now)).toBe(true);
+    expect(acceptGpsPositionTimestamp(seconds-120,null,now)).toBe(false);
+    expect(acceptGpsPositionTimestamp(seconds,now,now)).toBe(false);
+    expect(acceptGpsPositionTimestamp(220,null,now)).toBe(false);
   });
   it("rejects cached, out-of-order, invalid or future GPS positions",()=>{
     expect(acceptGpsPositionTimestamp(now-GPS_INCOMING_MAX_AGE_MS-1,null,now)).toBe(false);
