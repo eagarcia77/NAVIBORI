@@ -14,8 +14,10 @@ import {
 import {
   approachTurnPitch,
   novaSceneBuildingPaint,
+  novaSceneRoofPaint,
   type NovaSceneAppearance
 } from "@/lib/spatial/novascene-appearance";
+import {nearTurnZoom,nextRouteCorridor} from "@/lib/spatial/novascene-route-focus";
 import {
   buildAppleMapsDirectionsUrl,
   buildGoogleDirectionsUrl,
@@ -95,12 +97,16 @@ const ROUTE_CASING_ID="navibori-commerce-route-casing";
 const ROUTE_LINE_ID="navibori-commerce-route-line";
 const ROUTE_ARROW_ID="navibori-commerce-route-arrows";
 const ROUTE_ARROW_IMAGE_ID="navibori-route-arrow-image";
+const ROUTE_FOCUS_SOURCE_ID="navibori-next-corridor";
+const ROUTE_FOCUS_GLOW_ID="navibori-next-corridor-glow";
+const ROUTE_FOCUS_LINE_ID="navibori-next-corridor-line";
 
 
 // The reliable OSM raster map supplies streets; real OSM building footprints
 // are fetched separately from NAVIBORI's bounded, cached buildings API.
 // Extrusion is genuine MapLibre 3D geometry, not a pitched raster image.
 const NAVIBORI_BUILDINGS_ID="navibori-3d-buildings";
+const NAVIBORI_ROOF_ID="novascene-closeup-roof-caps";
 const NAVIBORI_BUILDINGS_SOURCE="navibori-building-geojson";
 const NAVIBORI_VECTOR_BUILDINGS_SOURCE="navibori-building-vector";
 const NAVIBORI_VECTOR_BUILDINGS_LAYER="navibori-vector-building-extrusions";
@@ -129,6 +135,14 @@ function create3DBuildings(map:maplibregl.Map){
       source:NAVIBORI_BUILDINGS_SOURCE,minzoom:14.5,
       layout:{visibility:"visible"},
       paint:novaSceneBuildingPaint("natural")
+    });
+  }
+  if(!map.getLayer(NAVIBORI_ROOF_ID)){
+    map.addLayer({
+      id:NAVIBORI_ROOF_ID,type:"fill-extrusion",
+      source:NAVIBORI_BUILDINGS_SOURCE,minzoom:17.2,
+      layout:{visibility:"visible"},
+      paint:novaSceneRoofPaint("natural")
     });
   }
   return NAVIBORI_BUILDINGS_ID;
@@ -332,11 +346,30 @@ function ensureRouteInfrastructure(map:maplibregl.Map){
       });
     }
 
+    // Highlight the immediate portion ahead without replacing the full route.
+    if(!map.getSource(ROUTE_FOCUS_SOURCE_ID)){
+      map.addSource(ROUTE_FOCUS_SOURCE_ID,{
+        type:"geojson",data:{type:"FeatureCollection",features:[]},lineMetrics:true
+      });
+    }
+    if(!map.getLayer(ROUTE_FOCUS_GLOW_ID)){
+      map.addLayer({
+        id:ROUTE_FOCUS_GLOW_ID,type:"line",source:ROUTE_FOCUS_SOURCE_ID,
+        layout:{"line-cap":"round","line-join":"round"},
+        paint:{"line-color":"#e3ffff","line-width":23,"line-blur":5,
+          "line-opacity":0.43}
+      });
+    }
+    if(!map.getLayer(ROUTE_FOCUS_LINE_ID)){
+      map.addLayer({
+        id:ROUTE_FOCUS_LINE_ID,type:"line",source:ROUTE_FOCUS_SOURCE_ID,
+        layout:{"line-cap":"round","line-join":"round"},
+        paint:{"line-color":"#f7fffd","line-width":5.4,"line-opacity":0.91}
+      });
+    }
     for(const layerId of [
-      ROUTE_GLOW_ID,
-      ROUTE_CASING_ID,
-      ROUTE_LINE_ID,
-      ROUTE_ARROW_ID
+      ROUTE_GLOW_ID,ROUTE_CASING_ID,ROUTE_LINE_ID,ROUTE_ARROW_ID,
+      ROUTE_FOCUS_GLOW_ID,ROUTE_FOCUS_LINE_ID
     ]){
       if(map.getLayer(layerId)){
         map.moveLayer(layerId);
@@ -1264,8 +1297,11 @@ export default function NaviboriMap({
           routeAboveBuildings:(()=>{
             const ids=map.getStyle().layers?.map(layer=>layer.id)??[];
             const buildingIndex=ids.indexOf(NAVIBORI_BUILDINGS_ID);
+            const roofIndex=ids.indexOf(NAVIBORI_ROOF_ID);
             const routeIndex=ids.indexOf(ROUTE_LINE_ID);
-            return buildingIndex>=0 && routeIndex>buildingIndex;
+            const focusIndex=ids.indexOf(ROUTE_FOCUS_LINE_ID);
+            return buildingIndex>=0 && roofIndex>buildingIndex &&
+              routeIndex>roofIndex && focusIndex>routeIndex;
           })(),
           sourceFeatures:map.getSource(NAVIBORI_BUILDINGS_SOURCE)
             ?map.querySourceFeatures(NAVIBORI_BUILDINGS_SOURCE).length:0
@@ -1502,9 +1538,13 @@ export default function NaviboriMap({
       }
       const layerIds=map.getStyle().layers?.map(layer=>layer.id)??[];
       const buildingIndex=layerIds.indexOf(NAVIBORI_BUILDINGS_ID);
+      const roofIndex=layerIds.indexOf(NAVIBORI_ROOF_ID);
       const routeIndex=layerIds.indexOf(ROUTE_LINE_ID);
-      if(buildingIndex>=0&&routeIndex>=0&&routeIndex<buildingIndex){
-        for(const id of [ROUTE_GLOW_ID,ROUTE_CASING_ID,ROUTE_LINE_ID,ROUTE_ARROW_ID]){
+      if(routeIndex>=0&&
+        ((buildingIndex>=0&&routeIndex<buildingIndex)||
+         (roofIndex>=0&&routeIndex<roofIndex))){
+        for(const id of [ROUTE_GLOW_ID,ROUTE_CASING_ID,ROUTE_LINE_ID,
+          ROUTE_ARROW_ID,ROUTE_FOCUS_GLOW_ID,ROUTE_FOCUS_LINE_ID]){
           if(map.getLayer(id))map.moveLayer(id);
         }
       }
@@ -1540,7 +1580,8 @@ export default function NaviboriMap({
         event.sourceId!==NAVIBORI_BUILDINGS_SOURCE &&
         event.sourceId!==NAVIBORI_VECTOR_BUILDINGS_SOURCE
       ))return;
-      for(const id of [ROUTE_GLOW_ID,ROUTE_CASING_ID,ROUTE_LINE_ID,ROUTE_ARROW_ID]){
+      for(const id of [ROUTE_GLOW_ID,ROUTE_CASING_ID,ROUTE_LINE_ID,
+        ROUTE_ARROW_ID,ROUTE_FOCUS_GLOW_ID,ROUTE_FOCUS_LINE_ID]){
         if(map.getLayer(id))map.moveLayer(id);
       }
     });
