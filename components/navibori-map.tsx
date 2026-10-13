@@ -12,6 +12,11 @@ import {
   type NovaSceneManifest
 } from "@/lib/spatial/novascene-tile-cache";
 import {
+  approachTurnPitch,
+  novaSceneBuildingPaint,
+  type NovaSceneAppearance
+} from "@/lib/spatial/novascene-appearance";
+import {
   buildAppleMapsDirectionsUrl,
   buildGoogleDirectionsUrl,
   validRouteCoordinate,
@@ -123,23 +128,7 @@ function create3DBuildings(map:maplibregl.Map){
       id:NAVIBORI_BUILDINGS_ID,type:"fill-extrusion",
       source:NAVIBORI_BUILDINGS_SOURCE,minzoom:14.5,
       layout:{visibility:"visible"},
-      paint:{
-        // Use a height-aware color gradient to distinguish roofs from walls.
-        // Estimated and measured height palettes remain subtly distinct;
-        // neither is a claim about the building's actual appearance.
-        "fill-extrusion-color":[
-          "case",["boolean",["get","estimated"],true],
-          ["interpolate",["linear"],["coalesce",["to-number",["get","height"]],9],
-            5,"#bad9e6",7.5,"#99c3d6",10,"#75adc7",14,"#5a95b5",35,"#3f7c9e"],
-          ["interpolate",["linear"],["coalesce",["to-number",["get","height"]],9],
-            5,"#a9d4db",8,"#77b7ca",14,"#4298b7",35,"#277495"]
-        ],
-        "fill-extrusion-height":["interpolate",["linear"],["zoom"],14.5,0,15.5,
-          ["max",5,["coalesce",["to-number",["get","height"]],9]]],
-        "fill-extrusion-base":["coalesce",["to-number",["get","base"]],0],
-        "fill-extrusion-opacity":0.94,
-        "fill-extrusion-vertical-gradient":true
-      }
+      paint:novaSceneBuildingPaint("natural")
     });
   }
   return NAVIBORI_BUILDINGS_ID;
@@ -437,6 +426,7 @@ export default function NaviboriMap({
   const mapModeRef=useRef<RealityMode>("3d");
   const buildingsLayerRef=useRef<string|null>(null);
   const [buildings3DState,setBuildings3DState]=useState<"loading"|"ready"|"no-data"|"unavailable">("loading");
+  const [sceneAppearance,setSceneAppearance]=useState<NovaSceneAppearance>("natural");
   const [buildingCount,setBuildingCount]=useState(0);
   const [buildingRenderedCount,setBuildingRenderedCount]=useState(0);
   const [buildingError,setBuildingError]=useState("");
@@ -1806,22 +1796,27 @@ export default function NaviboriMap({
     userLocation
   ]);
 
-  // Adaptive 3D perspective: show more surrounding streets at lower zoom,
-  // then gradually tilt toward the road at street-level detail.
-  // During turn-by-turn navigation, fade 3D geometry so roads and route
-  // markings remain visually dominant. Restore depth when navigation ends.
+  // Respect a saved style without changing map data, GPS routing or heights
+  // reported by Overture. The default style depicts low-rise housing.
+  useEffect(()=>{
+    try{
+      const saved=window.localStorage.getItem("navibori:novascene-appearance");
+      if(saved==="natural"||saved==="digital")setSceneAppearance(saved);
+    }catch{}
+  },[]);
   useEffect(()=>{
     const map=mapRef.current;
     const layer=buildingsLayerRef.current;
-    if(!map||!layer||!map.getLayer(layer)) return;
-    // Preserve building depth while keeping the turn-by-turn route legible.
-    // Route lines are explicitly ordered above extrusion geometry.
-    map.setPaintProperty(layer,"fill-extrusion-opacity",gpsActive ? 0.77 : 0.94);
-    if(map.getLayer(NAVIBORI_VECTOR_BUILDINGS_LAYER)){
-      map.setPaintProperty(NAVIBORI_VECTOR_BUILDINGS_LAYER,
-        "fill-extrusion-opacity",gpsActive ? 0.67 : 0.91);
+    if(map&&layer&&map.getLayer(layer)){
+      const paint=novaSceneBuildingPaint(sceneAppearance);
+      map.setPaintProperty(layer,"fill-extrusion-color",paint["fill-extrusion-color"]);
+      map.setPaintProperty(layer,"fill-extrusion-height",paint["fill-extrusion-height"]);
+      map.setPaintProperty(layer,"fill-extrusion-opacity",
+        gpsActive ? (sceneAppearance==="natural"?0.73:0.77)
+          : (sceneAppearance==="natural"?0.92:0.94));
     }
-  },[gpsActive,mapReady]);
+    try{window.localStorage.setItem("navibori:novascene-appearance",sceneAppearance);}catch{}
+  },[sceneAppearance,gpsActive,mapReady]);
 
   function adaptiveStreetPitch(zoom:number){
     // Smooth interpolation avoids abrupt camera jumps across zoom thresholds.
@@ -2981,7 +2976,8 @@ export default function NaviboriMap({
             map?.getBearing() ??
             0,
           pitch:mapModeRef.current==="3d"
-            ? adaptiveStreetPitch(cameraProfile.zoom)
+            ? approachTurnPitch(adaptiveStreetPitch(cameraProfile.zoom),
+                cameraCue?.distanceMeters ?? null)
             : mapModeRef.current==="2d"
               ? 0
               : cameraProfile.pitch,
@@ -3924,10 +3920,30 @@ export default function NaviboriMap({
                   {deviceLocale.language==="en" ? "Globe" : "Globo"}
                 </button>
               </div>
+              <div className="novascene-appearance-controls" role="group"
+                aria-label={tr("Estilo visual de NovaScene","NovaScene visual style")}>
+                <span>{tr("Apariencia de los edificios","Building appearance")}</span>
+                <div>
+                  <button type="button" className={sceneAppearance==="natural"?"active":""}
+                    aria-pressed={sceneAppearance==="natural"}
+                    onClick={()=>setSceneAppearance("natural")}>
+                    {tr("Natural","Natural")}
+                  </button>
+                  <button type="button" className={sceneAppearance==="digital"?"active":""}
+                    aria-pressed={sceneAppearance==="digital"}
+                    onClick={()=>setSceneAppearance("digital")}>
+                    {tr("Tecnológico","Digital")}
+                  </button>
+                </div>
+                <small>{tr(
+                  "Las alturas no verificadas son aproximaciones visuales. El estilo Natural reduce el volumen de viviendas de altura desconocida.",
+                  "Unverified heights are visual estimates. Natural mode reduces the visual volume of buildings without known heights."
+                )}</small>
+              </div>
               <div className="navibori-3d-diagnostic-menu" role="status">
                 <strong>{tr("NovaScene · motor 3D propio","NovaScene · built-in 3D engine")}</strong>
-                <small>{tr("7,512 contornos urbanos locales disponibles · alturas orientativas",
-                  "7,512 local building footprints available · heights illustrative")}</small>
+                <small>{tr("Atlas regional ampliado · alturas orientativas",
+                  "Expanded local geographic atlas · illustrative heights")}</small>
                 <span>{mode!=="3d"
                   ?tr("Vista 2D o globo seleccionada","2D or globe view selected")
                   :buildings3DState==="loading"
