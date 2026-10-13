@@ -1520,6 +1520,9 @@ export default function NaviboriMap({
       mapModeRef.current=initialMode;
       setMode(initialMode);
       map.setLayoutProperty(NAVIBORI_BUILDINGS_ID,"visibility",initialMode==="3d"?"visible":"none");
+      if(map.getLayer(NAVIBORI_ROOF_ID)){
+        map.setLayoutProperty(NAVIBORI_ROOF_ID,"visibility",initialMode==="3d"?"visible":"none");
+      }
       setMapReady(true);
       setBasemapState("ready");
       // Offline-first NovaScene: real building data lives on NAVIBORI itself.
@@ -1769,6 +1772,8 @@ export default function NaviboriMap({
       };
       const source=map.getSource(ROUTE_SOURCE_ID) as maplibregl.GeoJSONSource|undefined;
       source?.setData(empty);
+      const focus=map.getSource(ROUTE_FOCUS_SOURCE_ID) as maplibregl.GeoJSONSource|undefined;
+      focus?.setData(empty);
       setRouteVisualStatus("idle");
       return;
     }
@@ -1856,6 +1861,17 @@ export default function NaviboriMap({
         gpsActive ? (sceneAppearance==="natural"?0.73:0.77)
           : (sceneAppearance==="natural"?0.92:0.94));
     }
+    if(map?.getLayer(NAVIBORI_ROOF_ID)){
+      const roofPaint=novaSceneRoofPaint(sceneAppearance);
+      map.setPaintProperty(NAVIBORI_ROOF_ID,"fill-extrusion-color",
+        roofPaint["fill-extrusion-color"]);
+      map.setPaintProperty(NAVIBORI_ROOF_ID,"fill-extrusion-height",
+        roofPaint["fill-extrusion-height"]);
+      map.setPaintProperty(NAVIBORI_ROOF_ID,"fill-extrusion-base",
+        roofPaint["fill-extrusion-base"]);
+      map.setPaintProperty(NAVIBORI_ROOF_ID,"fill-extrusion-opacity",
+        gpsActive?0.76:(sceneAppearance==="natural"?0.93:0.91));
+    }
     try{window.localStorage.setItem("navibori:novascene-appearance",sceneAppearance);}catch{}
   },[sceneAppearance,gpsActive,mapReady]);
 
@@ -1917,6 +1933,9 @@ export default function NaviboriMap({
 
     if(buildingsLayerRef.current&&map.getLayer(buildingsLayerRef.current)){
       map.setLayoutProperty(buildingsLayerRef.current,"visibility",next==="3d"?"visible":"none");
+    }
+    if(map.getLayer(NAVIBORI_ROOF_ID)){
+      map.setLayoutProperty(NAVIBORI_ROOF_ID,"visibility",next==="3d"?"visible":"none");
     }
     if(map.getLayer(NAVIBORI_VECTOR_BUILDINGS_LAYER)){
       // Keep vector hidden if GeoJSON roofs have already been rendered.
@@ -2043,6 +2062,20 @@ export default function NaviboriMap({
 
       source.setData(feature);
 
+      // Build a true arc-length-clipped section of the route ahead of GPS.
+      // It never changes route geometry, selected destination or directions.
+      const spotlightSource=map.getSource(ROUTE_FOCUS_SOURCE_ID) as maplibregl.GeoJSONSource|undefined;
+      const corridor=gpsActiveRef.current
+        ? nextRouteCorridor(route.geometry.coordinates,progressRatio,145)
+        : [];
+      spotlightSource?.setData({
+        type:"FeatureCollection",
+        features:corridor.length>=2?[{
+          type:"Feature",properties:{},
+          geometry:{type:"LineString",coordinates:corridor}
+        }]:[]
+      });
+
       const color=routeLineColor(route.mode);
       // Reassert a high-contrast continuous route on every GPS progress update.
       map.setLayoutProperty(ROUTE_GLOW_ID,"visibility","visible");
@@ -2067,7 +2100,9 @@ export default function NaviboriMap({
         ROUTE_GLOW_ID,
         ROUTE_CASING_ID,
         ROUTE_LINE_ID,
-        ROUTE_ARROW_ID
+        ROUTE_ARROW_ID,
+        ROUTE_FOCUS_GLOW_ID,
+        ROUTE_FOCUS_LINE_ID
       ]){
         if(map.getLayer(layerId)){
           map.moveLayer(layerId);
@@ -3010,7 +3045,9 @@ export default function NaviboriMap({
         const map=mapRef.current;
         map?.easeTo({
           center:[cameraCenter.longitude,cameraCenter.latitude],
-          zoom:cameraProfile.zoom,
+          zoom:mapModeRef.current==="3d"
+            ? nearTurnZoom(cameraProfile.zoom,cameraCue?.distanceMeters ?? null)
+            : cameraProfile.zoom,
           offset:[0,cameraProfile.offsetY],
           bearing:
             navigationBearing ??
