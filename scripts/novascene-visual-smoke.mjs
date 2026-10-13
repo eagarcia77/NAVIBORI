@@ -60,7 +60,11 @@ try{
       console.log("NovaScene "+config.label+" "+location.label+" WebGL "+result+":",
         JSON.stringify(diagnostics),"renderer:",JSON.stringify(renderer));
       if(renderer?.routeAboveBuildings!==true){
-        errors.push("Route line must render above NovaScene walls in "+
+        errors.push("Route line and turn spotlight must render above walls and roofs in "+
+          config.label+" "+location.label+" viewport");
+      }
+      if(Number(renderer?.renderedRoofs??0)<=0){
+        errors.push("No genuine close-up WebGL roof caps rendered in "+
           config.label+" "+location.label+" viewport");
       }
       if(result!=="visible"||Number(diagnostics.total)<=0){
