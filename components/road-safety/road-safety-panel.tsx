@@ -131,6 +131,7 @@ export default function RoadSafetyPanel(){
       attributionControl:false
     });
     map.addControl(new maplibregl.NavigationControl({showCompass:true}),"top-right");
+    map.on("dragstart",()=>setFollow(false));
     map.addControl(new maplibregl.AttributionControl({compact:true}),"bottom-right");
     mapRef.current=map;
     return ()=>{
@@ -230,7 +231,8 @@ export default function RoadSafetyPanel(){
 
   function saveReport(kind:RoadAlertKind){
     const current=lastFix.current;
-    if(!safeToReport || !current){setNotice(t.safe);return;}
+    if(!current || now-current.receivedAt>30000 || (current.accuracy??Infinity)>125 ||
+      (current.speedMps!==null && current.speedMps>=2.5)){setNotice(t.safe);return;}
     const now=Date.now();
     const duplicate=reports.some(report=>report.kind===kind&&validReport(report,now)&&
       metersBetween(current,report)<45);
