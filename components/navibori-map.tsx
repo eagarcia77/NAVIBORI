@@ -2389,13 +2389,17 @@ export default function NaviboriMap({
                 ? 15
                 : 28
       };
-      // A previous ease may still own a WebGL render frame.
-      // Do not replace it with another ease in the same render cycle.
-      if(map.isMoving()||
-        window.matchMedia("(prefers-reduced-motion: reduce)").matches){
-        map.jumpTo(cameraOptions);
+      // Never interrupt another MapLibre animation. A stale ease frame
+      // can crash Chromium while live GPS still receives valid fixes.
+      const recenterWhenIdle=()=>{
+        if(mapRef.current!==map||!followGpsRef.current||map.isMoving())return;
+        const latest=lastContinuousFixRef.current?.coordinate ?? target;
+        map.jumpTo({...cameraOptions,center:[latest.longitude,latest.latitude]});
+      };
+      if(map.isMoving()){
+        map.once("moveend",()=>window.requestAnimationFrame(recenterWhenIdle));
       }else{
-        map.easeTo({...cameraOptions,offset:[0,orbitalLookahead ? 130 : 110],duration:450});
+        recenterWhenIdle();
       }
     }
 
@@ -3227,8 +3231,7 @@ export default function NaviboriMap({
           cameraMoving:map.isMoving(),
           reducedMotion:window.matchMedia("(prefers-reduced-motion: reduce)").matches
         }):"skip";
-        if(map&&decision!=="skip"){
-          const method=gpsCameraUpdateMethod(decision);
+        if(map&&gpsCameraUpdateMethod(decision)==="jump"){
           lastFollowCameraAtRef.current=Date.now();
           const cameraOptions:maplibregl.JumpToOptions={
             center:[cameraCenter.longitude,cameraCenter.latitude],
@@ -3241,14 +3244,7 @@ export default function NaviboriMap({
                   cameraCue?.distanceMeters ?? null)
               : mapModeRef.current==="2d" ? 0 : cameraProfile.pitch
           };
-          if(method==="jump"){
-            map.jumpTo(cameraOptions);
-          }else{
-            map.easeTo({...cameraOptions,
-              offset:[0,cameraProfile.offsetY],
-              duration:firstFix?650:Math.min(650,cameraProfile.duration)
-            });
-          }
+          map.jumpTo(cameraOptions);
         }
       }
 
