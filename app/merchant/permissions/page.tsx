@@ -3,13 +3,13 @@ import {redirect} from "next/navigation";
 import {createClient} from "@/lib/supabase/server";
 import NaviboriBrand from "@/components/brand/navibori-brand";
 import MerchantPermissionManager from "@/components/merchant/merchant-permission-manager";
+import {mayManageMerchantAccess} from "@/lib/auth/merchant-membership";
 
 export const dynamic="force-dynamic";
 export const metadata={
   title:"Permisos de comerciantes | NAVIBORI",
   description:"Administración segura de membresías merchant por establecimiento."
 };
-const ADMIN_ROLES=new Set(["platform_owner","municipality_admin","venue_manager"]);
 
 export default async function MerchantPermissionsPage(){
   const supabase=await createClient();
@@ -19,7 +19,7 @@ export default async function MerchantPermissionsPage(){
   const {data:memberships,error}=await supabase.rpc("my_venue_memberships");
   if(error)throw new Error("No fue posible verificar tus permisos.");
   const adminVenues=(memberships??[])
-    .filter(m=>ADMIN_ROLES.has(m.role))
+    .filter(m=>mayManageMerchantAccess([{venueId:m.venue_id,role:m.role}],m.venue_id))
     .map(m=>({id:m.venue_id,name:m.venue_name,role:m.role}));
 
   return <main className="commerce-page">
