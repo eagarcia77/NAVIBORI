@@ -45,6 +45,7 @@ import {
   type InMapRouteResult
 } from "@/lib/commerce/in-map-routing";
 import {commerceMatchesSearch} from "@/lib/commerce/map-search";
+import {currentVerifiedPromotions} from "@/lib/commerce/verified-promotions";
 import {localizeManeuver} from "@/lib/commerce/maneuver-localization";
 import {formatNaviboriDistance,formatNaviboriManeuverDistance,resolveNaviboriDistanceUnits,type NaviboriDistancePreference} from "@/lib/commerce/distance-display";
 import {canNavigateCommerce} from "@/lib/commerce/navigation-eligibility";
@@ -669,6 +670,10 @@ export default function NaviboriMap({
     [businesses,selectedSlug]
   );
 
+  const visiblePromotions=useMemo(
+    ()=>currentVerifiedPromotions(selected),
+    [selected]
+  );
   const canRoute=canNavigateCommerce(selected,source);
 
   const demoRoute=Boolean(source==="demo" && selected?.demo && selected?.mapLocation);
@@ -4328,6 +4333,22 @@ export default function NaviboriMap({
                 )}
               </div>
 
+              {!gpsActive && visiblePromotions.length>0 && (
+                <aside className="navibori-verified-promotions"
+                  aria-label={tr("Ofertas vigentes","Current offers")}>
+                  <strong>{tr("Ofertas del comercio","Business offers")}</strong>
+                  {visiblePromotions.map(promotion=>(
+                    <div key={promotion.id}>
+                      <span>{promotion.title}</span>
+                      {promotion.description && <small>{promotion.description}</small>}
+                    </div>
+                  ))}
+                  <small>{tr(
+                    "Consulta las condiciones y disponibilidad con el comercio.",
+                    "Check terms and availability with the business."
+                  )}</small>
+                </aside>
+              )}
               {canRoute ? (
                 <>
                   <div className="business-route-launch navibori-ux3-route">
