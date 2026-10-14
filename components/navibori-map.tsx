@@ -3538,75 +3538,6 @@ export default function NaviboriMap({
     >
       <div className="map-stage full-map-stage">
         <div ref={mapNode} className="map-canvas full-map-canvas" />
-        {navigationSessionVisible&&mode==="3d"&&(
-          <div className="navibori-3d-navigation-status" role="status">
-            <span>◈ NOVASCENE 3D</span>
-            <strong>{buildings3DState==="ready"
-              ?tr(buildingRenderedCount+" elementos 3D visibles",buildingRenderedCount+" visible 3D features")
-              :buildings3DState==="loading"
-                ?tr("Cargando edificios","Loading buildings")
-                :buildings3DState==="no-data"
-                  ?tr("Sin edificios visibles","No visible buildings")
-                  :tr("Edificios no disponibles","Buildings unavailable")}</strong>
-            <small className={"novascene-gps-signal "+(
-              signal.current ? gpsSignalQuality(gpsAccuracy)
-                :signal.fix==="stale"?"weak":"searching"
-            )}
-              title={tr("GPS del dispositivo, independiente del destino DEMO","Device GPS, separate from DEMO destination")}>
-              {signalCopy.gps}
-            </small>
-            {gpsAgeSeconds!==null&&(
-              <small className={"novascene-fix-age "+(signal.current?"current":"stale")}>
-                {tr("Última lectura: ","Last fix: ")+gpsAgeSeconds+" s"}
-              </small>
-            )}
-            {gpsStreamFixCount>=2&&(
-              <small className="novascene-fix-age current">
-                {tr("Seguimiento: ","Tracking: ")+gpsStreamFixCount+
-                  tr(" lecturas"," fixes")}
-              </small>
-            )}
-            {gpsUnconfirmedJump&&(
-              <small className="novascene-fix-age stale" role="status">
-                {tr("Verificando salto GPS","Verifying GPS jump")}
-              </small>
-            )}
-            {signal.retryRecommended&&!gpsResumePending&&(
-              <button type="button" className="novascene-gps-retry"
-                aria-label={tr("Solicitar ubicación GPS actual","Request current GPS fix")}
-                onClick={()=>{
-                  if(gpsResumeFixRef.current){
-                    gpsResumeFixRef.current();
-                  }else if(selected&&canRoute){
-                    // A route preview may exist without a watchPosition session.
-                    startGpsNavigation(lastRouteMode);
-                  }else{
-                    testGps();
-                  }
-                }}>
-                {tr("Reintentar GPS","Retry GPS")}
-              </button>
-            )}
-          </div>
-        )}
-        {!navigationSessionVisible&&(
-          <div className="navibori-3d-indicator" data-view={mode} role="status">
-            <span className="navibori-3d-orb" aria-hidden="true">◈</span>
-            <span><strong>{mode==="3d"?"NOVASCENE 3D":tr("Vista de mapa","Map view")}</strong>
-              <small>{buildings3DState==="unavailable"
-                ?tr("Edificios 3D no disponibles","3D buildings unavailable")
-                :mode==="3d"&&buildings3DState==="no-data"
-                  ?tr("No hay edificios 3D en esta zona","No 3D buildings in this area")
-                  :mode==="3d"&&buildings3DState==="ready"
-                    ?tr(buildingRenderedCount+" elementos 3D visibles · modelo local",buildingRenderedCount+" visible 3D features · local model")
-                  :mode==="3d"&&buildings3DState==="loading"
-                    ?tr("Cargando edificios locales…","Loading local buildings…")
-                  :mode==="3d"
-                    ?tr("Vista espacial activada","Spatial view enabled")
-                    :tr("Activa el mapa tridimensional","Enable 3D map")}</small>
-            </span>
-          </div>
-        )}
         {routeResult && (
           <svg ref={routeSvgRef} className="navibori-route-svg-fallback"
             style={shouldDrawSvgFallback(nativeRouteVisible)?undefined:{display:"none"}}
@@ -3942,6 +3873,52 @@ export default function NaviboriMap({
               </div>
             </div>
 
+            {gpsActive && (
+              <div className="navibori-drive-summary"
+                aria-label={tr("Resumen de navegación","Navigation summary")}>
+                <div>
+                  <span>{tr("Llegada","Arrival")}</span>
+                  <strong>{formatArrivalTime(
+                    navigationProgress?.remainingSeconds ?? routeResult.durationSeconds,
+                    deviceLocale.locale
+                  )}</strong>
+                </div>
+                <div>
+                  <span>{tr("Restante","Remaining")}</span>
+                  <strong>{formatDistance(
+                    navigationProgress?.remainingMeters ?? routeResult.distanceMeters
+                  )}</strong>
+                </div>
+                <button type="button" onClick={recenterGpsCamera}
+                  aria-label={tr("Recentrar en mi ubicación","Recenter on my location")}
+                  title={tr("Recentrar","Recenter")}>◎</button>
+                <button type="button" onClick={()=>{
+                  const next=!voiceEnabled;
+                  voiceEnabledRef.current=next;
+                  setVoiceEnabled(next);
+                  if(!next){
+                    if("speechSynthesis" in window)window.speechSynthesis.cancel();
+                    lastSpokenInstructionRef.current="";
+                  }else if(nextCue){
+                    speakNavigation(
+                      localizeManeuver(nextCue.instruction,deviceLocale.language),
+                      nextCue.distanceMeters,true
+                    );
+                  }
+                }} aria-pressed={voiceEnabled}
+                  aria-label={voiceEnabled?tr("Silenciar instrucciones","Mute directions"):
+                    tr("Activar instrucciones de voz","Enable voice directions")}
+                  title={tr("Voz","Voice")}>{voiceEnabled?"🔊":"🔇"}</button>
+                {signal.retryRecommended&&!gpsResumePending&&(
+                  <button type="button" className="navibori-drive-retry"
+                    onClick={()=>{
+                      if(gpsResumeFixRef.current)gpsResumeFixRef.current();
+                      else if(selected&&canRoute)startGpsNavigation(lastRouteMode);
+                      else testGps();
+                    }}>{tr("Reintentar GPS","Retry GPS")}</button>
+                )}
+              </div>
+            )}
             {!gpsActive && <div className="navibori-navigation-footer">
               <div>
                 <span>ETA</span>
@@ -4024,15 +4001,14 @@ export default function NaviboriMap({
           </aside>
         )}
 
-        <div className="full-map-brand-pill" aria-label="Estado de NAVIBORI">
-          <strong>NAVIBORI</strong>
-          <span>
-            {navigationSessionVisible
-              ? signalCopy.route
-              : source==="live" ? "Comercios LIVE" : "Comercios DEMO"}
-          </span>
-          <small title={tr("Identificador de la versión instalada","Installed build identifier")}>v{buildRevision}</small>
-        </div>
+        <button type="button"
+          className="full-map-brand-pill navibori-map-search-trigger"
+          aria-label={tr("Buscar comercios","Search businesses")}
+          onClick={()=>setMenuOpen(true)}
+        >
+          <span aria-hidden="true">⌕</span>
+          <strong>{tr("Buscar comercios","Search businesses")}</strong>
+        </button>
 
         {menuOpen && (
           <aside className="full-map-menu" aria-label="Menú principal NAVIBORI">
@@ -4045,7 +4021,7 @@ export default function NaviboriMap({
               <button
                 type="button"
                 onClick={()=>setMenuOpen(false)}
-                aria-label="Cerrar menú"
+                aria-label={tr("Cerrar menú","Close menu")}
               >
                 ×
               </button>
@@ -4061,7 +4037,7 @@ export default function NaviboriMap({
                 url.searchParams.set("navibori_refresh",Date.now().toString());
                 window.location.replace(url.toString());
               }}
-            >↻ {tr("Actualizar aplicación","Refresh application")} · v{buildRevision}</button>
+            >↻ {tr("Actualizar aplicación","Refresh application")}</button>
             <details className="navibori-health-panel">
               <summary>{tr("Estado técnico de navegación","Navigation health")}</summary>
               <div className="navibori-health-summary" role="status">
@@ -4164,7 +4140,7 @@ export default function NaviboriMap({
                 <button
                   type="button"
                   onClick={()=>setSearchTerm("")}
-                  aria-label="Limpiar búsqueda"
+                  aria-label={tr("Limpiar búsqueda","Clear search")}
                 >
                   ×
                 </button>
@@ -4353,7 +4329,9 @@ export default function NaviboriMap({
                   "Unverified heights are visual estimates. Natural mode reduces the visual volume of buildings without known heights."
                 )}</small>
               </div>
-              <div className="navibori-3d-diagnostic-menu" role="status">
+              <details className="navibori-health-panel">
+                <summary>{tr("Diagnóstico 3D","3D diagnostics")}</summary>
+                <div className="navibori-3d-diagnostic-menu" role="status">
                 <strong>{tr("NovaScene · motor 3D propio","NovaScene · built-in 3D engine")}</strong>
                 <small>{tr("Atlas regional ampliado · alturas orientativas",
                   "Expanded local geographic atlas · illustrative heights")}</small>
@@ -4374,6 +4352,7 @@ export default function NaviboriMap({
                   {tr("Reintentar edificios 3D","Retry 3D buildings")}
                 </button>
               </div>
+              </details>
             </section>
 
             <nav className="full-map-menu-links" aria-label="Opciones NAVIBORI">
@@ -4556,7 +4535,7 @@ export default function NaviboriMap({
 
               <strong>{selected.name}</strong>
               <div className="business-route-address-row">
-                <span>{selected.mapLocation?.address ?? selected.locationLabel}</span>
+                <span>{selected.demo ? tr("Ubicación de demostración","Demo location") : selected.mapLocation?.address ?? selected.locationLabel}</span>
                 <button type="button" onClick={copySelectedAddress}>
                   {addressCopied ? copy.copied : copy.copyAddress}
                 </button>
@@ -4757,38 +4736,12 @@ export default function NaviboriMap({
 
                   {demoRoute && (
                     <div className="navibori-demo-route-warning" role="status">
-                      Ruta de prueba DEMO · el destino es sintético y no representa un comercio real.
+                      {tr("Ruta DEMO: destino ficticio.","DEMO route: fictional destination.")}
                     </div>
                   )}
                   <small>
-                    NAVIBORI usa el GPS del dispositivo mientras esta navegación está activa.
-                    El pin “Destino” identifica la entrada verificada del comercio, “Ver ruta completa”
-                    muestra el recorrido completo y “Indicaciones” permite revisar los próximos pasos
-                    sin detener la navegación.
-                    El marcador se mueve contigo, muestra el próximo giro y recalcula si avanzas
-                    o te sales de la ruta. Si exploras el mapa manualmente, el seguimiento visual
-                    se pausa sin detener el GPS; “Recentrar en mi GPS” vuelve a seguir tu posición. Bicicleta y scooter usan el perfil de micromovilidad
-                    basado en rutas de bicicleta; verifica señalización y condiciones locales.
-                    Tu ubicación no se guarda en Supabase.
-                  </small>
-                  {!demoRoute && (
-                    <small>
-                      Para vehículos conectados, usa Apple Maps / CarPlay o Google Maps / Android Auto
-                      como transferencia inmediata de la ruta. La integración nativa propia de NAVIBORI
-                      con CarPlay y Android Auto requiere los clientes móviles nativos y las autorizaciones
-                      de cada plataforma.
-                    </small>
-                  )}
-                  <small>
-                    <a
-                      href="https://www.openstreetmap.org/fixthemap"
-                      target="_blank"
-                      rel="noreferrer"
-                    >
-                      Corregir el mapa
-                    </a>
-                    {" · "}
-                    La precisión depende del GPS del dispositivo y de los caminos registrados en OpenStreetMap.
+                    {tr("La navegación depende de la precisión del GPS y la cartografía disponible.",
+                      "Navigation depends on GPS accuracy and available map data.")}
                   </small>
                 </>
               ) : (
@@ -4805,12 +4758,9 @@ export default function NaviboriMap({
             </>
           ) : (
             <>
-              <strong>Selecciona un comercio</strong>
-              <span>
-                Busca por nombre, categoría o dirección; toca un pin; o usa “Mi ubicación”
-                para ordenar comercios cercanos y comenzar navegación GPS en carro, caminando,
-                bicicleta o scooter.
-              </span>
+              <strong>{tr("Busca un comercio","Find a business")}</strong>
+              <span>{tr("Busca arriba o selecciona un pin del mapa.",
+                "Search above or select a pin on the map.")}</span>
             </>
           )}
 
