@@ -3538,75 +3538,6 @@ export default function NaviboriMap({
     >
       <div className="map-stage full-map-stage">
         <div ref={mapNode} className="map-canvas full-map-canvas" />
-        {navigationSessionVisible&&mode==="3d"&&(
-          <div className="navibori-3d-navigation-status" role="status">
-            <span>◈ NOVASCENE 3D</span>
-            <strong>{buildings3DState==="ready"
-              ?tr(buildingRenderedCount+" elementos 3D visibles",buildingRenderedCount+" visible 3D features")
-              :buildings3DState==="loading"
-                ?tr("Cargando edificios","Loading buildings")
-                :buildings3DState==="no-data"
-                  ?tr("Sin edificios visibles","No visible buildings")
-                  :tr("Edificios no disponibles","Buildings unavailable")}</strong>
-            <small className={"novascene-gps-signal "+(
-              signal.current ? gpsSignalQuality(gpsAccuracy)
-                :signal.fix==="stale"?"weak":"searching"
-            )}
-              title={tr("GPS del dispositivo, independiente del destino DEMO","Device GPS, separate from DEMO destination")}>
-              {signalCopy.gps}
-            </small>
-            {gpsAgeSeconds!==null&&(
-              <small className={"novascene-fix-age "+(signal.current?"current":"stale")}>
-                {tr("Última lectura: ","Last fix: ")+gpsAgeSeconds+" s"}
-              </small>
-            )}
-            {gpsStreamFixCount>=2&&(
-              <small className="novascene-fix-age current">
-                {tr("Seguimiento: ","Tracking: ")+gpsStreamFixCount+
-                  tr(" lecturas"," fixes")}
-              </small>
-            )}
-            {gpsUnconfirmedJump&&(
-              <small className="novascene-fix-age stale" role="status">
-                {tr("Verificando salto GPS","Verifying GPS jump")}
-              </small>
-            )}
-            {signal.retryRecommended&&!gpsResumePending&&(
-              <button type="button" className="novascene-gps-retry"
-                aria-label={tr("Solicitar ubicación GPS actual","Request current GPS fix")}
-                onClick={()=>{
-                  if(gpsResumeFixRef.current){
-                    gpsResumeFixRef.current();
-                  }else if(selected&&canRoute){
-                    // A route preview may exist without a watchPosition session.
-                    startGpsNavigation(lastRouteMode);
-                  }else{
-                    testGps();
-                  }
-                }}>
-                {tr("Reintentar GPS","Retry GPS")}
-              </button>
-            )}
-          </div>
-        )}
-        {!navigationSessionVisible&&(
-          <div className="navibori-3d-indicator" data-view={mode} role="status">
-            <span className="navibori-3d-orb" aria-hidden="true">◈</span>
-            <span><strong>{mode==="3d"?"NOVASCENE 3D":tr("Vista de mapa","Map view")}</strong>
-              <small>{buildings3DState==="unavailable"
-                ?tr("Edificios 3D no disponibles","3D buildings unavailable")
-                :mode==="3d"&&buildings3DState==="no-data"
-                  ?tr("No hay edificios 3D en esta zona","No 3D buildings in this area")
-                  :mode==="3d"&&buildings3DState==="ready"
-                    ?tr(buildingRenderedCount+" elementos 3D visibles · modelo local",buildingRenderedCount+" visible 3D features · local model")
-                  :mode==="3d"&&buildings3DState==="loading"
-                    ?tr("Cargando edificios locales…","Loading local buildings…")
-                  :mode==="3d"
-                    ?tr("Vista espacial activada","Spatial view enabled")
-                    :tr("Activa el mapa tridimensional","Enable 3D map")}</small>
-            </span>
-          </div>
-        )}
         {routeResult && (
           <svg ref={routeSvgRef} className="navibori-route-svg-fallback"
             style={shouldDrawSvgFallback(nativeRouteVisible)?undefined:{display:"none"}}
@@ -3732,41 +3663,6 @@ export default function NaviboriMap({
             aria-live="polite"
           >
             <div className={"navibori-navigation-maneuver vector-gate-"+vectorGateState}>
-              <div
-                className={"lagrange-cockpit-chip "+lagrangePhase}
-                aria-label={tr(
-                  "Fase adaptativa Lagrange",
-                  "Lagrange adaptive phase"
-                )}
-              >
-                <span>◈ LAGRANGE</span>
-                <strong>
-                  {lagrangePhaseLabel(
-                    lagrangePhase,
-                    deviceLocale.language
-                  )}
-                </strong>
-              </div>
-              {exoDockState!=="inactive" && (
-                <div
-                  className={"exodock-chip "+exoDockState}
-                  aria-label={tr(
-                    "Sistema de aproximación final EXODOCK",
-                    "EXODOCK final approach system"
-                  )}
-                >
-                  <span>◇ EXODOCK</span>
-                  <strong>
-                    {exoDockLabel(exoDockState,deviceLocale.language)}
-                    {navigationProgress
-                      ? " · "+Math.max(
-                          0,
-                          Math.round(navigationProgress.remainingMeters)
-                        )+" m"
-                      : ""}
-                  </strong>
-                </div>
-              )}
               <span>
                 {nextCue
                   ? formatManeuverDistance(
@@ -3800,110 +3696,12 @@ export default function NaviboriMap({
                     "Low GPS confidence · automatic rerouting paused.")}
                 </small>
               )}
-              <div className="astranav-chip">
-                <span>✦ ASTRANAV</span>
-                <strong>
-                  {astraCompassState==="active"
-                    ? tr("FUSIÓN DE SENSORES","SENSOR FUSION")
-                    : tr("FUSIÓN DE RUTA","ROUTE FUSION")}
-                </strong>
-              </div>
-
-              {gpsActive && (
-                <div
-                  className={"astra-flight-director "+flightDirectorState.phase}
-                  aria-label={tr(
-                    "Director de vuelo Astra · "+
-                      flightDirectorLabel(flightDirectorState,"es"),
-                    "Astra Flight Director · "+
-                      flightDirectorLabel(flightDirectorState,"en")
-                  )}
-                >
-                  <div>
-                    <span>ASTRA FD</span>
-                    <strong>
-                      {flightDirectorLabel(
-                        flightDirectorState,
-                        deviceLocale.language
-                      )}
-                    </strong>
-                    <small>
-                      {flightDirectorState.bearingErrorDegrees!==null
-                        ? "Δ "+
-                          Math.round(
-                            Math.abs(flightDirectorState.bearingErrorDegrees)
-                          )+
-                          "°"
-                        : "Δ —"}
-                      {" · "}
-                      XTE ~
-                      {flightDirectorState.deviationMeters!==null
-                        ? Math.round(flightDirectorState.deviationMeters)
-                        : "—"}
-                      {" m · "}
-                      {flightDirectorState.confidence}%
-                    </small>
-                  </div>
-                  <div className="astra-flight-director-reticle" aria-hidden="true">
-                    <i />
-                    <b
-                      style={{
-                        transform:
-                          "translateX("+
-                          Math.round(flightDirectorState.cueOffset*34)+
-                          "px)"
-                      }}
-                    />
-                  </div>
-                </div>
-              )}
-
-              {driftBridgeEstimate && driftBridgeEstimate.phase!=="inactive" && (
-                <div
-                  className={"astra-drift-bridge-chip "+driftBridgeEstimate.phase}
-                  aria-live="polite"
-                  aria-label={tr(
-                    "Puente inercial ASTRA",
-                    "ASTRA inertial bridge"
-                  )}
-                >
-                  <span>ASTRA DRIFT BRIDGE</span>
-                  <strong>
-                    {driftBridgeEstimate.phase==="holding"
-                      ? tr("DR HOLD","DR HOLD")
-                      : tr("FIX GPS PERDIDO","GPS FIX LOST")}
-                  </strong>
-                  <small>
-                    {(driftBridgeEstimate.elapsedMs/1000).toFixed(1)} s
-                    {" · "}
-                    {driftBridgeEstimate.phase==="holding"
-                      ? driftBridgeEstimate.confidence+"%"
-                      : "0%"}
-                  </small>
-                </div>
-              )}
-
-              {orbitalLookahead && (
-                <div
-                  className="orbital-lookahead-chip"
-                  aria-label={tr(
-                    "Horizonte predictivo Orbital Lookahead",
-                    "Orbital Lookahead predictive horizon"
-                  )}
-                >
-                  <span>ORBITAL LOOKAHEAD</span>
-                  <strong>
-                    {Math.round(orbitalLookahead.lookaheadMeters)} m
-                  </strong>
-                </div>
-              )}
-
               {trajectoryPrediction && trajectoryPrediction.risk!=="stable" && (
                 <div
                   className={"trajectory-shield-chip "+trajectoryPrediction.risk}
                   aria-live="assertive"
                 >
-                  <span>TRAJECTORY SHIELD</span>
+                  <span>{tr("Aviso de ruta","Route alert")}</span>
                   <strong>
                     {trajectoryPrediction.risk==="warning"
                       ? tr("CORRIGE RUMBO","CORRECT COURSE")
@@ -3916,123 +3714,65 @@ export default function NaviboriMap({
                 </div>
               )}
 
-              <div
-                className="photon-corridor-meter"
-                aria-label={tr(
-                  "Progreso de Photon Corridor",
-                  "Photon Corridor progress"
-                )}
-              >
-                <div>
-                  <span>PHOTON CORRIDOR</span>
-                  <strong>
-                    {Math.round((navigationProgress?.progressRatio ?? 0)*100)}%
-                  </strong>
-                </div>
-                <i aria-hidden="true">
-                  <b
-                    style={{
-                      width:
-                        Math.round(
-                          (navigationProgress?.progressRatio ?? 0)*100
-                        )+"%"
-                    }}
-                  />
-                </i>
-              </div>
             </div>
 
-            {!gpsActive && <div className="navibori-navigation-footer">
-              <div>
-                <span>ETA</span>
-                <strong>
-                  {formatArrivalTime(
-                    navigationProgress?.remainingSeconds ??
-                    routeResult.durationSeconds,
+            {gpsActive && (
+              <div className="navibori-drive-summary"
+                aria-label={tr("Resumen de navegación","Navigation summary")}>
+                <div>
+                  <span>{tr("Llegada","Arrival")}</span>
+                  <strong>{formatArrivalTime(
+                    navigationProgress?.remainingSeconds ?? routeResult.durationSeconds,
                     deviceLocale.locale
-                  )}
-                </strong>
-              </div>
-              <div>
-                <span>{deviceLocale.language==="en" ? "Remaining" : "Restante"}</span>
-                <strong>
-                  {formatDistance(
-                    navigationProgress?.remainingMeters ??
-                    routeResult.distanceMeters
-                  )}
-                </strong>
-              </div>
-              <div>
-                <span>{copy.speed}</span>
-                <strong>
-                  {gpsSpeedKph!==null ? gpsSpeedKph+" km/h" : "—"}
-                </strong>
-              </div>
-              <div>
-                <span>{copy.gps}</span>
-                <strong>
-                  {signal.current&&gpsAccuracy!==null
-                    ? gpsAccuracy<=20
-                      ? copy.excellent+" · ±"+Math.round(gpsAccuracy)+" m"
-                      : gpsAccuracy<=50
-                        ? copy.good+" · ±"+Math.round(gpsAccuracy)+" m"
-                        : copy.weak+" · ±"+Math.round(gpsAccuracy)+" m"
-                    : signalCopy.gps}
-                </strong>
-              </div>
-              <button
-                type="button"
-                className={followGps ? "active" : ""}
-                onClick={recenterGpsCamera}
-              >
-                {followGps ? copy.following : copy.recenter}
-              </button>
-              <button
-                type="button"
-                className={voiceEnabled ? "active" : ""}
-                onClick={()=>{
+                  )}</strong>
+                </div>
+                <div>
+                  <span>{tr("Restante","Remaining")}</span>
+                  <strong>{formatDistance(
+                    navigationProgress?.remainingMeters ?? routeResult.distanceMeters
+                  )}</strong>
+                </div>
+                <button type="button" onClick={recenterGpsCamera}
+                  aria-label={tr("Recentrar en mi ubicación","Recenter on my location")}
+                  title={tr("Recentrar","Recenter")}>◎</button>
+                <button type="button" onClick={()=>{
                   const next=!voiceEnabled;
                   voiceEnabledRef.current=next;
                   setVoiceEnabled(next);
                   if(!next){
-                    if("speechSynthesis" in window){
-                      window.speechSynthesis.cancel();
-                    }
+                    if("speechSynthesis" in window)window.speechSynthesis.cancel();
                     lastSpokenInstructionRef.current="";
                   }else if(nextCue){
                     speakNavigation(
                       localizeManeuver(nextCue.instruction,deviceLocale.language),
-                      nextCue.distanceMeters,
-                      true
+                      nextCue.distanceMeters,true
                     );
                   }
-                }}
-              >
-                {(voiceEnabled ? "🔊 " : "🔇 ")+copy.voice}
-              </button>
-              <button
-                type="button"
-                className="danger"
-                onClick={()=>{
-                  stopGpsNavigation();
-                  setLocationStatus(tr("GPS detenido. La ruta permanece visible.","GPS stopped. The route remains visible."));
-                }}
-              >
-                {copy.finish}
-              </button>
-            </div>}
+                }} aria-pressed={voiceEnabled}
+                  aria-label={voiceEnabled?tr("Silenciar instrucciones","Mute directions"):
+                    tr("Activar instrucciones de voz","Enable voice directions")}
+                  title={tr("Voz","Voice")}>{voiceEnabled?"🔊":"🔇"}</button>
+                {signal.retryRecommended&&!gpsResumePending&&(
+                  <button type="button" className="navibori-drive-retry"
+                    onClick={()=>{
+                      if(gpsResumeFixRef.current)gpsResumeFixRef.current();
+                      else if(selected&&canRoute)startGpsNavigation(lastRouteMode);
+                      else testGps();
+                    }}>{tr("Reintentar GPS","Retry GPS")}</button>
+                )}
+              </div>
+            )}
           </aside>
         )}
 
-        <div className="full-map-brand-pill" aria-label="Estado de NAVIBORI">
-          <strong>NAVIBORI</strong>
-          <span>
-            {navigationSessionVisible
-              ? signalCopy.route
-              : source==="live" ? "Comercios LIVE" : "Comercios DEMO"}
-          </span>
-          <small title={tr("Identificador de la versión instalada","Installed build identifier")}>v{buildRevision}</small>
-        </div>
+        <button type="button"
+          className="full-map-brand-pill navibori-map-search-trigger"
+          aria-label={tr("Buscar comercios","Search businesses")}
+          onClick={()=>setMenuOpen(true)}
+        >
+          <span aria-hidden="true">⌕</span>
+          <strong>{tr("Buscar comercios","Search businesses")}</strong>
+        </button>
 
         {menuOpen && (
           <aside className="full-map-menu" aria-label="Menú principal NAVIBORI">
@@ -4045,7 +3785,7 @@ export default function NaviboriMap({
               <button
                 type="button"
                 onClick={()=>setMenuOpen(false)}
-                aria-label="Cerrar menú"
+                aria-label={tr("Cerrar menú","Close menu")}
               >
                 ×
               </button>
@@ -4061,7 +3801,7 @@ export default function NaviboriMap({
                 url.searchParams.set("navibori_refresh",Date.now().toString());
                 window.location.replace(url.toString());
               }}
-            >↻ {tr("Actualizar aplicación","Refresh application")} · v{buildRevision}</button>
+            >↻ {tr("Actualizar aplicación","Refresh application")}</button>
             <details className="navibori-health-panel">
               <summary>{tr("Estado técnico de navegación","Navigation health")}</summary>
               <div className="navibori-health-summary" role="status">
@@ -4164,7 +3904,7 @@ export default function NaviboriMap({
                 <button
                   type="button"
                   onClick={()=>setSearchTerm("")}
-                  aria-label="Limpiar búsqueda"
+                  aria-label={tr("Limpiar búsqueda","Clear search")}
                 >
                   ×
                 </button>
@@ -4353,7 +4093,9 @@ export default function NaviboriMap({
                   "Unverified heights are visual estimates. Natural mode reduces the visual volume of buildings without known heights."
                 )}</small>
               </div>
-              <div className="navibori-3d-diagnostic-menu" role="status">
+              <details className="navibori-health-panel">
+                <summary>{tr("Diagnóstico 3D","3D diagnostics")}</summary>
+                <div className="navibori-3d-diagnostic-menu" role="status">
                 <strong>{tr("NovaScene · motor 3D propio","NovaScene · built-in 3D engine")}</strong>
                 <small>{tr("Atlas regional ampliado · alturas orientativas",
                   "Expanded local geographic atlas · illustrative heights")}</small>
@@ -4374,6 +4116,7 @@ export default function NaviboriMap({
                   {tr("Reintentar edificios 3D","Retry 3D buildings")}
                 </button>
               </div>
+              </details>
             </section>
 
             <nav className="full-map-menu-links" aria-label="Opciones NAVIBORI">
@@ -4556,7 +4299,7 @@ export default function NaviboriMap({
 
               <strong>{selected.name}</strong>
               <div className="business-route-address-row">
-                <span>{selected.mapLocation?.address ?? selected.locationLabel}</span>
+                <span>{selected.demo ? tr("Ubicación de demostración","Demo location") : selected.mapLocation?.address ?? selected.locationLabel}</span>
                 <button type="button" onClick={copySelectedAddress}>
                   {addressCopied ? copy.copied : copy.copyAddress}
                 </button>
@@ -4595,8 +4338,8 @@ export default function NaviboriMap({
 
                   {arrived && (
                     <div className="navibori-arrival-card" role="status">
-                      <span>Destino alcanzado</span>
-                      <strong>Has llegado a {selected.name}.</strong>
+                      <span>{tr("Destino alcanzado","Destination reached")}</span>
+                      <strong>{tr("Has llegado a ","You have arrived at ")}{selected.name}.</strong>
                     </div>
                   )}
 
@@ -4701,7 +4444,7 @@ export default function NaviboriMap({
                           }
                         }}
                       >
-                        {voiceEnabled ? "🔊 Voz activada" : "🔇 Activar voz"}
+                        {voiceEnabled ? tr("🔊 Voz activada","🔊 Voice on") : tr("🔇 Activar voz","🔇 Enable voice")}
                       </button>
                     )}
                     {routeResult && routeResult.steps.length>0 && (
@@ -4710,12 +4453,12 @@ export default function NaviboriMap({
                         className={directionsOpen ? "active" : ""}
                         onClick={()=>setDirectionsOpen((open)=>!open)}
                       >
-                        🧭 Indicaciones
+                        {tr("🧭 Indicaciones","🧭 Directions")}
                       </button>
                     )}
                     {routeResult && (
                       <button type="button" onClick={showFullRoute}>
-                        🗺️ Ver ruta completa
+                        {tr("🗺️ Ver ruta completa","🗺️ Full route")}
                       </button>
                     )}
                     {gpsActive && (
@@ -4726,12 +4469,12 @@ export default function NaviboriMap({
                           setLocationStatus(tr("GPS detenido. La ruta permanece visible.","GPS stopped. The route remains visible."));
                         }}
                       >
-                        Detener GPS
+                        {tr("Detener GPS","Stop GPS")}
                       </button>
                     )}
                     {routeResult && (
                       <button type="button" onClick={clearRoute}>
-                        Limpiar ruta
+                        {tr("Limpiar ruta","Clear route")}
                       </button>
                     )}
                     {!demoRoute && (
@@ -4752,65 +4495,37 @@ export default function NaviboriMap({
                         </a>
                       </>
                     )}
-                    <Link href={"/comercios/"+selected.slug}>Ver comercio</Link>
+                    <Link href={"/comercios/"+selected.slug}>{tr("Ver comercio","View business")}</Link>
                   </div>
 
                   {demoRoute && (
                     <div className="navibori-demo-route-warning" role="status">
-                      Ruta de prueba DEMO · el destino es sintético y no representa un comercio real.
+                      {tr("Ruta DEMO: destino ficticio.","DEMO route: fictional destination.")}
                     </div>
                   )}
                   <small>
-                    NAVIBORI usa el GPS del dispositivo mientras esta navegación está activa.
-                    El pin “Destino” identifica la entrada verificada del comercio, “Ver ruta completa”
-                    muestra el recorrido completo y “Indicaciones” permite revisar los próximos pasos
-                    sin detener la navegación.
-                    El marcador se mueve contigo, muestra el próximo giro y recalcula si avanzas
-                    o te sales de la ruta. Si exploras el mapa manualmente, el seguimiento visual
-                    se pausa sin detener el GPS; “Recentrar en mi GPS” vuelve a seguir tu posición. Bicicleta y scooter usan el perfil de micromovilidad
-                    basado en rutas de bicicleta; verifica señalización y condiciones locales.
-                    Tu ubicación no se guarda en Supabase.
-                  </small>
-                  {!demoRoute && (
-                    <small>
-                      Para vehículos conectados, usa Apple Maps / CarPlay o Google Maps / Android Auto
-                      como transferencia inmediata de la ruta. La integración nativa propia de NAVIBORI
-                      con CarPlay y Android Auto requiere los clientes móviles nativos y las autorizaciones
-                      de cada plataforma.
-                    </small>
-                  )}
-                  <small>
-                    <a
-                      href="https://www.openstreetmap.org/fixthemap"
-                      target="_blank"
-                      rel="noreferrer"
-                    >
-                      Corregir el mapa
-                    </a>
-                    {" · "}
-                    La precisión depende del GPS del dispositivo y de los caminos registrados en OpenStreetMap.
+                    {tr("La navegación depende de la precisión del GPS y la cartografía disponible.",
+                      "Navigation depends on GPS accuracy and available map data.")}
                   </small>
                 </>
               ) : (
                 <>
                   <div className="business-route-actions">
-                    <button type="button" disabled>Ruta pendiente de verificación</button>
-                    <Link href={"/comercios/"+selected.slug}>Ver comercio</Link>
+                    <button type="button" disabled>{tr("Ruta pendiente de verificación","Route pending verification")}</button>
+                    <Link href={"/comercios/"+selected.slug}>{tr("Ver comercio","View business")}</Link>
                   </div>
                   <small>
-                    Los puntos DEMO no generan rutas GPS reales. Un comercio LIVE necesita dirección y coordenadas verificadas.
+                    {tr("Un comercio necesita coordenadas verificadas para navegación real.",
+                      "A business needs verified coordinates for live navigation.")}
                   </small>
                 </>
               )}
             </>
           ) : (
             <>
-              <strong>Selecciona un comercio</strong>
-              <span>
-                Busca por nombre, categoría o dirección; toca un pin; o usa “Mi ubicación”
-                para ordenar comercios cercanos y comenzar navegación GPS en carro, caminando,
-                bicicleta o scooter.
-              </span>
+              <strong>{tr("Busca un comercio","Find a business")}</strong>
+              <span>{tr("Busca arriba o selecciona un pin del mapa.",
+                "Search above or select a pin on the map.")}</span>
             </>
           )}
 

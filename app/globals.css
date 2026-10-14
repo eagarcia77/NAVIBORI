@@ -3338,3 +3338,143 @@ html[data-motion="reduced"] .navibori-drift-bridge-marker i{
 @media(max-width:600px){
   .novascene-fix-age{font-size:.54rem}
 }
+
+
+/* Mobile navigation essentials: search, arrival, remaining distance and voice.
+   Diagnostic telemetry stays in the menu/QA rather than covering the map. */
+.full-map-stage .navibori-map-search-trigger{
+  cursor:pointer;
+  color:#153e51;
+  letter-spacing:normal;
+  white-space:nowrap;
+  max-width:min(290px,calc(100% - 158px));
+}
+.full-map-stage .navibori-map-search-trigger strong{
+  font-size:.77rem;
+  letter-spacing:0;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+.full-map-stage .navibori-map-search-trigger>span{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  background:transparent;
+  padding:0;
+  font-size:1.35rem;
+}
+.full-map-stage .navibori-map-search-trigger:focus-visible,
+.navibori-drive-summary button:focus-visible{
+  outline:3px solid #0879ae;
+  outline-offset:3px;
+}
+.map-panel[data-navigation-active="true"] .navibori-map-search-trigger{
+  display:none;
+}
+.navibori-drive-summary{
+  position:absolute;
+  left:50%;
+  bottom:max(22px,calc(env(safe-area-inset-bottom) + 12px));
+  transform:translateX(-50%);
+  z-index:39;
+  display:flex;
+  align-items:stretch;
+  gap:7px;
+  width:min(455px,calc(100% - 24px));
+  padding:8px;
+  border:1px solid rgba(255,255,255,.95);
+  border-radius:18px;
+  background:rgba(255,255,255,.97);
+  box-shadow:0 8px 24px rgba(21,55,69,.2);
+  -webkit-backdrop-filter:blur(14px);
+  backdrop-filter:blur(14px);
+  pointer-events:auto;
+}
+.navibori-drive-summary>div{
+  display:grid;
+  align-content:center;
+  gap:2px;
+  flex:1 1 0;
+  min-width:0;
+  padding:4px 5px;
+}
+.navibori-drive-summary>div>span{
+  color:#526779;
+  font-size:.6rem;
+  font-weight:750;
+}
+.navibori-drive-summary>div>strong{
+  font-size:.9rem;
+  color:#163d53;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+.navibori-drive-summary>button{
+  flex:0 0 auto;
+  min-width:42px;
+  min-height:44px;
+  padding:0 9px;
+  border:1px solid #cddfe8;
+  border-radius:12px;
+  background:#f4f9fc;
+  color:#07638e;
+  font-size:1.2rem;
+  cursor:pointer;
+}
+.navibori-drive-summary>button[aria-pressed="true"]{
+  background:#e5f5ee;
+  border-color:#8dd6bc;
+}
+.navibori-drive-summary>button.navibori-drive-retry{
+  font-size:.67rem;
+  font-weight:850;
+  color:#9b4b21;
+  border-color:#eac49b;
+  background:#fff7eb;
+}
+.map-panel[data-navigation-active="true"] .navibori-navigation-maneuver>small.navibori-live-reroute,
+.map-panel[data-navigation-active="true"] .navibori-navigation-maneuver>small.navibori-live-gps-warning{
+  display:block!important;
+  white-space:normal;
+}
+.map-panel[data-navigation-active="true"] .navibori-navigation-maneuver .trajectory-shield-chip:not(.warning){
+  display:none;
+}
+@media(max-width:700px){
+  .full-map-stage .navibori-map-search-trigger{
+    left:70px;
+    right:76px;
+    max-width:none;
+    width:auto;
+    justify-content:flex-start;
+    min-width:0;
+  }
+  .full-map-stage .navibori-map-search-trigger>span{display:inline-flex!important}
+  .full-map-stage .business-route-card:not(.navigation-active){
+    max-height:46dvh;
+  }
+  .navibori-drive-summary{
+    width:calc(100% - 20px);
+    gap:4px;
+    padding:6px;
+  }
+  .navibori-drive-summary>div{padding:4px 2px}
+  .navibori-drive-summary>div>strong{font-size:.82rem}
+  .navibori-drive-summary>button{
+    min-width:41px;
+    padding:0 6px;
+  }
+  .navibori-drive-summary>button.navibori-drive-retry{font-size:.6rem}
+}
+@media(max-width:360px){
+  .navibori-drive-summary>div>strong{font-size:.75rem}
+  .navibori-drive-summary>button{min-width:37px}
+}
+
+
+/* MapLibre/OpenStreetMap attribution must remain readable above the active
+   navigation strip rather than being covered by the new controls. */
+.map-panel[data-navigation-active="true"] .maplibregl-ctrl-bottom-right{
+  bottom:max(96px,calc(env(safe-area-inset-bottom) + 86px));
+}
