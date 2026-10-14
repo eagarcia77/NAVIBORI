@@ -5,7 +5,7 @@ export type MerchantPromotionOperation="view"|"create"|"edit"|"activate"|"pause"
 
 export interface MerchantPromotionBusinessContext{
   businessId:string;
-  createdBy:string;
+  createdBy:string|null;
   venueId:string;
   status:string;
   verificationStatus:string;
