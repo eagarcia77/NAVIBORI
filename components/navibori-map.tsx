@@ -3663,41 +3663,6 @@ export default function NaviboriMap({
             aria-live="polite"
           >
             <div className={"navibori-navigation-maneuver vector-gate-"+vectorGateState}>
-              <div
-                className={"lagrange-cockpit-chip "+lagrangePhase}
-                aria-label={tr(
-                  "Fase adaptativa Lagrange",
-                  "Lagrange adaptive phase"
-                )}
-              >
-                <span>◈ LAGRANGE</span>
-                <strong>
-                  {lagrangePhaseLabel(
-                    lagrangePhase,
-                    deviceLocale.language
-                  )}
-                </strong>
-              </div>
-              {exoDockState!=="inactive" && (
-                <div
-                  className={"exodock-chip "+exoDockState}
-                  aria-label={tr(
-                    "Sistema de aproximación final EXODOCK",
-                    "EXODOCK final approach system"
-                  )}
-                >
-                  <span>◇ EXODOCK</span>
-                  <strong>
-                    {exoDockLabel(exoDockState,deviceLocale.language)}
-                    {navigationProgress
-                      ? " · "+Math.max(
-                          0,
-                          Math.round(navigationProgress.remainingMeters)
-                        )+" m"
-                      : ""}
-                  </strong>
-                </div>
-              )}
               <span>
                 {nextCue
                   ? formatManeuverDistance(
@@ -3731,110 +3696,12 @@ export default function NaviboriMap({
                     "Low GPS confidence · automatic rerouting paused.")}
                 </small>
               )}
-              <div className="astranav-chip">
-                <span>✦ ASTRANAV</span>
-                <strong>
-                  {astraCompassState==="active"
-                    ? tr("FUSIÓN DE SENSORES","SENSOR FUSION")
-                    : tr("FUSIÓN DE RUTA","ROUTE FUSION")}
-                </strong>
-              </div>
-
-              {gpsActive && (
-                <div
-                  className={"astra-flight-director "+flightDirectorState.phase}
-                  aria-label={tr(
-                    "Director de vuelo Astra · "+
-                      flightDirectorLabel(flightDirectorState,"es"),
-                    "Astra Flight Director · "+
-                      flightDirectorLabel(flightDirectorState,"en")
-                  )}
-                >
-                  <div>
-                    <span>ASTRA FD</span>
-                    <strong>
-                      {flightDirectorLabel(
-                        flightDirectorState,
-                        deviceLocale.language
-                      )}
-                    </strong>
-                    <small>
-                      {flightDirectorState.bearingErrorDegrees!==null
-                        ? "Δ "+
-                          Math.round(
-                            Math.abs(flightDirectorState.bearingErrorDegrees)
-                          )+
-                          "°"
-                        : "Δ —"}
-                      {" · "}
-                      XTE ~
-                      {flightDirectorState.deviationMeters!==null
-                        ? Math.round(flightDirectorState.deviationMeters)
-                        : "—"}
-                      {" m · "}
-                      {flightDirectorState.confidence}%
-                    </small>
-                  </div>
-                  <div className="astra-flight-director-reticle" aria-hidden="true">
-                    <i />
-                    <b
-                      style={{
-                        transform:
-                          "translateX("+
-                          Math.round(flightDirectorState.cueOffset*34)+
-                          "px)"
-                      }}
-                    />
-                  </div>
-                </div>
-              )}
-
-              {driftBridgeEstimate && driftBridgeEstimate.phase!=="inactive" && (
-                <div
-                  className={"astra-drift-bridge-chip "+driftBridgeEstimate.phase}
-                  aria-live="polite"
-                  aria-label={tr(
-                    "Puente inercial ASTRA",
-                    "ASTRA inertial bridge"
-                  )}
-                >
-                  <span>ASTRA DRIFT BRIDGE</span>
-                  <strong>
-                    {driftBridgeEstimate.phase==="holding"
-                      ? tr("DR HOLD","DR HOLD")
-                      : tr("FIX GPS PERDIDO","GPS FIX LOST")}
-                  </strong>
-                  <small>
-                    {(driftBridgeEstimate.elapsedMs/1000).toFixed(1)} s
-                    {" · "}
-                    {driftBridgeEstimate.phase==="holding"
-                      ? driftBridgeEstimate.confidence+"%"
-                      : "0%"}
-                  </small>
-                </div>
-              )}
-
-              {orbitalLookahead && (
-                <div
-                  className="orbital-lookahead-chip"
-                  aria-label={tr(
-                    "Horizonte predictivo Orbital Lookahead",
-                    "Orbital Lookahead predictive horizon"
-                  )}
-                >
-                  <span>ORBITAL LOOKAHEAD</span>
-                  <strong>
-                    {Math.round(orbitalLookahead.lookaheadMeters)} m
-                  </strong>
-                </div>
-              )}
-
               {trajectoryPrediction && trajectoryPrediction.risk!=="stable" && (
                 <div
                   className={"trajectory-shield-chip "+trajectoryPrediction.risk}
                   aria-live="assertive"
                 >
-                  <span>TRAJECTORY SHIELD</span>
+                  <span>{tr("Aviso de ruta","Route alert")}</span>
                   <strong>
                     {trajectoryPrediction.risk==="warning"
                       ? tr("CORRIGE RUMBO","CORRECT COURSE")
@@ -3847,30 +3714,6 @@ export default function NaviboriMap({
                 </div>
               )}
 
-              <div
-                className="photon-corridor-meter"
-                aria-label={tr(
-                  "Progreso de Photon Corridor",
-                  "Photon Corridor progress"
-                )}
-              >
-                <div>
-                  <span>PHOTON CORRIDOR</span>
-                  <strong>
-                    {Math.round((navigationProgress?.progressRatio ?? 0)*100)}%
-                  </strong>
-                </div>
-                <i aria-hidden="true">
-                  <b
-                    style={{
-                      width:
-                        Math.round(
-                          (navigationProgress?.progressRatio ?? 0)*100
-                        )+"%"
-                    }}
-                  />
-                </i>
-              </div>
             </div>
 
             {gpsActive && (
@@ -3919,85 +3762,6 @@ export default function NaviboriMap({
                 )}
               </div>
             )}
-            {!gpsActive && <div className="navibori-navigation-footer">
-              <div>
-                <span>ETA</span>
-                <strong>
-                  {formatArrivalTime(
-                    navigationProgress?.remainingSeconds ??
-                    routeResult.durationSeconds,
-                    deviceLocale.locale
-                  )}
-                </strong>
-              </div>
-              <div>
-                <span>{deviceLocale.language==="en" ? "Remaining" : "Restante"}</span>
-                <strong>
-                  {formatDistance(
-                    navigationProgress?.remainingMeters ??
-                    routeResult.distanceMeters
-                  )}
-                </strong>
-              </div>
-              <div>
-                <span>{copy.speed}</span>
-                <strong>
-                  {gpsSpeedKph!==null ? gpsSpeedKph+" km/h" : "—"}
-                </strong>
-              </div>
-              <div>
-                <span>{copy.gps}</span>
-                <strong>
-                  {signal.current&&gpsAccuracy!==null
-                    ? gpsAccuracy<=20
-                      ? copy.excellent+" · ±"+Math.round(gpsAccuracy)+" m"
-                      : gpsAccuracy<=50
-                        ? copy.good+" · ±"+Math.round(gpsAccuracy)+" m"
-                        : copy.weak+" · ±"+Math.round(gpsAccuracy)+" m"
-                    : signalCopy.gps}
-                </strong>
-              </div>
-              <button
-                type="button"
-                className={followGps ? "active" : ""}
-                onClick={recenterGpsCamera}
-              >
-                {followGps ? copy.following : copy.recenter}
-              </button>
-              <button
-                type="button"
-                className={voiceEnabled ? "active" : ""}
-                onClick={()=>{
-                  const next=!voiceEnabled;
-                  voiceEnabledRef.current=next;
-                  setVoiceEnabled(next);
-                  if(!next){
-                    if("speechSynthesis" in window){
-                      window.speechSynthesis.cancel();
-                    }
-                    lastSpokenInstructionRef.current="";
-                  }else if(nextCue){
-                    speakNavigation(
-                      localizeManeuver(nextCue.instruction,deviceLocale.language),
-                      nextCue.distanceMeters,
-                      true
-                    );
-                  }
-                }}
-              >
-                {(voiceEnabled ? "🔊 " : "🔇 ")+copy.voice}
-              </button>
-              <button
-                type="button"
-                className="danger"
-                onClick={()=>{
-                  stopGpsNavigation();
-                  setLocationStatus(tr("GPS detenido. La ruta permanece visible.","GPS stopped. The route remains visible."));
-                }}
-              >
-                {copy.finish}
-              </button>
-            </div>}
           </aside>
         )}
 
