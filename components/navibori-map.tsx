@@ -46,6 +46,7 @@ import {
 } from "@/lib/commerce/in-map-routing";
 import {commerceMatchesSearch} from "@/lib/commerce/map-search";
 import {localizeManeuver} from "@/lib/commerce/maneuver-localization";
+import {formatNaviboriDistance,formatNaviboriManeuverDistance,resolveNaviboriDistanceUnits,type NaviboriDistancePreference} from "@/lib/commerce/distance-display";
 import {canNavigateCommerce} from "@/lib/commerce/navigation-eligibility";
 import {
   COMMERCE_MAP_REFRESH_MS,
@@ -179,12 +180,6 @@ const travelModes:Array<{
   {value:"scooter",icon:"🛴",label:"Scooter",ariaLabel:"scooter"}
 ];
 
-function formatDistance(meters:number){
-  if(!Number.isFinite(meters)||meters<0) return "—";
-  if(meters<1000) return Math.round(meters)+" m";
-  return (meters/1000).toFixed(1)+" km";
-}
-
 function formatDuration(seconds:number){
   const minutes=Math.max(1,Math.round(seconds/60));
   if(minutes<60) return minutes+" min";
@@ -218,22 +213,6 @@ function routeLineColor(mode:InMapRouteMode){
     case "scooter": return "#e87916";
     default: return "#0878f9";
   }
-}
-
-function formatManeuverDistance(
-  meters:number,
-  language:"es"|"en"="es"
-){
-  if(meters<30) return language==="en" ? "Now" : "Ahora";
-  const prefix=language==="en" ? "In " : "En ";
-  if(language==="es"){
-    if(meters<1000) return prefix+Math.max(10,Math.round(meters/10)*10)+" m";
-    return prefix+(meters/1000).toFixed(1)+" km";
-  }
-  if(meters<1000){
-    return prefix+Math.max(25,Math.round(meters*3.28084/25)*25)+" ft";
-  }
-  return prefix+(meters/1609.344).toFixed(1)+" mi";
 }
 
 function ensureRouteArrowImage(map:maplibregl.Map){
@@ -465,6 +444,23 @@ export default function NaviboriMap({
     deviceLocale.language==="en" ? en : es;
 
   const [languageSource,setLanguageSource]=useState<"device"|"peripheral">("device");
+  const [distancePreference,setDistancePreference]=useState<NaviboriDistancePreference>("auto");
+  const distanceUnits=resolveNaviboriDistanceUnits(distancePreference,deviceLocale.locale);
+  const formatDistance=(meters:number)=>formatNaviboriDistance(meters,distanceUnits);
+  const formatManeuverDistance=(meters:number,language:"es"|"en"=deviceLocale.language)=>
+    formatNaviboriManeuverDistance(meters,language,distanceUnits);
+  useEffect(()=>{
+    try{
+      const saved=window.localStorage.getItem("navibori:distance-preference");
+      if(saved==="imperial"||saved==="metric")setDistancePreference(saved);
+    }catch{
+      // Distance formatting must also work in private browsing.
+    }
+  },[]);
+  const updateDistancePreference=(next:NaviboriDistancePreference)=>{
+    setDistancePreference(next);
+    try{window.localStorage.setItem("navibori:distance-preference",next);}catch{}
+  };
   const [businesses,setBusinesses]=useState<CommerceProfile[]>(initialBusinesses);
   const [source,setSource]=useState<"live"|"demo">(initialSource);
   const [commerceRefreshState,setCommerceRefreshState]=useState<
@@ -537,6 +533,7 @@ export default function NaviboriMap({
   const [addressCopied,setAddressCopied]=useState(false);
   const [diagnosticsCopyStatus,setDiagnosticsCopyStatus]=useState<"idle"|"success"|"error">("idle");
   const [searchTerm,setSearchTerm]=useState("");
+  const [nearbyOpen,setNearbyOpen]=useState(false);
   const [searchOpen,setSearchOpen]=useState(false);
   const [routeModePickerOpen,setRouteModePickerOpen]=useState(false);
   const [previewingLocation,setPreviewingLocation]=useState(false);
@@ -1111,15 +1108,9 @@ export default function NaviboriMap({
       glyph.className="vector-gate-glyph";
       glyph.textContent=vectorGateGlyph(nextCue?.step.modifier);
 
-      const phase=document.createElement("em");
-      phase.className="vector-gate-phase";
-      phase.textContent=phaseLabel;
-
-      const distance=document.createElement("b");
-      distance.className="vector-gate-distance";
-      distance.textContent=distanceLabel;
-
-      element.append(frame,glyph,phase,distance);
+      // The maneuver banner already contains distance and phase context.
+      // The map marker shows only the turn arrow to preserve road visibility.
+      element.append(frame,glyph);
 
       nextTurnMarkerRef.current=new maplibregl.Marker({
         element,
@@ -1132,73 +1123,9 @@ export default function NaviboriMap({
         .addTo(map);
     }
 
-    if(gpsActive && navigationProgress){
-      const element=document.createElement("div");
-      element.className="navibori-photon-cursor";
-      element.setAttribute(
-        "aria-label",
-        tr("Posición sobre Photon Corridor","Position on Photon Corridor")
-      );
-      element.innerHTML="<span></span><i></i>";
-      photonCursorRef.current=new maplibregl.Marker({
-        element,
-        anchor:"center"
-      })
-        .setLngLat([
-          navigationProgress.snapped.longitude,
-          navigationProgress.snapped.latitude
-        ])
-        .addTo(map);
-    }
-
-    if(gpsActive && orbitalLookahead){
-      const element=document.createElement("div");
-      element.className="navibori-orbital-target";
-      element.setAttribute(
-        "aria-label",
-        tr(
-          "Punto de anticipación Orbital Lookahead",
-          "Orbital Lookahead guidance target"
-        )
-      );
-      element.innerHTML="<span></span><i></i>";
-      orbitalTargetRef.current=new maplibregl.Marker({
-        element,
-        anchor:"center"
-      })
-        .setLngLat([
-          orbitalLookahead.coordinate.longitude,
-          orbitalLookahead.coordinate.latitude
-        ])
-        .addTo(map);
-    }
-
-    if(
-      gpsActive &&
-      trajectoryPrediction &&
-      trajectoryPrediction.risk!=="stable"
-    ){
-      const element=document.createElement("div");
-      element.className=
-        "navibori-trajectory-ghost "+trajectoryPrediction.risk;
-      element.setAttribute(
-        "aria-label",
-        tr(
-          "Posición proyectada por Trajectory Shield",
-          "Trajectory Shield projected position"
-        )
-      );
-      element.innerHTML="<span></span><i></i>";
-      trajectoryGhostRef.current=new maplibregl.Marker({
-        element,
-        anchor:"center"
-      })
-        .setLngLat([
-          trajectoryPrediction.futureCoordinate.longitude,
-          trajectoryPrediction.futureCoordinate.latitude
-        ])
-        .addTo(map);
-    }
+    // Orbital Lookahead and Photon Corridor remain in navigation calculations.
+    // Their extra blue map pins and projected ghost are not needed by drivers.
+    // GPS position, selected destination and next-turn marker stay visible.
 
     return ()=>{
       nextTurnMarkerRef.current?.remove();
@@ -1221,13 +1148,7 @@ export default function NaviboriMap({
     nextCue?.distanceMeters,
     vectorGateState,
     deviceLocale.language,
-    navigationProgress?.snapped.latitude,
-    navigationProgress?.snapped.longitude,
-    orbitalLookahead?.coordinate.latitude,
-    orbitalLookahead?.coordinate.longitude,
-    trajectoryPrediction?.futureCoordinate.latitude,
-    trajectoryPrediction?.futureCoordinate.longitude,
-    trajectoryPrediction?.risk,
+    distanceUnits,
     routeResult,
     selected?.mapLocation?.latitude,
     selected?.mapLocation?.longitude
@@ -2073,6 +1994,7 @@ export default function NaviboriMap({
     setSearchOpen(false);
     setSearchTerm("");
     setRouteModePickerOpen(false);
+    setNearbyOpen(false);
     previewRequestIdRef.current+=1;
     setPreviewingLocation(false);
     // The selection effect normally owns focus animations. Triggering
@@ -2085,33 +2007,6 @@ export default function NaviboriMap({
         duration:650
       });
     }
-  }
-
-  function navigateToNearbyBusiness(
-    business:CommerceProfile,
-    routeMode:InMapRouteMode
-  ){
-    if(!canNavigateCommerce(business,source)){
-      focusBusiness(business);
-      setLocationStatus(
-        source==="live"
-          ? tr(
-            "Este comercio todavía no tiene una ubicación LIVE verificada para navegación.",
-            "This business does not yet have a verified LIVE location for navigation."
-          )
-          : tr(
-            "Este destino DEMO no tiene coordenadas válidas para probar navegación.",
-            "This DEMO destination does not have valid coordinates for navigation testing."
-          )
-      );
-      return;
-    }
-
-    focusBusiness(business);
-    setPendingNavigation({
-      slug:business.slug,
-      mode:routeMode
-    });
   }
 
   function showUserLocation(next:RouteCoordinate){
@@ -3598,6 +3493,7 @@ export default function NaviboriMap({
       data-exodock-state={exoDockState}
       data-gravity-lens={gravityLensPhase}
       data-navigation-active={gpsActive ? "true" : "false"}
+      data-distance-units={distanceUnits}
       data-novascene-state={buildings3DState}
       data-novascene-visible={buildingRenderedCount}
       data-novascene-total={buildingCount}
@@ -4269,6 +4165,24 @@ export default function NaviboriMap({
                 window.dispatchEvent(new Event(NAVIBORI_LOCALE_CHANGE_EVENT));
               }}>{tr("Automático","Auto")}</button>
             </div>
+            <div className="navibori-distance-preferences" role="group"
+              aria-label={tr("Unidades de distancia","Distance units")}>
+              <span>{tr("Unidades de distancia","Distance units")}</span>
+              <div>
+                {([
+                  ["auto",tr("Automático","Automatic")],
+                  ["imperial",tr("Millas y pies","Miles and feet")],
+                  ["metric",tr("Kilómetros y metros","Kilometers and meters")]
+                ] as const).map(([value,label])=>(
+                  <button type="button" key={value}
+                    aria-pressed={distancePreference===value}
+                    className={distancePreference===value?"active":""}
+                    onClick={()=>updateDistancePreference(value)}>
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
             <small className="full-map-menu-locale">
               {deviceLocale.language==="en" ? "Language" : "Idioma"} · {deviceLocale.locale} · {
                 languageSource==="peripheral"
@@ -4294,70 +4208,42 @@ export default function NaviboriMap({
           </button>
         )}
 
-        {userLocation && nearbyBusinesses.length>0 && !gpsActive && !menuOpen && (
-          <aside className="nearby-businesses-panel" aria-label="Comercios cerca de mí">
-            <div className="nearby-businesses-heading">
-              <div>
-                <span>{deviceLocale.language==="en" ? "Near me" : "Cerca de mí"}</span>
-                <strong>{deviceLocale.language==="en" ? "Nearby businesses" : "Comercios próximos"}</strong>
+        {userLocation && nearbyBusinesses.length>0 && !gpsActive &&
+          !menuOpen && !selected && !searchOpen && (
+          nearbyOpen ? (
+            <aside className="nearby-businesses-panel navibori-nearby-compact"
+              aria-label={tr("Comercios cercanos","Nearby businesses")}>
+              <div className="nearby-businesses-heading">
+                <strong>{tr("Comercios cercanos","Nearby businesses")}</strong>
+                <button type="button" className="navibori-nearby-close"
+                  aria-label={tr("Cerrar comercios cercanos","Close nearby businesses")}
+                  onClick={()=>setNearbyOpen(false)}>×</button>
               </div>
-              {gpsAccuracy!==null && (
-                <small>GPS ±{Math.round(gpsAccuracy)} m</small>
-              )}
-            </div>
-
-            <div className="nearby-businesses-list">
-              {nearbyBusinesses.map(({business,distanceMeters})=>(
-                <article
-                  key={business.id}
-                  className={"nearby-business-item "+(
-                    business.slug===selectedSlug ? "selected" : ""
-                  )}
-                >
-                  <button
-                    type="button"
+              <div className="nearby-businesses-list">
+                {nearbyBusinesses.map(({business,distanceMeters})=>(
+                  <button type="button" key={business.id}
                     className="nearby-business-main"
-                    onClick={()=>focusBusiness(business)}
-                  >
-                    <span>
-                      {deviceLocale.language==="en" ? "Approx. " : "Aprox. "}
-                      {formatDistance(distanceMeters)}
-                      {deviceLocale.language==="en" ? " · straight-line" : " · en línea directa"}
-                    </span>
+                    onClick={()=>focusBusiness(business)}>
                     <strong>{business.name}</strong>
-                    <small>
-                      {business.mapLocation?.address ?? business.locationLabel}
-                    </small>
+                    <small>{tr("Aprox. ","Approx. ")}
+                      {formatDistance(distanceMeters)}
+                      {tr(" en línea directa"," straight-line")}</small>
                   </button>
-
-                  {canNavigateCommerce(business,source) ? (
-                    <div className="nearby-business-route-buttons">
-                      {travelModes.map((travel)=>(
-                        <button
-                          type="button"
-                          key={travel.value}
-                          onClick={()=>navigateToNearbyBusiness(business,travel.value)}
-                          aria-label={(deviceLocale.language==="en" ? "Navigate by " : "Navegar en ")+copy.modeShort[travel.value]+" · "+business.name}
-                          title={copy.modeShort[travel.value]}
-                        >
-                          <span aria-hidden="true">{travel.icon}</span>
-                          <small>{copy.modeShort[travel.value]}</small>
-                        </button>
-                      ))}
-                    </div>
-                  ) : (
-                    <span className="nearby-business-demo">DEMO</span>
-                  )}
-                </article>
-              ))}
-            </div>
-          </aside>
+                ))}
+              </div>
+            </aside>
+          ) : (
+            <button type="button" className="navibori-nearby-toggle"
+              onClick={()=>setNearbyOpen(true)}>
+              {tr("Comercios cercanos","Nearby businesses")}
+              {" · "}{nearbyBusinesses.length}
+            </button>
+          )
         )}
-
 
         <aside
           className={"business-route-card "+(
-            gpsActive && routeResult ? "navigation-active" : ""
+            gpsActive && routeResult ? "navigation-active" : selected ? "has-selection" : "empty"
           )}
           aria-live="polite"
         >
@@ -4367,6 +4253,14 @@ export default function NaviboriMap({
                 <span className={"commerce-demo-badge "+(selected.demo ? "" : "live")}>
                   {selected.demo ? "DEMO" : "LIVE"}
                 </span>
+                {!gpsActive && (
+                  <button type="button" className="navibori-business-dismiss"
+                    aria-label={tr("Cerrar comercio","Close business")}
+                    onClick={()=>{
+                      clearRoute();
+                      setSelectedSlug(null);
+                    }}>×</button>
+                )}
                 {gpsActive && (
                   <span className="gps-live-badge">
                     {signalCopy.route} · {signalCopy.gps}
@@ -4458,41 +4352,9 @@ export default function NaviboriMap({
                     </div>
                   )}
 
-                  {routeResult && nextCue && !arrived && (
-                    <div className="navibori-turn-card" aria-live="polite">
-                      <span>{formatManeuverDistance(nextCue.distanceMeters,deviceLocale.language)}</span>
-                      <strong>{localizeManeuver(nextCue.instruction,deviceLocale.language)}</strong>
-                    </div>
-                  )}
-
-                  {routeResult && (
-                    <div className="navibori-route-summary">
-                      <div>
-                        <span>{deviceLocale.language==="en" ? "Remaining distance" : "Distancia restante"}</span>
-                        <strong>{formatDistance(routeResult.distanceMeters)}</strong>
-                      </div>
-                      <div>
-                        <span>{deviceLocale.language==="en" ? "Estimated time" : "Tiempo estimado"}</span>
-                        <strong>{formatDuration(routeResult.durationSeconds)}</strong>
-                      </div>
-                      <div>
-                        <span>{deviceLocale.language==="en" ? "Mode" : "Modo"}</span>
-                        <strong>{routeModeIcon(routeResult.mode)} {routeModeLabel(routeResult.mode,deviceLocale.locale)}</strong>
-                      </div>
-                      {gpsActive && (
-                        <div>
-                          <span>GPS</span>
-                          <strong>
-                            {gpsAccuracy!==null
-                              ? "±"+Math.round(gpsAccuracy)+" m"
-                              : deviceLocale.language==="en" ? "Active" : "Activo"}
-                          </strong>
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {routeResult && routeResult.steps.length>0 && (
+                  <details className="navibori-route-more">
+                    <summary>{tr("Más opciones","More options")}</summary>
+                    {routeResult && routeResult.steps.length>0 && (
                     <section className="navibori-directions-panel">
                       <button
                         type="button"
@@ -4610,18 +4472,20 @@ export default function NaviboriMap({
                         </a>
                       </>
                     )}
-                    <Link href={"/comercios/"+selected.slug}>{tr("Ver comercio","View business")}</Link>
+                    
                   </div>
+                  </details>
+                  <Link className="navibori-view-business"
+                    href={"/comercios/"+selected.slug}>
+                    {tr("Ver comercio","View business")}
+                  </Link>
 
-                  {demoRoute && (
+                  {demoRoute && routeResult && (
                     <div className="navibori-demo-route-warning" role="status">
                       {tr("Ruta DEMO: destino ficticio.","DEMO route: fictional destination.")}
                     </div>
                   )}
-                  <small>
-                    {tr("La navegación depende de la precisión del GPS y la cartografía disponible.",
-                      "Navigation depends on GPS accuracy and available map data.")}
-                  </small>
+
                 </>
               ) : (
                 <>

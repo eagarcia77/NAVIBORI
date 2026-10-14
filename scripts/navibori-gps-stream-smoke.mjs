@@ -68,8 +68,17 @@ try{
       phase="requesting first geolocation";
       await page.getByRole("button",{name:"Obtener mi ubicación real"}).click();
       await page.waitForSelector('.map-panel[data-gps-probe="received"]',{timeout:25000});
-      await page.locator(".nearby-business-main").first().waitFor({timeout:20000});
+      const nearbyToggle=page.locator(".navibori-nearby-toggle");
+      await nearbyToggle.waitFor({timeout:20000});
+      if(await page.locator(".nearby-businesses-panel").count()){
+        failures.push(name+": nearby list must be collapsed until requested");
+      }
+      await nearbyToggle.click();
+      await page.locator(".nearby-business-main").first().waitFor({timeout:15000});
       await page.locator(".nearby-business-main").first().click();
+      if(await page.locator(".nearby-businesses-panel").count()){
+        failures.push(name+": nearby list must close after selecting a business");
+      }
       phase="previewing the selected travel mode";
       await page.getByRole("button",{name:"Cómo llegar",exact:true}).click();
       await page.locator(".business-route-mode-actions button").first().click();
@@ -105,6 +114,21 @@ try{
       }
       if(await page.locator(".navibori-3d-navigation-status").count()){
         failures.push(name+": developer 3D telemetry should not obscure GPS navigation");
+      }
+      if(await page.locator(".navibori-photon-cursor,.navibori-orbital-target,.navibori-trajectory-ghost").count()){
+        failures.push(name+": decorative GPS/trajectory map markers should not cover road directions");
+      }
+      if(await page.locator(".vector-gate-phase,.vector-gate-distance").count()){
+        failures.push(name+": duplicate turn labels should be removed from the map marker");
+      }
+      if(await page.locator(".navibori-drive-summary").isVisible()){
+        const units=await page.locator(".map-panel").getAttribute("data-distance-units");
+        if(units!=="imperial"){
+          failures.push(name+": Puerto Rico automatic distance unit must be imperial, got "+units);
+        }
+        if(!(await page.locator(".navibori-drive-summary").innerText()).includes("mi")){
+          failures.push(name+": remaining distance must match maneuver units in miles/feet");
+        }
       }
       phase="GPS watch active";
       const initial=Number(await page.locator(".map-panel").getAttribute("data-gps-stream-fixes"));
