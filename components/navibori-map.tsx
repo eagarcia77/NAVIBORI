@@ -4242,7 +4242,7 @@ export default function NaviboriMap({
 
         <aside
           className={"business-route-card "+(
-            gpsActive && routeResult ? "navigation-active" : ""
+            gpsActive && routeResult ? "navigation-active" : selected ? "has-selection" : "empty"
           )}
           aria-live="polite"
         >
@@ -4252,6 +4252,14 @@ export default function NaviboriMap({
                 <span className={"commerce-demo-badge "+(selected.demo ? "" : "live")}>
                   {selected.demo ? "DEMO" : "LIVE"}
                 </span>
+                {!gpsActive && (
+                  <button type="button" className="navibori-business-dismiss"
+                    aria-label={tr("Cerrar comercio","Close business")}
+                    onClick={()=>{
+                      clearRoute();
+                      setSelectedSlug(null);
+                    }}>×</button>
+                )}
                 {gpsActive && (
                   <span className="gps-live-badge">
                     {signalCopy.route} · {signalCopy.gps}
@@ -4343,41 +4351,9 @@ export default function NaviboriMap({
                     </div>
                   )}
 
-                  {routeResult && nextCue && !arrived && (
-                    <div className="navibori-turn-card" aria-live="polite">
-                      <span>{formatManeuverDistance(nextCue.distanceMeters,deviceLocale.language)}</span>
-                      <strong>{localizeManeuver(nextCue.instruction,deviceLocale.language)}</strong>
-                    </div>
-                  )}
-
-                  {routeResult && (
-                    <div className="navibori-route-summary">
-                      <div>
-                        <span>{deviceLocale.language==="en" ? "Remaining distance" : "Distancia restante"}</span>
-                        <strong>{formatDistance(routeResult.distanceMeters)}</strong>
-                      </div>
-                      <div>
-                        <span>{deviceLocale.language==="en" ? "Estimated time" : "Tiempo estimado"}</span>
-                        <strong>{formatDuration(routeResult.durationSeconds)}</strong>
-                      </div>
-                      <div>
-                        <span>{deviceLocale.language==="en" ? "Mode" : "Modo"}</span>
-                        <strong>{routeModeIcon(routeResult.mode)} {routeModeLabel(routeResult.mode,deviceLocale.locale)}</strong>
-                      </div>
-                      {gpsActive && (
-                        <div>
-                          <span>GPS</span>
-                          <strong>
-                            {gpsAccuracy!==null
-                              ? "±"+Math.round(gpsAccuracy)+" m"
-                              : deviceLocale.language==="en" ? "Active" : "Activo"}
-                          </strong>
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {routeResult && routeResult.steps.length>0 && (
+                  <details className="navibori-route-more">
+                    <summary>{tr("Más opciones","More options")}</summary>
+                    {routeResult && routeResult.steps.length>0 && (
                     <section className="navibori-directions-panel">
                       <button
                         type="button"
@@ -4495,18 +4471,20 @@ export default function NaviboriMap({
                         </a>
                       </>
                     )}
-                    <Link href={"/comercios/"+selected.slug}>{tr("Ver comercio","View business")}</Link>
+                    
                   </div>
+                  </details>
+                  <Link className="navibori-view-business"
+                    href={"/comercios/"+selected.slug}>
+                    {tr("Ver comercio","View business")}
+                  </Link>
 
-                  {demoRoute && (
+                  {demoRoute && routeResult && (
                     <div className="navibori-demo-route-warning" role="status">
                       {tr("Ruta DEMO: destino ficticio.","DEMO route: fictional destination.")}
                     </div>
                   )}
-                  <small>
-                    {tr("La navegación depende de la precisión del GPS y la cartografía disponible.",
-                      "Navigation depends on GPS accuracy and available map data.")}
-                  </small>
+
                 </>
               ) : (
                 <>
