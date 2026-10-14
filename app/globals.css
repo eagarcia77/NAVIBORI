@@ -4093,3 +4093,45 @@ html[data-motion="reduced"] .navibori-drift-bridge-marker i{
   .auth-shell{padding:16px}
   .auth-resend-form button{width:100%}
 }
+
+
+/* Apple Maps CarPlay handoff (NOT a native NAVIBORI CarPlay app).
+   High-visibility action; no fake DEMO routing or menu scrolling required. */
+.navibori-apple-maps-handoff{
+  display:grid;
+  gap:6px;
+  padding:8px 9px;
+  border:1px solid #d4e2e9;
+  border-radius:12px;
+  background:#f6f9fc;
+}
+.navibori-apple-maps-link{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
+  min-height:46px;
+  padding:10px 12px;
+  border-radius:10px;
+  color:#fff;
+  background:#173f61;
+  text-decoration:none;
+  text-align:center;
+  font-weight:800;
+  font-size:.81rem;
+}
+.navibori-apple-maps-link:focus-visible{
+  outline:3px solid #1787ec;
+  outline-offset:3px;
+}
+.navibori-apple-maps-handoff small{
+  line-height:1.4;
+  font-size:.68rem;
+  color:#485f70;
+}
+@media(max-width:700px){
+  .navibori-apple-maps-handoff{
+    padding:6px 8px;
+    gap:4px;
+  }
+}

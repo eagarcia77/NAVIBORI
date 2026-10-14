@@ -48,7 +48,7 @@ import {commerceMatchesSearch} from "@/lib/commerce/map-search";
 import {currentVerifiedPromotions} from "@/lib/commerce/verified-promotions";
 import {localizeManeuver} from "@/lib/commerce/maneuver-localization";
 import {formatNaviboriDistance,formatNaviboriManeuverDistance,resolveNaviboriDistanceUnits,type NaviboriDistancePreference} from "@/lib/commerce/distance-display";
-import {canNavigateCommerce} from "@/lib/commerce/navigation-eligibility";
+import {canNavigateCommerce,canHandoffCommerceDirections} from "@/lib/commerce/navigation-eligibility";
 import {
   COMMERCE_MAP_REFRESH_MS,
   shouldRefreshCommerceMap
@@ -675,6 +675,7 @@ export default function NaviboriMap({
     [selected]
   );
   const canRoute=canNavigateCommerce(selected,source);
+  const appleMapsRouteAvailable=canHandoffCommerceDirections(selected,source);
 
   const demoRoute=Boolean(source==="demo" && selected?.demo && selected?.mapLocation);
   const signal=navigationSignalState(
@@ -4333,6 +4334,30 @@ export default function NaviboriMap({
                 )}
               </div>
 
+              {!gpsActive && (
+                <div className="navibori-apple-maps-handoff" aria-label={tr(
+                  "Abrir Apple Maps", "Open Apple Maps"
+                )}>
+                  <a className="navibori-apple-maps-link"
+                    href={appleMapsRouteAvailable
+                      ? appleDirectionUrl(routeResult?.mode ?? lastRouteMode)
+                      : "https://maps.apple.com/"}
+                    target="_blank" rel="noopener noreferrer"
+                    data-external-directions={appleMapsRouteAvailable?"verified":"without-destination"}>
+                    <span aria-hidden="true"></span>
+                    {appleMapsRouteAvailable
+                      ? tr("Abrir ruta en Apple Maps","Open directions in Apple Maps")
+                      : tr("Abrir Apple Maps","Open Apple Maps")}
+                    <span aria-hidden="true">↗</span>
+                  </a>
+                  <small>{appleMapsRouteAvailable
+                    ? tr("Si el iPhone está conectado a CarPlay, puedes continuar allí la navegación con Apple Maps.",
+                      "When your iPhone is connected to CarPlay, you can continue navigation with Apple Maps.")
+                    : tr("Este destino no está verificado o es DEMO. Apple Maps se abrirá sin una ruta ficticia; busca allí un destino real.",
+                      "This destination is unverified or DEMO. Apple Maps opens without a fictional route; choose a real destination there.")}</small>
+                </div>
+              )}
+
               {!gpsActive && visiblePromotions.length>0 && (
                 <aside className="navibori-verified-promotions"
                   aria-label={tr("Ofertas vigentes","Current offers")}>
@@ -4524,23 +4549,11 @@ export default function NaviboriMap({
                         {tr("Limpiar ruta","Clear route")}
                       </button>
                     )}
-                    {!demoRoute && (
-                      <>
-                        <a
-                          href={appleDirectionUrl(routeResult?.mode ?? lastRouteMode)}
-                          target="_blank"
-                          rel="noreferrer"
-                        >
-                           Apple Maps / CarPlay
-                        </a>
-                        <a
-                          href={directionUrl(routeResult?.mode ?? lastRouteMode)}
-                          target="_blank"
-                          rel="noreferrer"
-                        >
-                          Google Maps / Android Auto
-                        </a>
-                      </>
+                    {appleMapsRouteAvailable && (
+                      <a href={directionUrl(routeResult?.mode ?? lastRouteMode)}
+                        target="_blank" rel="noopener noreferrer">
+                        {tr("Abrir ruta en Google Maps","Open directions in Google Maps")}
+                      </a>
                     )}
                     
                   </div>
