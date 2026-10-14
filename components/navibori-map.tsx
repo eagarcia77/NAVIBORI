@@ -4588,6 +4588,17 @@ export default function NaviboriMap({
               <strong>{tr("Busca un comercio","Find a business")}</strong>
               <span>{tr("Busca arriba o selecciona un pin del mapa.",
                 "Search above or select a pin on the map.")}</span>
+              <a className="navibori-apple-maps-link navibori-apple-maps-empty-shortcut"
+                href="https://maps.apple.com/"
+                target="_blank" rel="noopener noreferrer"
+                data-external-directions="without-destination"
+                aria-label={tr("Abrir Apple Maps sin destino","Open Apple Maps without a destination")}>
+                <span aria-hidden="true"></span>
+                {tr("Abrir Apple Maps","Open Apple Maps")}
+                <span aria-hidden="true">↗</span>
+              </a>
+              <small>{tr("Puedes elegir un lugar real en Apple Maps y continuar en CarPlay.",
+                "Choose a real destination in Apple Maps and continue in CarPlay.")}</small>
             </>
           )}
 
