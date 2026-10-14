@@ -37,9 +37,9 @@ export function novaSceneBuildingPaint(appearance:NovaSceneAppearance){
     ? ["case",
         ["boolean",["get","estimated"],true],
         ["interpolate",["linear"],["coalesce",["to-number",["get","height"],null],9],
-          3,"#ebe4d9",7,"#d9cfc3",10,"#c7c2ba",15,"#b4c1c7",40,"#92a8af"],
+          3,"#ddd5c9",7,"#c4b9ab",10,"#b0a697",15,"#9ca9a8",40,"#718e96"],
         ["interpolate",["linear"],["coalesce",["to-number",["get","height"],null],9],
-          3,"#d5dedb",8,"#a9c1be",15,"#7da8b4",40,"#5d8c9d"]
+          3,"#c1d1cb",8,"#91ada8",15,"#638f99",40,"#467480"]
       ]
     : ["case",
         ["boolean",["get","estimated"],true],
@@ -81,7 +81,7 @@ export function approachTurnPitch(basePitch:number,distanceMeters:number|null){
 export function novaSceneRoofPaint(appearance:NovaSceneAppearance){
   const height=novaSceneHeightExpression(appearance);
   const color=appearance==="natural"
-    ? ["case",["boolean",["get","estimated"],true],"#f0e8df","#dae4de"]
+    ? ["case",["boolean",["get","estimated"],true],"#e9e0d1","#bdd7cf"]
     : ["case",["boolean",["get","estimated"],true],"#b8e2f0","#83c8e4"];
   return {
     "fill-extrusion-color":color,

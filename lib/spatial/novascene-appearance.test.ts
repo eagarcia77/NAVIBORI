@@ -28,6 +28,12 @@ describe("NovaScene 2.3 architecture rendering",()=>{
     expect(novaSceneBuildingPaint("natural")["fill-extrusion-vertical-gradient"]).toBe(true);
     expect(novaSceneBuildingPaint("natural")["fill-extrusion-opacity"]).toBeGreaterThan(0.85);
   });
+  it("separates natural building facades and roof caps visually without modifying height expressions",()=>{
+    const natural=novaSceneBuildingPaint("natural");
+    expect(JSON.stringify(natural["fill-extrusion-color"])).toContain("#c4b9ab");
+    expect(JSON.stringify(natural["fill-extrusion-height"])).toContain("height");
+    expect(natural["fill-extrusion-vertical-gradient"]).toBe(true);
+  });
   it("keeps junction geometry visible as turn distance decreases",()=>{
     expect(approachTurnPitch(58,null)).toBe(58);
     expect(approachTurnPitch(58,200)).toBe(58);
