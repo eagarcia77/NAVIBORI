@@ -1430,6 +1430,18 @@ export type Database = {
           updated_at: string
         }[]
       }
+      grant_merchant_venue_access: {
+        Args: { p_email: string; p_venue_id: string }
+        Returns: boolean
+      }
+      list_merchant_venue_access: {
+        Args: { p_venue_id: string }
+        Returns: { user_id: string; email: string; created_at: string }[]
+      }
+      revoke_merchant_venue_access: {
+        Args: { p_venue_id: string; p_user_id: string }
+        Returns: boolean
+      }
       get_navibori_vapid_private: { Args: never; Returns: string }
       get_published_spatial_dataset: {
         Args: { p_venue_id: string }
