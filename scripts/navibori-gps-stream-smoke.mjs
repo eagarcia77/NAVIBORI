@@ -79,7 +79,7 @@ try{
         if(!await essentialBar.getByRole("button",{name:"Recentrar en mi ubicación"}).isVisible()){
           failures.push(name+": GPS recenter action missing");
         }
-        if(!await essentialBar.getByRole("button",{name:/instrucciones de voz/i}).isVisible()){
+        if(!await essentialBar.getByRole("button",{name:/(Silenciar instrucciones|Activar instrucciones de voz)/i}).isVisible()){
           failures.push(name+": accessible voice toggle missing");
         }
       }
