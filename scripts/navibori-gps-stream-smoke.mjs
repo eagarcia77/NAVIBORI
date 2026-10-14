@@ -68,6 +68,24 @@ try{
         return map?.getAttribute("data-navigation-active")==="true" &&
           Number(map?.getAttribute("data-gps-stream-fixes")||0)>=1;
       },undefined,{timeout:30000});
+      const essentialBar=page.locator(".navibori-drive-summary");
+      if(!await essentialBar.isVisible()){
+        failures.push(name+": navigation has no visible ETA/distance/voice controls");
+      }else{
+        const text=await essentialBar.innerText();
+        if(!text.includes("Llegada")||!text.includes("Restante")){
+          failures.push(name+": missing essential navigation data: "+text);
+        }
+        if(!await essentialBar.getByRole("button",{name:"Recentrar en mi ubicación"}).isVisible()){
+          failures.push(name+": GPS recenter action missing");
+        }
+        if(!await essentialBar.getByRole("button",{name:/instrucciones de voz/i}).isVisible()){
+          failures.push(name+": accessible voice toggle missing");
+        }
+      }
+      if(await page.locator(".navibori-3d-navigation-status").count()){
+        failures.push(name+": developer 3D telemetry should not obscure GPS navigation");
+      }
       phase="GPS watch active";
       const initial=Number(await page.locator(".map-panel").getAttribute("data-gps-stream-fixes"));
       await new Promise(resolve=>setTimeout(resolve,1450));
