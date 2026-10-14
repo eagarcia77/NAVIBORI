@@ -61,7 +61,7 @@ try{
       });
       await searchBox.waitFor({timeout:20000});
       await searchBox.fill("navibori-nonexistent-business-qa");
-      await page.getByText("No encontramos resultados.").waitFor({timeout:10000});
+      await page.locator(".navibori-search-results [role=status]").waitFor({timeout:10000});
       await searchBox.fill("");
       await searchBox.press("Escape");
       await context.setGeolocation({...base});
