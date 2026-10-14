@@ -43,8 +43,28 @@ with check (
       and b.created_by=(select auth.uid())
       and b.status in ('draft','active')
       and (b.status='active' or b.verification_status<>'pending')
+      and (
+        not business_promotions.active
+        or (
+          b.status='active'
+          and b.verification_status='verified'
+          and b.location_verified=true
+        )
+      )
   )
 );
+
+-- Business data is currently empty; enforce the same input contract at DB
+-- level so malicious clients cannot publish invalid title/date content.
+alter table public.business_promotions
+  add constraint navibori_promotion_title_limits
+  check (char_length(btrim(title)) between 1 and 120);
+alter table public.business_promotions
+  add constraint navibori_promotion_description_limits
+  check (char_length(description)<=1000);
+alter table public.business_promotions
+  add constraint navibori_promotion_chronological_dates
+  check (starts_at is null or ends_at is null or starts_at<=ends_at);
 
 -- Existing sync entry point must not wipe promotions managed independently.
 -- No promotions argument (NULL) means "leave promotions as they are".
