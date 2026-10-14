@@ -1,11 +1,13 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { NAVIBORI_AUTH_CALLBACK_URL } from "@/lib/auth/email-confirmation";
 
 /** Handles the PKCE redirect after the user clicks a Supabase
  * confirmation link. No next URL or arbitrary redirect target is accepted.
  */
 export async function GET(request: Request) {
   const url = new URL(request.url);
+  const trustedOrigin = new URL(NAVIBORI_AUTH_CALLBACK_URL).origin;
   const code = url.searchParams.get("code");
   const tokenHash = url.searchParams.get("token_hash");
   const type = url.searchParams.get("type");
@@ -13,7 +15,7 @@ export async function GET(request: Request) {
   if (!code && !tokenHash) {
     return NextResponse.redirect(new URL(
       "/login?error=" + encodeURIComponent("Falta el código de confirmación."),
-      url.origin
+      trustedOrigin
     ));
   }
 
@@ -28,7 +30,7 @@ export async function GET(request: Request) {
   } else {
     return NextResponse.redirect(new URL(
       "/login?error=" + encodeURIComponent("El enlace de confirmación no es válido."),
-      url.origin
+      trustedOrigin
     ));
   }
 
@@ -36,13 +38,13 @@ export async function GET(request: Request) {
     return NextResponse.redirect(new URL(
       "/login?error=" + encodeURIComponent(
         "No se pudo verificar el enlace. Solicita otro correo de confirmación."
-      ),url.origin
+      ),trustedOrigin
     ));
   }
 
   return NextResponse.redirect(new URL(
     "/login?message=" + encodeURIComponent(
       "Correo verificado correctamente. Ya puedes iniciar sesión."
-    ),url.origin
+    ),trustedOrigin
   ));
 }
