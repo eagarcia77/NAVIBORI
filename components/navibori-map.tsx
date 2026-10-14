@@ -4338,8 +4338,8 @@ export default function NaviboriMap({
 
                   {arrived && (
                     <div className="navibori-arrival-card" role="status">
-                      <span>Destino alcanzado</span>
-                      <strong>Has llegado a {selected.name}.</strong>
+                      <span>{tr("Destino alcanzado","Destination reached")}</span>
+                      <strong>{tr("Has llegado a ","You have arrived at ")}{selected.name}.</strong>
                     </div>
                   )}
 
@@ -4444,7 +4444,7 @@ export default function NaviboriMap({
                           }
                         }}
                       >
-                        {voiceEnabled ? "🔊 Voz activada" : "🔇 Activar voz"}
+                        {voiceEnabled ? tr("🔊 Voz activada","🔊 Voice on") : tr("🔇 Activar voz","🔇 Enable voice")}
                       </button>
                     )}
                     {routeResult && routeResult.steps.length>0 && (
@@ -4453,12 +4453,12 @@ export default function NaviboriMap({
                         className={directionsOpen ? "active" : ""}
                         onClick={()=>setDirectionsOpen((open)=>!open)}
                       >
-                        🧭 Indicaciones
+                        {tr("🧭 Indicaciones","🧭 Directions")}
                       </button>
                     )}
                     {routeResult && (
                       <button type="button" onClick={showFullRoute}>
-                        🗺️ Ver ruta completa
+                        {tr("🗺️ Ver ruta completa","🗺️ Full route")}
                       </button>
                     )}
                     {gpsActive && (
@@ -4469,12 +4469,12 @@ export default function NaviboriMap({
                           setLocationStatus(tr("GPS detenido. La ruta permanece visible.","GPS stopped. The route remains visible."));
                         }}
                       >
-                        Detener GPS
+                        {tr("Detener GPS","Stop GPS")}
                       </button>
                     )}
                     {routeResult && (
                       <button type="button" onClick={clearRoute}>
-                        Limpiar ruta
+                        {tr("Limpiar ruta","Clear route")}
                       </button>
                     )}
                     {!demoRoute && (
@@ -4495,7 +4495,7 @@ export default function NaviboriMap({
                         </a>
                       </>
                     )}
-                    <Link href={"/comercios/"+selected.slug}>Ver comercio</Link>
+                    <Link href={"/comercios/"+selected.slug}>{tr("Ver comercio","View business")}</Link>
                   </div>
 
                   {demoRoute && (
@@ -4511,11 +4511,12 @@ export default function NaviboriMap({
               ) : (
                 <>
                   <div className="business-route-actions">
-                    <button type="button" disabled>Ruta pendiente de verificación</button>
-                    <Link href={"/comercios/"+selected.slug}>Ver comercio</Link>
+                    <button type="button" disabled>{tr("Ruta pendiente de verificación","Route pending verification")}</button>
+                    <Link href={"/comercios/"+selected.slug}>{tr("Ver comercio","View business")}</Link>
                   </div>
                   <small>
-                    Los puntos DEMO no generan rutas GPS reales. Un comercio LIVE necesita dirección y coordenadas verificadas.
+                    {tr("Un comercio necesita coordenadas verificadas para navegación real.",
+                      "A business needs verified coordinates for live navigation.")}
                   </small>
                 </>
               )}
