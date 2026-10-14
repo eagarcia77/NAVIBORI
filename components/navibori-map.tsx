@@ -533,6 +533,7 @@ export default function NaviboriMap({
   const [addressCopied,setAddressCopied]=useState(false);
   const [diagnosticsCopyStatus,setDiagnosticsCopyStatus]=useState<"idle"|"success"|"error">("idle");
   const [searchTerm,setSearchTerm]=useState("");
+  const [nearbyOpen,setNearbyOpen]=useState(false);
   const [searchOpen,setSearchOpen]=useState(false);
   const [routeModePickerOpen,setRouteModePickerOpen]=useState(false);
   const [previewingLocation,setPreviewingLocation]=useState(false);
@@ -1993,6 +1994,7 @@ export default function NaviboriMap({
     setSearchOpen(false);
     setSearchTerm("");
     setRouteModePickerOpen(false);
+    setNearbyOpen(false);
     previewRequestIdRef.current+=1;
     setPreviewingLocation(false);
     // The selection effect normally owns focus animations. Triggering
@@ -2005,33 +2007,6 @@ export default function NaviboriMap({
         duration:650
       });
     }
-  }
-
-  function navigateToNearbyBusiness(
-    business:CommerceProfile,
-    routeMode:InMapRouteMode
-  ){
-    if(!canNavigateCommerce(business,source)){
-      focusBusiness(business);
-      setLocationStatus(
-        source==="live"
-          ? tr(
-            "Este comercio todavía no tiene una ubicación LIVE verificada para navegación.",
-            "This business does not yet have a verified LIVE location for navigation."
-          )
-          : tr(
-            "Este destino DEMO no tiene coordenadas válidas para probar navegación.",
-            "This DEMO destination does not have valid coordinates for navigation testing."
-          )
-      );
-      return;
-    }
-
-    focusBusiness(business);
-    setPendingNavigation({
-      slug:business.slug,
-      mode:routeMode
-    });
   }
 
   function showUserLocation(next:RouteCoordinate){
@@ -4232,66 +4207,38 @@ export default function NaviboriMap({
           </button>
         )}
 
-        {userLocation && nearbyBusinesses.length>0 && !gpsActive && !menuOpen && (
-          <aside className="nearby-businesses-panel" aria-label="Comercios cerca de mí">
-            <div className="nearby-businesses-heading">
-              <div>
-                <span>{deviceLocale.language==="en" ? "Near me" : "Cerca de mí"}</span>
-                <strong>{deviceLocale.language==="en" ? "Nearby businesses" : "Comercios próximos"}</strong>
+        {userLocation && nearbyBusinesses.length>0 && !gpsActive &&
+          !menuOpen && !selected && !searchOpen && (
+          nearbyOpen ? (
+            <aside className="nearby-businesses-panel navibori-nearby-compact"
+              aria-label={tr("Comercios cercanos","Nearby businesses")}>
+              <div className="nearby-businesses-heading">
+                <strong>{tr("Comercios cercanos","Nearby businesses")}</strong>
+                <button type="button" className="navibori-nearby-close"
+                  aria-label={tr("Cerrar comercios cercanos","Close nearby businesses")}
+                  onClick={()=>setNearbyOpen(false)}>×</button>
               </div>
-              {gpsAccuracy!==null && (
-                <small>GPS ±{Math.round(gpsAccuracy)} m</small>
-              )}
-            </div>
-
-            <div className="nearby-businesses-list">
-              {nearbyBusinesses.map(({business,distanceMeters})=>(
-                <article
-                  key={business.id}
-                  className={"nearby-business-item "+(
-                    business.slug===selectedSlug ? "selected" : ""
-                  )}
-                >
-                  <button
-                    type="button"
+              <div className="nearby-businesses-list">
+                {nearbyBusinesses.map(({business,distanceMeters})=>(
+                  <button type="button" key={business.id}
                     className="nearby-business-main"
-                    onClick={()=>focusBusiness(business)}
-                  >
-                    <span>
-                      {deviceLocale.language==="en" ? "Approx. " : "Aprox. "}
-                      {formatDistance(distanceMeters)}
-                      {deviceLocale.language==="en" ? " · straight-line" : " · en línea directa"}
-                    </span>
+                    onClick={()=>focusBusiness(business)}>
                     <strong>{business.name}</strong>
-                    <small>
-                      {business.mapLocation?.address ?? business.locationLabel}
-                    </small>
+                    <small>{tr("Aprox. ","Approx. ")}
+                      {formatDistance(distanceMeters)}
+                      {tr(" en línea directa"," straight-line")}</small>
                   </button>
-
-                  {canNavigateCommerce(business,source) ? (
-                    <div className="nearby-business-route-buttons">
-                      {travelModes.map((travel)=>(
-                        <button
-                          type="button"
-                          key={travel.value}
-                          onClick={()=>navigateToNearbyBusiness(business,travel.value)}
-                          aria-label={(deviceLocale.language==="en" ? "Navigate by " : "Navegar en ")+copy.modeShort[travel.value]+" · "+business.name}
-                          title={copy.modeShort[travel.value]}
-                        >
-                          <span aria-hidden="true">{travel.icon}</span>
-                          <small>{copy.modeShort[travel.value]}</small>
-                        </button>
-                      ))}
-                    </div>
-                  ) : (
-                    <span className="nearby-business-demo">DEMO</span>
-                  )}
-                </article>
-              ))}
-            </div>
-          </aside>
+                ))}
+              </div>
+            </aside>
+          ) : (
+            <button type="button" className="navibori-nearby-toggle"
+              onClick={()=>setNearbyOpen(true)}>
+              {tr("Comercios cercanos","Nearby businesses")}
+              {" · "}{nearbyBusinesses.length}
+            </button>
+          )
         )}
-
 
         <aside
           className={"business-route-card "+(
