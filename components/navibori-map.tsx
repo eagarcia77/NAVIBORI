@@ -1900,7 +1900,8 @@ export default function NaviboriMap({
     // Never re-fit bounds for every progress tick: that starts overlapping
     // MapLibre ease frames and can crash Chromium's _onEaseFrame callback.
     // Preview/follow actions own the camera separately.
-    if(gpsActive || gpsActiveRef.current){
+    if(gpsActive || gpsActiveRef.current || pendingNavigation ||
+      activeNavigationModeRef.current){
       return cleanup;
     }
 
@@ -1923,6 +1924,7 @@ export default function NaviboriMap({
     gpsActive,
     mapReady,
     navigationProgress?.progressRatio,
+    pendingNavigation,
     routeResult,
     userLocation
   ]);
