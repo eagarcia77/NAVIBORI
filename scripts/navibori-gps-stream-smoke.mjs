@@ -55,6 +55,17 @@ try{
     try{
       phase="loading app";
       await page.goto(host,{waitUntil:"domcontentloaded",timeout:45000});
+      // Without a selected venue, Apple Maps remains directly accessible.
+      phase="checking empty-map Apple Maps shortcut";
+      const emptyHandoff=page.locator(".business-route-card.empty .navibori-apple-maps-empty-shortcut");
+      await emptyHandoff.waitFor({timeout:20000});
+      if(!await emptyHandoff.isVisible()){
+        failures.push(name+": Apple Maps shortcut is hidden when no business is selected");
+      }
+      if(await emptyHandoff.getAttribute("href")!=="https://maps.apple.com/" ||
+          await emptyHandoff.getAttribute("data-external-directions")!=="without-destination"){
+        failures.push(name+": empty-map handoff must not invent destination coordinates");
+      }
       // UX 3.0 must expose actual search without opening the sidebar.
       const searchBox=page.getByRole("searchbox",{
         name:"Buscar comercio, categoría o dirección"
