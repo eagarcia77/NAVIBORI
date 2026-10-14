@@ -537,6 +537,8 @@ export default function NaviboriMap({
   const [addressCopied,setAddressCopied]=useState(false);
   const [diagnosticsCopyStatus,setDiagnosticsCopyStatus]=useState<"idle"|"success"|"error">("idle");
   const [searchTerm,setSearchTerm]=useState("");
+  const [searchOpen,setSearchOpen]=useState(false);
+  const [routeModePickerOpen,setRouteModePickerOpen]=useState(false);
   const [pendingNavigation,setPendingNavigation]=useState<{
     slug:string;
     mode:InMapRouteMode;
@@ -2066,6 +2068,9 @@ export default function NaviboriMap({
     lastSpokenInstructionRef.current="";
     const alreadySelected=selectedSlug===business.slug;
     setSelectedSlug(business.slug);
+    setSearchOpen(false);
+    setSearchTerm("");
+    setRouteModePickerOpen(false);
     // The selection effect normally owns focus animations. Triggering
     // a second ease here interrupts the first MapLibre render frame.
     if(alreadySelected && mapRef.current&&!mapRef.current.isMoving()){
@@ -3617,7 +3622,10 @@ export default function NaviboriMap({
               : tr("Abrir menú","Open menu")
           }
           aria-expanded={menuOpen}
-          onClick={()=>setMenuOpen((open)=>!open)}
+          onClick={()=>{
+            setSearchOpen(false);
+            setMenuOpen((open)=>!open);
+          }}
         >
           {menuOpen ? "×" : "☰"}
         </button>
@@ -3765,14 +3773,65 @@ export default function NaviboriMap({
           </aside>
         )}
 
-        <button type="button"
-          className="full-map-brand-pill navibori-map-search-trigger"
-          aria-label={tr("Buscar comercios","Search businesses")}
-          onClick={()=>setMenuOpen(true)}
-        >
-          <span aria-hidden="true">⌕</span>
-          <strong>{tr("Buscar comercios","Search businesses")}</strong>
-        </button>
+        {!gpsActive && (
+          <div className="navibori-search-dock">
+            <div className="navibori-search-field">
+              <span aria-hidden="true">⌕</span>
+              <input
+                type="search"
+                value={searchTerm}
+                placeholder={tr("Buscar comercio, categoría o dirección",
+                  "Search business, category or address")}
+                aria-label={tr("Buscar comercio, categoría o dirección",
+                  "Search business, category or address")}
+                onFocus={()=>setSearchOpen(true)}
+                onChange={(event)=>{
+                  setSearchTerm(event.target.value);
+                  setSearchOpen(true);
+                }}
+                onKeyDown={(event)=>{
+                  if(event.key==="Escape"){
+                    setSearchOpen(false);
+                    event.currentTarget.blur();
+                  }
+                  if(event.key==="Enter"&&searchResults.length){
+                    focusBusiness(searchResults[0]);
+                    setSearchTerm("");
+                    setSearchOpen(false);
+                    event.currentTarget.blur();
+                  }
+                }}
+              />
+              {searchTerm.trim()&&(
+                <button type="button"
+                  aria-label={tr("Borrar búsqueda","Clear search")}
+                  onClick={()=>{
+                    setSearchTerm("");
+                    setSearchOpen(true);
+                  }}>×</button>
+              )}
+            </div>
+            {searchOpen&&searchTerm.trim()&&(
+              <div className="navibori-search-results"
+                aria-label={tr("Resultados de búsqueda","Search results")}>
+                {searchResults.length?searchResults.map(business=>(
+                  <button type="button" key={business.id}
+                    onClick={()=>{
+                      focusBusiness(business);
+                      setSearchTerm("");
+                      setSearchOpen(false);
+                    }}>
+                    <strong>{business.name}</strong>
+                    <small>{business.mapLocation?.address ?? business.locationLabel}</small>
+                  </button>
+                )):(
+                  <p role="status">{tr("No encontramos resultados.",
+                    "No results found.")}</p>
+                )}
+              </div>
+            )}
+          </div>
+        )}
 
         {menuOpen && (
           <aside className="full-map-menu" aria-label="Menú principal NAVIBORI">
@@ -3891,50 +3950,6 @@ export default function NaviboriMap({
               {diagnosticsCopyStatus==="success" && <small role="status">{tr("Informe copiado sin coordenadas GPS.","Report copied without GPS coordinates.")}</small>}
               <small>{tr("La precisión y el estado se actualizan mientras usas NAVIBORI. DEMO no representa navegación GPS real.","Status and accuracy update while NAVIBORI runs. DEMO is not live GPS navigation.")}</small>
             </details>
-
-            <div className="full-map-menu-search">
-              <input
-                type="search"
-                value={searchTerm}
-                onChange={(event)=>setSearchTerm(event.target.value)}
-                placeholder={copy.searchPlaceholder}
-                aria-label={copy.searchPlaceholder}
-              />
-              {searchTerm && (
-                <button
-                  type="button"
-                  onClick={()=>setSearchTerm("")}
-                  aria-label={tr("Limpiar búsqueda","Clear search")}
-                >
-                  ×
-                </button>
-              )}
-            </div>
-
-            {searchResults.length>0 && (
-              <div className="full-map-menu-results">
-                {searchResults.map((business)=>(
-                  <button
-                    type="button"
-                    key={business.id}
-                    onClick={()=>{
-                      focusBusiness(business);
-                      setSearchTerm("");
-                      setMenuOpen(false);
-                    }}
-                  >
-                    <strong>{business.name}</strong>
-                    <small>{business.mapLocation?.address ?? business.locationLabel}</small>
-                  </button>
-                ))}
-              </div>
-            )}
-
-            {searchTerm.trim() && searchResults.length===0 && (
-              <small className="full-map-menu-empty">
-                {copy.noResults}
-              </small>
-            )}
 
             <section className="full-map-menu-section">
               <span>GPS</span>
