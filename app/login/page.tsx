@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { login, signup } from "./actions";
+import { login, signup, resendConfirmation } from "./actions";
 
 export const dynamic = "force-dynamic";
 
@@ -35,6 +35,19 @@ export default async function LoginPage({
             <button className="secondary" formAction={signup}>Crear cuenta</button>
           </div>
         </form>
+
+        <section className="auth-resend-section" aria-labelledby="resend-confirmation-title">
+          <h2 id="resend-confirmation-title">¿No recibiste el correo de confirmación?</h2>
+          <p>Solicita otro enlace para verificar tu cuenta. Revisa también Spam y Promociones.</p>
+          <form action={resendConfirmation} className="auth-resend-form">
+            <label htmlFor="confirmationEmail">Correo electrónico de tu cuenta</label>
+            <input id="confirmationEmail" name="confirmationEmail" type="email"
+              autoComplete="email" maxLength={254} required placeholder="tu@correo.com" />
+            <button type="submit">Reenviar correo de confirmación</button>
+          </form>
+          <small>El envío depende de la configuración SMTP de NAVIBORI.
+            Esta solicitud no concede acceso administrativo.</small>
+        </section>
 
         <p className="xr-note">
           Registrarse no concede acceso administrativo automáticamente.

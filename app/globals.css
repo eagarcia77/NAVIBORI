@@ -4041,3 +4041,55 @@ html[data-motion="reduced"] .navibori-drift-bridge-marker i{
   .merchant-permissions-confirm-actions{display:grid;grid-template-columns:1fr}
   .merchant-permissions-confirm-actions button{width:100%}
 }
+
+
+/* NAVIBORI email confirmation recovery: accessible, mobile first. */
+.auth-resend-section{
+  display:grid;
+  gap:10px;
+  padding:17px 0 18px;
+  margin:12px 0 6px;
+  border-top:1px solid var(--line);
+  border-bottom:1px solid var(--line);
+}
+.auth-resend-section h2{
+  margin:0;
+  font-size:1rem;
+  font-weight:850;
+}
+.auth-resend-section p,.auth-resend-section small{
+  margin:0;
+  font-size:.83rem;
+  line-height:1.5;
+  color:var(--muted);
+}
+.auth-resend-form{display:grid;gap:9px}
+.auth-resend-form label{font-size:.83rem;font-weight:750}
+.auth-resend-form input{
+  width:100%;
+  min-height:48px;
+  border:1px solid var(--line);
+  border-radius:11px;
+  padding:10px 12px;
+  background:#fff;
+  color:var(--ink);
+  font:inherit;
+  font-size:1rem;
+}
+.auth-resend-form button{
+  justify-self:start;
+  min-height:48px;
+  padding:10px 17px;
+  font-weight:800;
+  cursor:pointer;
+}
+.auth-resend-form input:focus-visible,
+.auth-resend-form button:focus-visible{
+  outline:3px solid #1787ec;
+  outline-offset:2px;
+}
+@media(max-width:700px){
+  .auth-card{padding:20px}
+  .auth-shell{padding:16px}
+  .auth-resend-form button{width:100%}
+}
