@@ -19,15 +19,6 @@ type LocalCatalogItem = {
   available:boolean;
 };
 
-type LocalPromotion = {
-  id:string;
-  title:string;
-  description:string;
-  startsAt?:string;
-  endsAt?:string;
-  active:boolean;
-};
-
 const DAY_NUMBER:Record<CommerceHours["day"],number>={
   sun:0,mon:1,tue:2,wed:3,thu:4,fri:5,sat:6
 };
@@ -183,9 +174,7 @@ export async function syncLocalMerchantContent(businessId:string){
   const catalog:LocalCatalogItem[]=JSON.parse(
     localStorage.getItem("navibori:merchant-catalog") ?? "[]"
   );
-  const promotion:LocalPromotion|null=JSON.parse(
-    localStorage.getItem("navibori:merchant-promotion") ?? "null"
-  );
+
 
   const normalizedHours=hours.map((item)=>({
     day_of_week:DAY_NUMBER[item.day],
@@ -204,21 +193,12 @@ export async function syncLocalMerchantContent(businessId:string){
     sort_order:index
   }));
 
-  const normalizedPromotions=promotion && promotion.title.trim()
-    ? [{
-        title:promotion.title,
-        description:promotion.description,
-        starts_at:promotion.startsAt || null,
-        ends_at:promotion.endsAt || null,
-        active:promotion.active
-      }]
-    : [];
-
   const {error}=await supabase.rpc("sync_merchant_business_content",{
     p_business_id:businessId,
     p_hours:normalizedHours,
     p_offers:normalizedOffers,
-    p_promotions:normalizedPromotions
+    // NULL keeps promotions managed individually by /merchant/promotions.
+    p_promotions:null
   });
 
   if(error) throw error;
