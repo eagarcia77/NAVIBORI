@@ -5,7 +5,6 @@ import MerchantPulse from "@/components/merchant/merchant-pulse";
 import CatalogEditor from "@/components/merchant/catalog-editor";
 import MerchantVerification from "@/components/merchant/merchant-verification";
 import HoursEditor from "@/components/merchant/hours-editor";
-import PromotionEditor from "@/components/merchant/promotion-editor";
 import BackendSyncPanel from "@/components/merchant/backend-sync-panel";
 import BusinessMediaEditor from "@/components/merchant/business-media-editor";
 import MerchantAnalyticsDashboard from "@/components/merchant/merchant-analytics-dashboard";
@@ -30,7 +29,7 @@ export default function MerchantPage() {
           <NaviboriBrand compact />
           <p className="eyebrow">MERCHANT CONSOLE</p>
           <h1>Gestiona tu presencia</h1>
-          <p>Perfil, oferta y promoción en un flujo preparado para publicación segura.</p>
+          <p>Perfil comercial, catálogo y promociones con revisión y permisos por establecimiento.</p>
         </div>
         <div className="subpage-actions">
           <Link href="/comercios">Ver comercios</Link>
@@ -39,7 +38,7 @@ export default function MerchantPage() {
       </header>
 
       <div className="demo-notice">
-        Los editores conservan una copia local. Si la cuenta tiene rol merchant, Backend Sync guarda el borrador real en Supabase bajo RLS. Activación pública requiere revisión del venue.
+        Algunos editores preparan borradores locales. El administrador de promociones guarda cada oferta por separado en Supabase y verifica la membresía del comercio. La activación pública del establecimiento requiere revisión.
       </div>
 
       <MerchantConsole />
@@ -50,7 +49,14 @@ export default function MerchantPage() {
       <FulfillmentBlackoutEditor />
       <HoursEditor />
       <CatalogEditor />
-      <PromotionEditor />
+      <section className="merchant-promotion-entry">
+        <div>
+          <h2>Promociones de tus comercios</h2>
+          <p>Crea, programa, activa y pausa promociones con tu cuenta merchant.
+            Los cambios se guardan en Supabase y requieren permisos del comercio.</p>
+        </div>
+        <Link href="/merchant/promotions">Administrar promociones</Link>
+      </section>
       <MerchantVerification />
       <CustomerRequestInbox />
       <MerchantFulfillmentBoard />

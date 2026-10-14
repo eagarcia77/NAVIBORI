@@ -103,13 +103,28 @@ Deno.serve(async(req)=>{
 
   const {data:business,error:businessError}=await supabase
     .from("businesses")
-    .select("id,name,slug,status,verification_status,created_by")
+    .select("id,name,slug,status,verification_status,created_by,venue_id,location_verified")
     .eq("id",businessId)
     .maybeSingle();
 
   if(businessError || !business) return respond(req,{error:"Comercio no encontrado."},404);
   if(business.created_by!==user.id) return respond(req,{error:"No autorizado para este comercio."},403);
-  if(business.status!=="active" || business.verification_status!=="verified"){
+
+  // Service-role Supabase clients bypass RLS, so the owner must also retain
+  // an authorized membership for this business' venue on every push request.
+  const {data:membership,error:membershipError}=await supabase
+    .from("venue_memberships")
+    .select("role")
+    .eq("venue_id",business.venue_id)
+    .eq("user_id",user.id)
+    .in("role",["merchant","platform_owner","municipality_admin","venue_manager"])
+    .limit(1);
+  if(membershipError||!membership?.length){
+    return respond(req,{error:"La membresía de este comercio no está autorizada."},403);
+  }
+  if(business.status!=="active" ||
+     business.verification_status!=="verified" ||
+     !business.location_verified){
     return respond(req,{error:"El comercio debe estar LIVE y verificado."},409);
   }
 
