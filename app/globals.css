@@ -3971,3 +3971,73 @@ html[data-motion="reduced"] .navibori-drift-bridge-marker i{
   .merchant-promotion-layout{grid-template-columns:1fr}
   .merchant-promotion-layout>div,.merchant-promotion-layout>form{padding:12px}
 }
+
+
+/* NAVIBORI 3.5 — secure venue merchant membership administration. */
+.merchant-permissions-admin{
+  position:relative;display:grid;gap:18px;
+  margin-block:20px;padding:20px;
+  background:#fff;border:1px solid #d7e7ec;border-radius:18px;
+  color:#173d51;
+}
+.merchant-permissions-admin>.merchant-section-head{align-items:start}
+.merchant-permissions-admin h2{margin:0 0 7px;font-size:1.1rem}
+.merchant-permissions-admin h3{margin:0;font-size:1rem}
+.merchant-permissions-admin p{margin:0;line-height:1.5}
+.merchant-permissions-admin .merchant-permissions-field{
+  display:grid;gap:7px;max-width:660px;
+  font-weight:750;font-size:.8rem;color:#315468;
+}
+.merchant-permissions-admin select,.merchant-permissions-admin input{
+  min-height:46px;width:100%;padding:10px 12px;
+  border:1px solid #bed6e3;border-radius:10px;
+  color:#133950;background:#fff;font:inherit;font-size:.92rem;
+}
+.merchant-permissions-add{
+  display:grid;gap:14px;align-items:end;padding:16px;
+  background:#f6fafc;border:1px solid #e0eaf0;border-radius:14px;
+}
+.merchant-permissions-add>div p{font-size:.83rem;color:#5a7080;margin-top:5px}
+.merchant-permissions-add>button,.merchant-permissions-roster button,
+.merchant-permissions-confirm-actions button{
+  min-height:44px;width:max-content;max-width:100%;padding:10px 16px;
+  border-radius:11px;border:1px solid #c3d9e6;background:#123d63;
+  color:white;font-size:.79rem;font-weight:800;cursor:pointer;
+}
+.merchant-permissions-roster{display:grid;gap:10px}
+.merchant-permissions-roster ul{
+  display:grid;gap:9px;padding:0;margin:0;list-style:none;
+}
+.merchant-permissions-roster li{
+  display:flex;gap:10px;align-items:center;justify-content:space-between;
+  border:1px solid #dce8ed;background:white;border-radius:12px;
+  padding:12px;overflow-wrap:anywhere;
+}
+.merchant-permissions-roster li>div{display:grid;gap:5px;min-width:0}
+.merchant-permissions-roster li strong{font-size:.83rem}
+.merchant-permissions-roster li small{font-size:.69rem;color:#596e7f}
+.merchant-permissions-roster button{background:white;color:#a23636;border-color:#e8c8c8}
+.merchant-permissions-confirm{
+  position:relative;display:grid;gap:12px;padding:18px;
+  border:2px solid #c38484;border-radius:14px;
+  background:#fff7f7;
+}
+.merchant-permissions-confirm p{font-size:.82rem}
+.merchant-permissions-confirm-actions{display:flex;gap:9px;flex-wrap:wrap}
+.merchant-permissions-confirm-actions button:first-child{background:white;color:#173d51}
+.merchant-permissions-confirm-actions button:last-child{
+  background:#a43636;border-color:#a43636;
+}
+.merchant-permissions-admin button:disabled{opacity:.55;cursor:not-allowed}
+.merchant-permissions-admin button:focus-visible,
+.merchant-permissions-admin select:focus-visible,
+.merchant-permissions-admin input:focus-visible{
+  outline:3px solid #1787ec;outline-offset:2px;
+}
+@media(max-width:700px){
+  .merchant-permissions-admin{padding:12px}
+  .merchant-permissions-add{padding:12px}
+  .merchant-permissions-roster li{align-items:flex-start;flex-direction:column}
+  .merchant-permissions-confirm-actions{display:grid;grid-template-columns:1fr}
+  .merchant-permissions-confirm-actions button{width:100%}
+}

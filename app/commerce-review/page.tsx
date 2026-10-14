@@ -134,6 +134,7 @@ export default async function CommerceReviewPage(){
         </div>
         <div className="subpage-actions">
           <Link href="/merchant">Merchant Console</Link>
+            <Link href="/merchant/permissions">Permisos de comerciantes</Link>
           <Link href="/comercios">Directorio</Link>
           <Link href="/">Mapa</Link>
         </div>
