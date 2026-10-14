@@ -20,3 +20,12 @@ export function canNavigateCommerce(
     business.mapLocation.verified===true
   );
 }
+
+/** External handoff must never send synthetic demo coordinates to map apps.
+ * NAVIBORI can still open Apple Maps without supplying a destination. */
+export function canHandoffCommerceDirections(
+  business:CommerceProfile|null|undefined,
+  source:CommerceMapSource
+):boolean{
+  return source==="live"&&canNavigateCommerce(business,source);
+}
