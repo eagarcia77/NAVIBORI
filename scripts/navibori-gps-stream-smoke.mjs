@@ -55,14 +55,34 @@ try{
     try{
       phase="loading app";
       await page.goto(host,{waitUntil:"domcontentloaded",timeout:45000});
+      // UX 3.0 must expose actual search without opening the sidebar.
+      const searchBox=page.getByRole("searchbox",{
+        name:"Buscar comercio, categoría o dirección"
+      });
+      await searchBox.waitFor({timeout:20000});
+      await searchBox.fill("navibori-nonexistent-business-qa");
+      await page.getByText("No encontramos resultados.").waitFor({timeout:10000});
+      await searchBox.fill("");
+      await searchBox.press("Escape");
       await context.setGeolocation({...base});
       phase="requesting first geolocation";
       await page.getByRole("button",{name:"Obtener mi ubicación real"}).click();
       await page.waitForSelector('.map-panel[data-gps-probe="received"]',{timeout:25000});
       await page.locator(".nearby-business-main").first().waitFor({timeout:20000});
       await page.locator(".nearby-business-main").first().click();
-      phase="starting continuous navigation";
+      phase="previewing the selected travel mode";
+      await page.getByRole("button",{name:"Cómo llegar",exact:true}).click();
       await page.locator(".business-route-mode-actions button").first().click();
+      await page.getByRole("button",{name:"Ver ruta",exact:true}).click();
+      const startNavigation=page.getByRole("button",{
+        name:"Iniciar navegación",exact:true
+      });
+      await startNavigation.waitFor({timeout:30000});
+      if(await page.locator(".map-panel").getAttribute("data-navigation-active")!=="false"){
+        failures.push(name+": preview must not start live GPS before user confirmation");
+      }
+      phase="starting continuous navigation";
+      await startNavigation.click();
       await page.waitForFunction(()=>{
         const map=document.querySelector(".map-panel");
         return map?.getAttribute("data-navigation-active")==="true" &&
