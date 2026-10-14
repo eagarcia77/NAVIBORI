@@ -3862,3 +3862,35 @@ html[data-motion="reduced"] .navibori-drift-bridge-marker i{
   .navibori-stop-dialog{padding:14px}
   .navibori-stop-actions{grid-template-columns:1fr}
 }
+
+
+/* NAVIBORI 3.3: restrained, verified commerce promotions in the detail card. */
+.navibori-verified-promotions{
+  display:grid;
+  gap:5px;
+  padding:10px 12px;
+  border:1px solid #b8dfd4;
+  border-radius:12px;
+  background:#f1fbf7;
+  color:#164d43;
+}
+.navibori-verified-promotions>strong{
+  font-size:.76rem;
+  font-weight:850;
+}
+.navibori-verified-promotions>div{
+  display:grid;
+  gap:2px;
+}
+.navibori-verified-promotions>div>span{
+  font-size:.74rem;
+  font-weight:800;
+}
+.navibori-verified-promotions small{
+  font-size:.66rem;
+  line-height:1.4;
+  color:#3a635b;
+}
+@media(max-width:700px){
+  .navibori-verified-promotions{padding:8px 10px;gap:4px}
+}
