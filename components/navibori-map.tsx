@@ -46,6 +46,7 @@ import {
 } from "@/lib/commerce/in-map-routing";
 import {commerceMatchesSearch} from "@/lib/commerce/map-search";
 import {localizeManeuver} from "@/lib/commerce/maneuver-localization";
+import {formatNaviboriDistance,formatNaviboriManeuverDistance,resolveNaviboriDistanceUnits,type NaviboriDistancePreference} from "@/lib/commerce/distance-display";
 import {canNavigateCommerce} from "@/lib/commerce/navigation-eligibility";
 import {
   COMMERCE_MAP_REFRESH_MS,
@@ -179,12 +180,6 @@ const travelModes:Array<{
   {value:"scooter",icon:"🛴",label:"Scooter",ariaLabel:"scooter"}
 ];
 
-function formatDistance(meters:number){
-  if(!Number.isFinite(meters)||meters<0) return "—";
-  if(meters<1000) return Math.round(meters)+" m";
-  return (meters/1000).toFixed(1)+" km";
-}
-
 function formatDuration(seconds:number){
   const minutes=Math.max(1,Math.round(seconds/60));
   if(minutes<60) return minutes+" min";
@@ -218,22 +213,6 @@ function routeLineColor(mode:InMapRouteMode){
     case "scooter": return "#e87916";
     default: return "#0878f9";
   }
-}
-
-function formatManeuverDistance(
-  meters:number,
-  language:"es"|"en"="es"
-){
-  if(meters<30) return language==="en" ? "Now" : "Ahora";
-  const prefix=language==="en" ? "In " : "En ";
-  if(language==="es"){
-    if(meters<1000) return prefix+Math.max(10,Math.round(meters/10)*10)+" m";
-    return prefix+(meters/1000).toFixed(1)+" km";
-  }
-  if(meters<1000){
-    return prefix+Math.max(25,Math.round(meters*3.28084/25)*25)+" ft";
-  }
-  return prefix+(meters/1609.344).toFixed(1)+" mi";
 }
 
 function ensureRouteArrowImage(map:maplibregl.Map){
@@ -465,6 +444,23 @@ export default function NaviboriMap({
     deviceLocale.language==="en" ? en : es;
 
   const [languageSource,setLanguageSource]=useState<"device"|"peripheral">("device");
+  const [distancePreference,setDistancePreference]=useState<NaviboriDistancePreference>("auto");
+  const distanceUnits=resolveNaviboriDistanceUnits(distancePreference,deviceLocale.locale);
+  const formatDistance=(meters:number)=>formatNaviboriDistance(meters,distanceUnits);
+  const formatManeuverDistance=(meters:number,language:"es"|"en"=deviceLocale.language)=>
+    formatNaviboriManeuverDistance(meters,language,distanceUnits);
+  useEffect(()=>{
+    try{
+      const saved=window.localStorage.getItem("navibori:distance-preference");
+      if(saved==="imperial"||saved==="metric")setDistancePreference(saved);
+    }catch{
+      // Distance formatting must also work in private browsing.
+    }
+  },[]);
+  const updateDistancePreference=(next:NaviboriDistancePreference)=>{
+    setDistancePreference(next);
+    try{window.localStorage.setItem("navibori:distance-preference",next);}catch{}
+  };
   const [businesses,setBusinesses]=useState<CommerceProfile[]>(initialBusinesses);
   const [source,setSource]=useState<"live"|"demo">(initialSource);
   const [commerceRefreshState,setCommerceRefreshState]=useState<
@@ -1228,6 +1224,7 @@ export default function NaviboriMap({
     trajectoryPrediction?.futureCoordinate.latitude,
     trajectoryPrediction?.futureCoordinate.longitude,
     trajectoryPrediction?.risk,
+    distanceUnits,
     routeResult,
     selected?.mapLocation?.latitude,
     selected?.mapLocation?.longitude
@@ -4268,6 +4265,24 @@ export default function NaviboriMap({
                 try{window.localStorage.setItem("navibori:preferred-language","auto");}catch{}
                 window.dispatchEvent(new Event(NAVIBORI_LOCALE_CHANGE_EVENT));
               }}>{tr("Automático","Auto")}</button>
+            </div>
+            <div className="navibori-distance-preferences" role="group"
+              aria-label={tr("Unidades de distancia","Distance units")}>
+              <span>{tr("Unidades de distancia","Distance units")}</span>
+              <div>
+                {([
+                  ["auto",tr("Automático","Automatic")],
+                  ["imperial",tr("Millas y pies","Miles and feet")],
+                  ["metric",tr("Kilómetros y metros","Kilometers and meters")]
+                ] as const).map(([value,label])=>(
+                  <button type="button" key={value}
+                    aria-pressed={distancePreference===value}
+                    className={distancePreference===value?"active":""}
+                    onClick={()=>updateDistancePreference(value)}>
+                    {label}
+                  </button>
+                ))}
+              </div>
             </div>
             <small className="full-map-menu-locale">
               {deviceLocale.language==="en" ? "Language" : "Idioma"} · {deviceLocale.locale} · {
