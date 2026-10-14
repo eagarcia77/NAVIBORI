@@ -3616,3 +3616,180 @@ html[data-motion="reduced"] .navibori-drift-bridge-marker i{
   .navibori-search-field{gap:5px;padding:0 7px}
   .navibori-ux3-route-actions button{font-size:.73rem;padding:8px}
 }
+
+
+/* Mobile UX 3.1 — more map, fewer overlapping cards and technical markers. */
+.navibori-nearby-toggle{
+  position:absolute;
+  top:calc(max(12px,env(safe-area-inset-top)) + 64px);
+  left:max(12px,env(safe-area-inset-left));
+  z-index:32;
+  min-height:44px;
+  padding:0 14px;
+  border:1px solid #d1e1e8;
+  border-radius:999px;
+  background:rgba(255,255,255,.96);
+  color:#123d63;
+  font-size:.75rem;
+  font-weight:850;
+  box-shadow:0 8px 20px rgba(23,55,68,.15);
+  cursor:pointer;
+}
+.full-map-stage .nearby-businesses-panel.navibori-nearby-compact{
+  position:absolute;
+  top:calc(max(12px,env(safe-area-inset-top)) + 64px);
+  left:max(12px,env(safe-area-inset-left));
+  right:auto;
+  z-index:33;
+  width:min(340px,calc(100% - 24px));
+  max-height:min(34dvh,300px);
+  padding:10px;
+  border-radius:15px;
+}
+.navibori-nearby-compact .nearby-businesses-heading{align-items:center}
+.navibori-nearby-close{
+  width:44px;
+  height:44px;
+  border:1px solid #d1e1e8;
+  border-radius:12px;
+  background:#f5f8fa;
+  color:#284959;
+  font-size:1.2rem;
+  cursor:pointer;
+}
+.navibori-nearby-compact .nearby-businesses-list{
+  display:grid;
+  gap:4px;
+  overflow:auto;
+  padding:0;
+}
+.navibori-nearby-compact .nearby-business-main{
+  display:grid;
+  gap:4px;
+  width:100%;
+  min-height:51px;
+  padding:8px 11px;
+  border:1px solid #e1ebef;
+  border-radius:10px;
+  background:#fff;
+}
+.navibori-nearby-compact .nearby-business-main strong{font-size:.78rem}
+.navibori-nearby-compact .nearby-business-main small{font-size:.65rem}
+.navibori-nearby-toggle:focus-visible,
+.navibori-nearby-close:focus-visible,
+.navibori-business-dismiss:focus-visible,
+.navibori-route-more summary:focus-visible{
+  outline:3px solid #1787ec;
+  outline-offset:2px;
+}
+.full-map-stage .business-route-card.empty{
+  max-height:none;
+  padding:9px 15px;
+  gap:3px;
+  border-radius:15px;
+}
+.full-map-stage .business-route-card.empty>strong{font-size:.85rem}
+.full-map-stage .business-route-card.empty>span{font-size:.7rem}
+.full-map-stage .business-route-card.has-selection{
+  max-height:min(41dvh,370px);
+  padding:11px 13px;
+  gap:7px;
+}
+.business-route-title-row{min-height:30px;align-items:center}
+.navibori-business-dismiss{
+  margin-left:auto;
+  width:44px;
+  height:44px;
+  border:1px solid #d3e2e8;
+  border-radius:12px;
+  background:#f8fafc;
+  color:#23465a;
+  font-size:1.4rem;
+  line-height:1;
+  cursor:pointer;
+}
+.navibori-route-more{
+  min-width:0;
+  padding:3px 0;
+  border-top:1px solid #e1e9ee;
+}
+.navibori-route-more>summary{
+  display:flex;
+  min-height:44px;
+  align-items:center;
+  padding:7px 10px;
+  border-radius:10px;
+  color:#28536c;
+  font-size:.72rem;
+  font-weight:800;
+  cursor:pointer;
+}
+.navibori-route-more[open]>summary{background:#edf5fa}
+.navibori-route-more .business-route-actions{padding-top:8px}
+.navibori-view-business{
+  display:inline-flex;
+  width:max-content;
+  max-width:100%;
+  min-height:42px;
+  align-items:center;
+  justify-content:center;
+  padding:0 12px;
+  border:1px solid #d2e1e8;
+  border-radius:10px;
+  background:#fff;
+  color:#123d63;
+  text-decoration:none;
+  font-size:.75rem;
+  font-weight:800;
+}
+.navibori-distance-preferences{
+  display:grid;
+  gap:7px;
+  padding:9px 0;
+  border-top:1px solid #e1e9ee;
+}
+.navibori-distance-preferences>span{
+  font-size:.73rem;
+  font-weight:850;
+  color:#174b66;
+}
+.navibori-distance-preferences>div{display:flex;gap:5px;flex-wrap:wrap}
+.navibori-distance-preferences button{
+  min-height:44px;
+  padding:7px 10px;
+  border:1px solid #d2e1e8;
+  border-radius:10px;
+  background:#fff;
+  color:#183f56;
+  font-size:.68rem;
+  font-weight:800;
+  cursor:pointer;
+}
+.navibori-distance-preferences button.active{
+  color:#fff;
+  background:#123d63;
+  border-color:#123d63;
+}
+.map-panel[data-navigation-active="true"] .navibori-navigation-maneuver:before{
+  content:none!important;
+}
+@media(max-width:760px){
+  .full-map-stage .nearby-businesses-panel.navibori-nearby-compact{
+    top:calc(max(12px,env(safe-area-inset-top)) + 64px);
+    max-height:29dvh;
+  }
+  .full-map-stage .business-route-card.has-selection{
+    max-height:39dvh;
+    padding:9px 11px;
+  }
+  .full-map-stage .business-route-card.has-selection>strong{
+    font-size:1rem;
+  }
+  .business-route-address-row button{min-height:42px}
+  .navibori-ux3-route{gap:8px;padding:8px}
+  .navibori-ux3-route-actions button{min-height:46px}
+}
+@media(max-height:640px){
+  .full-map-stage .business-route-card.has-selection{max-height:44dvh}
+  .full-map-stage .nearby-businesses-panel.navibori-nearby-compact{max-height:24dvh}
+}
