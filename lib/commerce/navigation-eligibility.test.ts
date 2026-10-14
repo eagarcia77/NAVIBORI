@@ -1,5 +1,5 @@
 import {describe,expect,it} from "vitest";
-import {canNavigateCommerce} from "./navigation-eligibility";
+import {canNavigateCommerce,canHandoffCommerceDirections} from "./navigation-eligibility";
 import type {CommerceProfile} from "./types";
 
 function business(overrides:Partial<CommerceProfile>={}):CommerceProfile{
@@ -48,6 +48,23 @@ describe("commerce navigation eligibility",()=>{
     });
 
     expect(canNavigateCommerce(live,"live")).toBe(true);
+  });
+
+  it("never hands fictional demo coordinates to Apple Maps / CarPlay",()=>{
+    expect(canHandoffCommerceDirections(business(),"demo")).toBe(false);
+    expect(canHandoffCommerceDirections(business(),"live")).toBe(false);
+
+    const live=business({
+      demo:false,
+      verifiedLocation:true,
+      verification:"verified",
+      mapLocation:{latitude:18.05,longitude:-66.50,address:"Verified",verified:true}
+    });
+    expect(canHandoffCommerceDirections(live,"live")).toBe(true);
+    expect(canHandoffCommerceDirections(live,"demo")).toBe(false);
+    expect(canHandoffCommerceDirections({
+      ...live,mapLocation:{...live.mapLocation!,verified:false}
+    },"live")).toBe(false);
   });
 
   it("rejects unverified or invalid LIVE destinations",()=>{
