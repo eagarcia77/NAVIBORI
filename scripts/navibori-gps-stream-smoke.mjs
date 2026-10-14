@@ -76,6 +76,14 @@ try{
       await nearbyToggle.click();
       await page.locator(".nearby-business-main").first().waitFor({timeout:15000});
       await page.locator(".nearby-business-main").first().click();
+      // A DEMO location is not a verified, copyable postal address.
+      if((await page.locator(".commerce-demo-badge").innerText())==="DEMO" &&
+        await page.locator(".business-route-address-row button").count()){
+        failures.push(name+": DEMO must not offer Copy address");
+      }
+      if(await page.locator(".navibori-gps-probe button").count()){
+        failures.push(name+": one-shot GPS probe must not bypass route preview");
+      }
       if(await page.locator(".nearby-businesses-panel").count()){
         failures.push(name+": nearby list must close after selecting a business");
       }
@@ -155,6 +163,26 @@ try{
       }));
       phase="capturing results";
       await page.screenshot({path:"/tmp/navibori-gps-stream-"+name+".png"});
+      phase="confirming a deliberate GPS stop";
+      await page.getByRole("button",{name:"Finalizar navegación GPS"}).click();
+      const stopDialog=page.getByRole("alertdialog",{name:"¿Finalizar navegación?"});
+      await stopDialog.waitFor({timeout:8000});
+      if(await page.locator(".map-panel").getAttribute("data-navigation-active")!=="true"){
+        failures.push(name+": End button stopped GPS before confirmation");
+      }
+      await stopDialog.getByRole("button",{name:"Continuar navegando"}).click();
+      if(await page.locator(".map-panel").getAttribute("data-navigation-active")!=="true"){
+        failures.push(name+": continuing navigation should preserve GPS stream");
+      }
+      await page.getByRole("button",{name:"Finalizar navegación GPS"}).click();
+      await page.getByRole("alertdialog").getByRole("button",{
+        name:"Finalizar navegación",exact:true
+      }).click();
+      await page.waitForSelector('.map-panel[data-navigation-active="false"]',{timeout:10000});
+      if(!await page.locator(".business-route-card").isVisible()){
+        failures.push(name+": ending GPS should preserve the route preview card");
+      }
+
     }catch(err){
       const panel=await page.locator(".map-panel").evaluate(el=>({
         gpsFixes:el.getAttribute("data-gps-stream-fixes"),

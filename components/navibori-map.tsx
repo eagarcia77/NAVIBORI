@@ -492,6 +492,14 @@ export default function NaviboriMap({
   const [routeBusy,setRouteBusy]=useState<InMapRouteMode|null>(null);
   const [lastRouteMode,setLastRouteMode]=useState<InMapRouteMode>("driving");
   const [gpsActive,setGpsActive]=useState(false);
+  const [stopConfirmationOpen,setStopConfirmationOpen]=useState(false);
+  const stopCancelButtonRef=useRef<HTMLButtonElement|null>(null);
+  useEffect(()=>{
+    if(!stopConfirmationOpen)return;
+    const frame=window.requestAnimationFrame(()=>stopCancelButtonRef.current?.focus());
+    return ()=>window.cancelAnimationFrame(frame);
+  },[stopConfirmationOpen]);
+
   const [gpsAccuracy,setGpsAccuracy]=useState<number|null>(null);
   const [gpsSpeedKph,setGpsSpeedKph]=useState<number|null>(null);
   const [gpsSignalHeartbeat,setGpsSignalHeartbeat]=useState(0);
@@ -2752,7 +2760,17 @@ export default function NaviboriMap({
     }
   }
 
+  function confirmEndNavigation(){
+    setStopConfirmationOpen(false);
+    stopGpsNavigation();
+    setLocationStatus(tr(
+      "Navegación finalizada. La ruta permanece en el mapa.",
+      "Navigation ended. The route remains on the map."
+    ));
+  }
+
   function stopGpsNavigation(options:{preservePhase?:boolean}={}){
+    setStopConfirmationOpen(false);
     gpsSessionRef.current+=1;
     gpsResumeFixRef.current=null;
     gpsResumeRequestPendingRef.current=false;
@@ -3467,6 +3485,7 @@ export default function NaviboriMap({
   }
 
   async function copySelectedAddress(){
+    if(selected?.demo)return;
     const address=selected?.mapLocation?.address ?? selected?.locationLabel;
     if(!address) return;
 
@@ -3529,12 +3548,6 @@ export default function NaviboriMap({
                 ?tr("Permite ubicación precisa cuando se solicite.","Allow precise location when prompted.")
                 :tr("En iPhone, abre NAVIBORI directamente en Safari y permite ubicación precisa.",
                     "On iPhone, open NAVIBORI directly in Safari and allow precise location.")}</small>
-            {gpsProbeStatus==="received"&&selected&&canRoute&&(
-              <button type="button"
-                onClick={()=>startGpsNavigation(lastRouteMode)}>
-                {tr("Iniciar navegación GPS","Start GPS navigation")}
-              </button>
-            )}
           </div>
         )}
         <button
@@ -3592,14 +3605,51 @@ export default function NaviboriMap({
           <button
             type="button"
             className="navibori-minimal-stop"
-            onClick={()=>{
-              stopGpsNavigation();
-              setLocationStatus(tr("GPS detenido. La ruta permanece visible.","GPS stopped. The route remains visible."));
-            }}
+            onClick={()=>setStopConfirmationOpen(true)}
             aria-label={tr("Finalizar navegación GPS","End GPS navigation")}
           >
             {tr("Finalizar","End")}
           </button>
+        )}
+
+        {stopConfirmationOpen && gpsActive && (
+          <div className="navibori-stop-backdrop">
+            <div className="navibori-stop-dialog" role="alertdialog"
+              aria-modal="true"
+              aria-labelledby="navibori-stop-title"
+              aria-describedby="navibori-stop-description"
+              onKeyDown={event=>{
+                if(event.key==="Escape"){
+                  event.preventDefault();
+                  setStopConfirmationOpen(false);
+                }
+                if(event.key==="Tab"){
+                  const buttons=Array.from(event.currentTarget.querySelectorAll<HTMLButtonElement>("button:not([disabled])"));
+                  const first=buttons[0],last=buttons[buttons.length-1];
+                  if(event.shiftKey&&document.activeElement===first){
+                    event.preventDefault();last?.focus();
+                  }else if(!event.shiftKey&&document.activeElement===last){
+                    event.preventDefault();first?.focus();
+                  }
+                }
+              }}>
+              <h2 id="navibori-stop-title">{tr("¿Finalizar navegación?","End navigation?")}</h2>
+              <p id="navibori-stop-description">{tr(
+                "Se detendrá el seguimiento GPS de esta ruta. El recorrido permanecerá en el mapa.",
+                "GPS tracking will stop. Your route will remain on the map."
+              )}</p>
+              <div className="navibori-stop-actions">
+                <button type="button" ref={stopCancelButtonRef}
+                  onClick={()=>setStopConfirmationOpen(false)}>
+                  {tr("Continuar navegando","Keep navigating")}
+                </button>
+                <button type="button" className="navibori-stop-confirm"
+                  onClick={confirmEndNavigation}>
+                  {tr("Finalizar navegación","End navigation")}
+                </button>
+              </div>
+            </div>
+          </div>
         )}
 
         {navigationPhase!=="idle" && !gpsActive && selected && (
@@ -4271,9 +4321,11 @@ export default function NaviboriMap({
               <strong>{selected.name}</strong>
               <div className="business-route-address-row">
                 <span>{selected.demo ? tr("Ubicación de demostración","Demo location") : selected.mapLocation?.address ?? selected.locationLabel}</span>
-                <button type="button" onClick={copySelectedAddress}>
-                  {addressCopied ? copy.copied : copy.copyAddress}
-                </button>
+                {!selected.demo && (
+                  <button type="button" onClick={copySelectedAddress}>
+                    {addressCopied ? copy.copied : copy.copyAddress}
+                  </button>
+                )}
               </div>
 
               {canRoute ? (
@@ -4441,10 +4493,7 @@ export default function NaviboriMap({
                     {gpsActive && (
                       <button
                         type="button"
-                        onClick={()=>{
-                          stopGpsNavigation();
-                          setLocationStatus(tr("GPS detenido. La ruta permanece visible.","GPS stopped. The route remains visible."));
-                        }}
+                        onClick={()=>setStopConfirmationOpen(true)}
                       >
                         {tr("Detener GPS","Stop GPS")}
                       </button>
