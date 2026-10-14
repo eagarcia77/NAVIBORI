@@ -3493,6 +3493,7 @@ export default function NaviboriMap({
       data-exodock-state={exoDockState}
       data-gravity-lens={gravityLensPhase}
       data-navigation-active={gpsActive ? "true" : "false"}
+      data-distance-units={distanceUnits}
       data-novascene-state={buildings3DState}
       data-novascene-visible={buildingRenderedCount}
       data-novascene-total={buildingCount}
