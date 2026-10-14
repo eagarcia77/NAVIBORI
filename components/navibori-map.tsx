@@ -539,6 +539,8 @@ export default function NaviboriMap({
   const [searchTerm,setSearchTerm]=useState("");
   const [searchOpen,setSearchOpen]=useState(false);
   const [routeModePickerOpen,setRouteModePickerOpen]=useState(false);
+  const [previewingLocation,setPreviewingLocation]=useState(false);
+  const previewRequestIdRef=useRef(0);
   const [pendingNavigation,setPendingNavigation]=useState<{
     slug:string;
     mode:InMapRouteMode;
@@ -2071,6 +2073,7 @@ export default function NaviboriMap({
     setSearchOpen(false);
     setSearchTerm("");
     setRouteModePickerOpen(false);
+    previewRequestIdRef.current+=1;
     // The selection effect normally owns focus animations. Triggering
     // a second ease here interrupts the first MapLibre render frame.
     if(alreadySelected && mapRef.current&&!mapRef.current.isMoving()){
@@ -2798,6 +2801,61 @@ export default function NaviboriMap({
     }
   }
 
+  async function previewSelectedRoute(routeMode:InMapRouteMode){
+    if(!selected?.mapLocation||!canRoute||previewingLocation||routeBusy!==null)return;
+    const requestId=++previewRequestIdRef.current;
+    if(!window.isSecureContext||!navigator.geolocation){
+      setRouteStatus(tr(
+        "Se necesita HTTPS y acceso a ubicación para calcular la ruta.",
+        "HTTPS and location access are required to calculate the route."
+      ));
+      return;
+    }
+    setPreviewingLocation(true);
+    setRouteStatus(tr("Buscando tu ubicación…","Finding your location…"));
+    try{
+      const position=await new Promise<GeolocationPosition>((resolve,reject)=>{
+        navigator.geolocation.getCurrentPosition(resolve,reject,{
+          enableHighAccuracy:true,maximumAge:0,timeout:15000
+        });
+      });
+      if(requestId!==previewRequestIdRef.current)return;
+      const origin={
+        latitude:position.coords.latitude,
+        longitude:position.coords.longitude
+      };
+      if(!validRouteCoordinate(origin)||
+        !acceptGpsPositionTimestamp(position.timestamp,null,Date.now())){
+        throw new Error(tr("La ubicación es inválida o demasiado antigua.",
+          "The location is invalid or too old."));
+      }
+      setUserLocation(origin);
+      setGpsAccuracy(Number.isFinite(position.coords.accuracy)
+        ? position.coords.accuracy : null);
+      showUserLocation(origin);
+      const route=await calculateRoute(routeMode,origin);
+      if(requestId!==previewRequestIdRef.current)return;
+      if(route){
+        setRouteModePickerOpen(false);
+        setNavigationPhase("idle");
+      }
+    }catch(error){
+      if(requestId!==previewRequestIdRef.current)return;
+      const locationError=error as GeolocationPositionError;
+      setNavigationPhase("error");
+      setRouteStatus(
+        typeof locationError.code==="number"
+          ? geolocationErrorMessage(locationError)
+          : error instanceof Error ? error.message
+            : tr("No pudimos calcular la ruta.","Could not calculate the route.")
+      );
+    }finally{
+      if(requestId===previewRequestIdRef.current){
+        setPreviewingLocation(false);
+      }
+    }
+  }
+
   function stopGpsNavigation(options:{preservePhase?:boolean}={}){
     gpsSessionRef.current+=1;
     gpsResumeFixRef.current=null;
@@ -3475,6 +3533,8 @@ export default function NaviboriMap({
   }
 
   function clearRoute(){
+    previewRequestIdRef.current+=1;
+    setRouteModePickerOpen(false);
     consecutiveOffRouteFixesRef.current=0;
     lastOffRouteCandidateAtRef.current=null;
     routeAbortRef.current?.abort();
@@ -4322,33 +4382,71 @@ export default function NaviboriMap({
 
               {canRoute ? (
                 <>
-                  <div className="business-route-launch">
-                    <div>
-                      <span>{copy.howToGetThere}</span>
-                      <small>{copy.oneTapStarts}</small>
-                    </div>
-                    <div className="business-route-mode-actions">
-                      {travelModes.map((travel)=>(
-                        <button
-                          type="button"
-                          key={travel.value}
-                          className={gpsActive && lastRouteMode===travel.value ? "active" : ""}
-                          disabled={routeBusy!==null}
-                          onClick={()=>{
-                            setMenuOpen(false);
-                            startGpsNavigation(travel.value);
-                          }}
-                          aria-label={(deviceLocale.language==="en" ? "Start GPS by " : "Iniciar GPS en ")+copy.modeShort[travel.value]+" · "+selected.name}
-                        >
-                          <span aria-hidden="true">{travel.icon}</span>
-                          <strong>
-                            {routeBusy===travel.value
-  ? deviceLocale.language==="en" ? "Calculating…" : "Calculando…"
-  : copy.modeShort[travel.value]}
-                          </strong>
-                        </button>
-                      ))}
-                    </div>
+                  <div className="business-route-launch navibori-ux3-route">
+                    {routeResult&&!gpsActive ? (
+                      <>
+                        <div>
+                          <span>{tr("Tu ruta está lista","Your route is ready")}</span>
+                          <small>{routeModeLabel(routeResult.mode,deviceLocale.locale)} ·
+                            {" "}{formatDuration(routeResult.durationSeconds)} ·
+                            {" "}{formatDistance(routeResult.distanceMeters)}</small>
+                        </div>
+                        <div className="navibori-ux3-route-actions">
+                          <button type="button" className="navibori-ux3-primary"
+                            onClick={()=>startGpsNavigation(routeResult.mode)}>
+                            {tr("Iniciar navegación","Start navigation")}
+                          </button>
+                          <button type="button" onClick={()=>{
+                            routeAbortRef.current?.abort();
+                            routeResultRef.current=null;
+                            setRouteResult(null);
+                            setNavigationPhase("idle");
+                            setRouteModePickerOpen(true);
+                          }}>
+                            {tr("Cambiar transporte","Change travel mode")}
+                          </button>
+                        </div>
+                      </>
+                    ) : routeModePickerOpen ? (
+                      <>
+                        <div>
+                          <span>{tr("¿Cómo deseas llegar?","How would you like to get there?")}</span>
+                          <small>{tr("Selecciona tu medio de transporte.",
+                            "Choose your travel mode.")}</small>
+                        </div>
+                        <div className="business-route-mode-actions" role="group"
+                          aria-label={tr("Medio de transporte","Travel mode")}>
+                          {travelModes.map(travel=>(
+                            <button type="button" key={travel.value}
+                              aria-pressed={lastRouteMode===travel.value}
+                              className={lastRouteMode===travel.value?"active":""}
+                              disabled={previewingLocation||routeBusy!==null}
+                              onClick={()=>setLastRouteMode(travel.value)}>
+                              <span aria-hidden="true">{travel.icon}</span>
+                              <strong>{copy.modeShort[travel.value]}</strong>
+                            </button>
+                          ))}
+                        </div>
+                        <div className="navibori-ux3-route-actions">
+                          <button type="button" className="navibori-ux3-primary"
+                            disabled={previewingLocation||routeBusy!==null}
+                            onClick={()=>void previewSelectedRoute(lastRouteMode)}>
+                            {previewingLocation||routeBusy!==null
+                              ?tr("Calculando ruta…","Calculating route…")
+                              :tr("Ver ruta","View route")}
+                          </button>
+                          <button type="button" disabled={previewingLocation}
+                            onClick={()=>setRouteModePickerOpen(false)}>
+                            {tr("Volver","Back")}
+                          </button>
+                        </div>
+                      </>
+                    ) : (
+                      <button type="button" className="navibori-ux3-primary"
+                        onClick={()=>setRouteModePickerOpen(true)}>
+                        {tr("Cómo llegar","Directions")}
+                      </button>
+                    )}
                   </div>
 
                   {arrived && (
