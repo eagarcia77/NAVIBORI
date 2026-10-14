@@ -10,15 +10,17 @@ El panel privado /merchant/permissions permite a un administrador autenticado de
 La asignación de `platform_owner`, `municipality_admin` y `venue_manager` queda **fuera** de este panel.
 
 ## Autoridad y protección
-Las RPCs `list_merchant_venue_access`, `grant_merchant_venue_access` y
-`revoke_merchant_venue_access` están autenticadas. Aunque usan
-`SECURITY DEFINER` para consultar `auth.users` y modificar roles,
-comprueban explícitamente `auth.uid()` y una membresía administrativa
-**del mismo venue**, no `user_metadata` ni la pantalla del navegador.
-Usan `search_path=''`, referencias con esquema explícito,
-parámetros tipados, no permiten cambios propios, no otorgan privilegios
-administrativos y registran el actor en `audit_logs`.
-La lista no es visible para usuarios sin rol administrativo.
+Las RPC públicas `list_merchant_venue_access`,
+`grant_merchant_venue_access` y `revoke_merchant_venue_access`
+son **SECURITY INVOKER**. Delegan las operaciones privilegiadas a
+funciones `SECURITY DEFINER` en el esquema `navibori_private`,
+que no se expone a PostgREST. Las funciones privadas comprueban
+explícitamente `auth.uid()` y una membresía administrativa
+**del mismo venue**. Nunca dependen de `user_metadata` ni de botones
+del navegador. Todas usan `search_path=''`, referencias calificadas,
+parámetros tipados, prohíben cambios de acceso propios, nunca otorgan
+privilegios administrativos y registran el actor en `audit_logs`.
+La lista de correos solo puede consultarla un administrador del venue.
 
 ## Estado del proyecto y acceso inicial
 En la auditoría del 14 de octubre de 2026, NAVIBORI tenía 1 cuenta
@@ -41,12 +43,14 @@ No publicar ni copiar identificadores de usuarios o credenciales.
 - Los registros de auditoría no se borran al revocar.
 
 ## Validaciones antes de producción
-1. Aplicar `docs/database/MERCHANT_MEMBERSHIP_ADMIN_V1.sql` al proyecto
-   dedicado NAVIBORI, de forma controlada.
+1. Aplicar `docs/database/MERCHANT_MEMBERSHIP_ADMIN_V1.sql` y, después,
+   `docs/database/MERCHANT_MEMBERSHIP_PRIVATE_RPC_V1.sql` al proyecto
+   dedicado NAVIBORI. Ambas migraciones ya se aplicaron el 14 de octubre de 2026.
 2. Comprobar permisos `EXECUTE`, la separación por venue, los errores
    de usuario no autenticado y los registros de auditoría.
 3. Verificar la compilación CI, unit tests y Render.
 4. Con cuentas de prueba separadas: administrador de venue A, merchant A,
    merchant B y usuario sin rol; comprobar aislamiento y revocación.
-5. Revisar advertencias de Supabase Security Advisor. Las RPCs
-   SECURITY DEFINER autenticadas requieren especial atención.
+5. Revisar advertencias de Supabase Security Advisor. Los wrappers
+   públicos son SECURITY INVOKER; el analizador ya no advierte sobre estas
+   funciones. Sigue pendiente la protección de contraseñas filtradas.
