@@ -78,7 +78,7 @@ export default function BackendSyncPanel(){
 
       if(businessStatus==="active" && businessId){
         await syncLocalMerchantContent(businessId);
-        setStatus("Operación actualizada: horarios, catálogo y promociones sincronizados.");
+        setStatus("Horarios y catálogo actualizados. Las promociones se administran por separado.");
         return;
       }
 
