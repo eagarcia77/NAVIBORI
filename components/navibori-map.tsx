@@ -2074,6 +2074,7 @@ export default function NaviboriMap({
     setSearchTerm("");
     setRouteModePickerOpen(false);
     previewRequestIdRef.current+=1;
+    setPreviewingLocation(false);
     // The selection effect normally owns focus animations. Triggering
     // a second ease here interrupts the first MapLibre render frame.
     if(alreadySelected && mapRef.current&&!mapRef.current.isMoving()){
@@ -3534,6 +3535,7 @@ export default function NaviboriMap({
 
   function clearRoute(){
     previewRequestIdRef.current+=1;
+    setPreviewingLocation(false);
     setRouteModePickerOpen(false);
     consecutiveOffRouteFixesRef.current=0;
     lastOffRouteCandidateAtRef.current=null;
