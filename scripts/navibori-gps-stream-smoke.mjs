@@ -86,6 +86,20 @@ try{
         await page.locator(".business-route-address-row button").count()){
         failures.push(name+": DEMO must not offer Copy address");
       }
+      // Apple Maps must be directly visible, never buried in More options.
+      const handoff=page.locator(".navibori-apple-maps-link");
+      await handoff.waitFor({timeout:10000});
+      if(!await handoff.isVisible()){
+        failures.push(name+": Apple Maps access is hidden in the commerce preview");
+      }
+      const appleHref=await handoff.getAttribute("href");
+      const appleMode=await handoff.getAttribute("data-external-directions");
+      if((await page.locator(".commerce-demo-badge").innerText())==="DEMO"){
+        if(appleMode!=="without-destination"||!appleHref?.startsWith("https://maps.apple.com/")||
+          appleHref?.includes("destination=")||appleHref?.includes("daddr=")){
+          failures.push(name+": DEMO Apple Maps link must not send fictional destination coordinates");
+        }
+      }
       if(await page.locator(".navibori-gps-probe button").count()){
         failures.push(name+": one-shot GPS probe must not bypass route preview");
       }
