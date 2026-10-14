@@ -537,6 +537,10 @@ export default function NaviboriMap({
   const [addressCopied,setAddressCopied]=useState(false);
   const [diagnosticsCopyStatus,setDiagnosticsCopyStatus]=useState<"idle"|"success"|"error">("idle");
   const [searchTerm,setSearchTerm]=useState("");
+  const [searchOpen,setSearchOpen]=useState(false);
+  const [routeModePickerOpen,setRouteModePickerOpen]=useState(false);
+  const [previewingLocation,setPreviewingLocation]=useState(false);
+  const previewRequestIdRef=useRef(0);
   const [pendingNavigation,setPendingNavigation]=useState<{
     slug:string;
     mode:InMapRouteMode;
@@ -2066,6 +2070,11 @@ export default function NaviboriMap({
     lastSpokenInstructionRef.current="";
     const alreadySelected=selectedSlug===business.slug;
     setSelectedSlug(business.slug);
+    setSearchOpen(false);
+    setSearchTerm("");
+    setRouteModePickerOpen(false);
+    previewRequestIdRef.current+=1;
+    setPreviewingLocation(false);
     // The selection effect normally owns focus animations. Triggering
     // a second ease here interrupts the first MapLibre render frame.
     if(alreadySelected && mapRef.current&&!mapRef.current.isMoving()){
@@ -2793,6 +2802,61 @@ export default function NaviboriMap({
     }
   }
 
+  async function previewSelectedRoute(routeMode:InMapRouteMode){
+    if(!selected?.mapLocation||!canRoute||previewingLocation||routeBusy!==null)return;
+    const requestId=++previewRequestIdRef.current;
+    if(!window.isSecureContext||!navigator.geolocation){
+      setRouteStatus(tr(
+        "Se necesita HTTPS y acceso a ubicación para calcular la ruta.",
+        "HTTPS and location access are required to calculate the route."
+      ));
+      return;
+    }
+    setPreviewingLocation(true);
+    setRouteStatus(tr("Buscando tu ubicación…","Finding your location…"));
+    try{
+      const position=await new Promise<GeolocationPosition>((resolve,reject)=>{
+        navigator.geolocation.getCurrentPosition(resolve,reject,{
+          enableHighAccuracy:true,maximumAge:0,timeout:15000
+        });
+      });
+      if(requestId!==previewRequestIdRef.current)return;
+      const origin={
+        latitude:position.coords.latitude,
+        longitude:position.coords.longitude
+      };
+      if(!validRouteCoordinate(origin)||
+        !acceptGpsPositionTimestamp(position.timestamp,null,Date.now())){
+        throw new Error(tr("La ubicación es inválida o demasiado antigua.",
+          "The location is invalid or too old."));
+      }
+      setUserLocation(origin);
+      setGpsAccuracy(Number.isFinite(position.coords.accuracy)
+        ? position.coords.accuracy : null);
+      showUserLocation(origin);
+      const route=await calculateRoute(routeMode,origin);
+      if(requestId!==previewRequestIdRef.current)return;
+      if(route){
+        setRouteModePickerOpen(false);
+        setNavigationPhase("idle");
+      }
+    }catch(error){
+      if(requestId!==previewRequestIdRef.current)return;
+      const locationError=error as GeolocationPositionError;
+      setNavigationPhase("error");
+      setRouteStatus(
+        typeof locationError.code==="number"
+          ? geolocationErrorMessage(locationError)
+          : error instanceof Error ? error.message
+            : tr("No pudimos calcular la ruta.","Could not calculate the route.")
+      );
+    }finally{
+      if(requestId===previewRequestIdRef.current){
+        setPreviewingLocation(false);
+      }
+    }
+  }
+
   function stopGpsNavigation(options:{preservePhase?:boolean}={}){
     gpsSessionRef.current+=1;
     gpsResumeFixRef.current=null;
@@ -3470,6 +3534,9 @@ export default function NaviboriMap({
   }
 
   function clearRoute(){
+    previewRequestIdRef.current+=1;
+    setPreviewingLocation(false);
+    setRouteModePickerOpen(false);
     consecutiveOffRouteFixesRef.current=0;
     lastOffRouteCandidateAtRef.current=null;
     routeAbortRef.current?.abort();
@@ -3617,7 +3684,10 @@ export default function NaviboriMap({
               : tr("Abrir menú","Open menu")
           }
           aria-expanded={menuOpen}
-          onClick={()=>setMenuOpen((open)=>!open)}
+          onClick={()=>{
+            setSearchOpen(false);
+            setMenuOpen((open)=>!open);
+          }}
         >
           {menuOpen ? "×" : "☰"}
         </button>
@@ -3765,14 +3835,65 @@ export default function NaviboriMap({
           </aside>
         )}
 
-        <button type="button"
-          className="full-map-brand-pill navibori-map-search-trigger"
-          aria-label={tr("Buscar comercios","Search businesses")}
-          onClick={()=>setMenuOpen(true)}
-        >
-          <span aria-hidden="true">⌕</span>
-          <strong>{tr("Buscar comercios","Search businesses")}</strong>
-        </button>
+        {!gpsActive && (
+          <div className="navibori-search-dock">
+            <div className="navibori-search-field">
+              <span aria-hidden="true">⌕</span>
+              <input
+                type="search"
+                value={searchTerm}
+                placeholder={tr("Buscar comercio, categoría o dirección",
+                  "Search business, category or address")}
+                aria-label={tr("Buscar comercio, categoría o dirección",
+                  "Search business, category or address")}
+                onFocus={()=>setSearchOpen(true)}
+                onChange={(event)=>{
+                  setSearchTerm(event.target.value);
+                  setSearchOpen(true);
+                }}
+                onKeyDown={(event)=>{
+                  if(event.key==="Escape"){
+                    setSearchOpen(false);
+                    event.currentTarget.blur();
+                  }
+                  if(event.key==="Enter"&&searchResults.length){
+                    focusBusiness(searchResults[0]);
+                    setSearchTerm("");
+                    setSearchOpen(false);
+                    event.currentTarget.blur();
+                  }
+                }}
+              />
+              {searchTerm.trim()&&(
+                <button type="button"
+                  aria-label={tr("Borrar búsqueda","Clear search")}
+                  onClick={()=>{
+                    setSearchTerm("");
+                    setSearchOpen(true);
+                  }}>×</button>
+              )}
+            </div>
+            {searchOpen&&searchTerm.trim()&&(
+              <div className="navibori-search-results"
+                aria-label={tr("Resultados de búsqueda","Search results")}>
+                {searchResults.length?searchResults.map(business=>(
+                  <button type="button" key={business.id}
+                    onClick={()=>{
+                      focusBusiness(business);
+                      setSearchTerm("");
+                      setSearchOpen(false);
+                    }}>
+                    <strong>{business.name}</strong>
+                    <small>{business.mapLocation?.address ?? business.locationLabel}</small>
+                  </button>
+                )):(
+                  <p role="status">{tr("No encontramos resultados.",
+                    "No results found.")}</p>
+                )}
+              </div>
+            )}
+          </div>
+        )}
 
         {menuOpen && (
           <aside className="full-map-menu" aria-label="Menú principal NAVIBORI">
@@ -3891,50 +4012,6 @@ export default function NaviboriMap({
               {diagnosticsCopyStatus==="success" && <small role="status">{tr("Informe copiado sin coordenadas GPS.","Report copied without GPS coordinates.")}</small>}
               <small>{tr("La precisión y el estado se actualizan mientras usas NAVIBORI. DEMO no representa navegación GPS real.","Status and accuracy update while NAVIBORI runs. DEMO is not live GPS navigation.")}</small>
             </details>
-
-            <div className="full-map-menu-search">
-              <input
-                type="search"
-                value={searchTerm}
-                onChange={(event)=>setSearchTerm(event.target.value)}
-                placeholder={copy.searchPlaceholder}
-                aria-label={copy.searchPlaceholder}
-              />
-              {searchTerm && (
-                <button
-                  type="button"
-                  onClick={()=>setSearchTerm("")}
-                  aria-label={tr("Limpiar búsqueda","Clear search")}
-                >
-                  ×
-                </button>
-              )}
-            </div>
-
-            {searchResults.length>0 && (
-              <div className="full-map-menu-results">
-                {searchResults.map((business)=>(
-                  <button
-                    type="button"
-                    key={business.id}
-                    onClick={()=>{
-                      focusBusiness(business);
-                      setSearchTerm("");
-                      setMenuOpen(false);
-                    }}
-                  >
-                    <strong>{business.name}</strong>
-                    <small>{business.mapLocation?.address ?? business.locationLabel}</small>
-                  </button>
-                ))}
-              </div>
-            )}
-
-            {searchTerm.trim() && searchResults.length===0 && (
-              <small className="full-map-menu-empty">
-                {copy.noResults}
-              </small>
-            )}
 
             <section className="full-map-menu-section">
               <span>GPS</span>
@@ -4307,33 +4384,71 @@ export default function NaviboriMap({
 
               {canRoute ? (
                 <>
-                  <div className="business-route-launch">
-                    <div>
-                      <span>{copy.howToGetThere}</span>
-                      <small>{copy.oneTapStarts}</small>
-                    </div>
-                    <div className="business-route-mode-actions">
-                      {travelModes.map((travel)=>(
-                        <button
-                          type="button"
-                          key={travel.value}
-                          className={gpsActive && lastRouteMode===travel.value ? "active" : ""}
-                          disabled={routeBusy!==null}
-                          onClick={()=>{
-                            setMenuOpen(false);
-                            startGpsNavigation(travel.value);
-                          }}
-                          aria-label={(deviceLocale.language==="en" ? "Start GPS by " : "Iniciar GPS en ")+copy.modeShort[travel.value]+" · "+selected.name}
-                        >
-                          <span aria-hidden="true">{travel.icon}</span>
-                          <strong>
-                            {routeBusy===travel.value
-  ? deviceLocale.language==="en" ? "Calculating…" : "Calculando…"
-  : copy.modeShort[travel.value]}
-                          </strong>
-                        </button>
-                      ))}
-                    </div>
+                  <div className="business-route-launch navibori-ux3-route">
+                    {routeResult&&!gpsActive ? (
+                      <>
+                        <div>
+                          <span>{tr("Tu ruta está lista","Your route is ready")}</span>
+                          <small>{routeModeLabel(routeResult.mode,deviceLocale.locale)} ·
+                            {" "}{formatDuration(routeResult.durationSeconds)} ·
+                            {" "}{formatDistance(routeResult.distanceMeters)}</small>
+                        </div>
+                        <div className="navibori-ux3-route-actions">
+                          <button type="button" className="navibori-ux3-primary"
+                            onClick={()=>startGpsNavigation(routeResult.mode)}>
+                            {tr("Iniciar navegación","Start navigation")}
+                          </button>
+                          <button type="button" onClick={()=>{
+                            routeAbortRef.current?.abort();
+                            routeResultRef.current=null;
+                            setRouteResult(null);
+                            setNavigationPhase("idle");
+                            setRouteModePickerOpen(true);
+                          }}>
+                            {tr("Cambiar transporte","Change travel mode")}
+                          </button>
+                        </div>
+                      </>
+                    ) : routeModePickerOpen ? (
+                      <>
+                        <div>
+                          <span>{tr("¿Cómo deseas llegar?","How would you like to get there?")}</span>
+                          <small>{tr("Selecciona tu medio de transporte.",
+                            "Choose your travel mode.")}</small>
+                        </div>
+                        <div className="business-route-mode-actions" role="group"
+                          aria-label={tr("Medio de transporte","Travel mode")}>
+                          {travelModes.map(travel=>(
+                            <button type="button" key={travel.value}
+                              aria-pressed={lastRouteMode===travel.value}
+                              className={lastRouteMode===travel.value?"active":""}
+                              disabled={previewingLocation||routeBusy!==null}
+                              onClick={()=>setLastRouteMode(travel.value)}>
+                              <span aria-hidden="true">{travel.icon}</span>
+                              <strong>{copy.modeShort[travel.value]}</strong>
+                            </button>
+                          ))}
+                        </div>
+                        <div className="navibori-ux3-route-actions">
+                          <button type="button" className="navibori-ux3-primary"
+                            disabled={previewingLocation||routeBusy!==null}
+                            onClick={()=>void previewSelectedRoute(lastRouteMode)}>
+                            {previewingLocation||routeBusy!==null
+                              ?tr("Calculando ruta…","Calculating route…")
+                              :tr("Ver ruta","View route")}
+                          </button>
+                          <button type="button" disabled={previewingLocation}
+                            onClick={()=>setRouteModePickerOpen(false)}>
+                            {tr("Volver","Back")}
+                          </button>
+                        </div>
+                      </>
+                    ) : (
+                      <button type="button" className="navibori-ux3-primary"
+                        onClick={()=>setRouteModePickerOpen(true)}>
+                        {tr("Cómo llegar","Directions")}
+                      </button>
+                    )}
                   </div>
 
                   {arrived && (
