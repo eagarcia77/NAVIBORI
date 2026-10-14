@@ -1107,15 +1107,9 @@ export default function NaviboriMap({
       glyph.className="vector-gate-glyph";
       glyph.textContent=vectorGateGlyph(nextCue?.step.modifier);
 
-      const phase=document.createElement("em");
-      phase.className="vector-gate-phase";
-      phase.textContent=phaseLabel;
-
-      const distance=document.createElement("b");
-      distance.className="vector-gate-distance";
-      distance.textContent=distanceLabel;
-
-      element.append(frame,glyph,phase,distance);
+      // The maneuver banner already contains distance and phase context.
+      // The map marker shows only the turn arrow to preserve road visibility.
+      element.append(frame,glyph);
 
       nextTurnMarkerRef.current=new maplibregl.Marker({
         element,
@@ -1128,73 +1122,9 @@ export default function NaviboriMap({
         .addTo(map);
     }
 
-    if(gpsActive && navigationProgress){
-      const element=document.createElement("div");
-      element.className="navibori-photon-cursor";
-      element.setAttribute(
-        "aria-label",
-        tr("Posición sobre Photon Corridor","Position on Photon Corridor")
-      );
-      element.innerHTML="<span></span><i></i>";
-      photonCursorRef.current=new maplibregl.Marker({
-        element,
-        anchor:"center"
-      })
-        .setLngLat([
-          navigationProgress.snapped.longitude,
-          navigationProgress.snapped.latitude
-        ])
-        .addTo(map);
-    }
-
-    if(gpsActive && orbitalLookahead){
-      const element=document.createElement("div");
-      element.className="navibori-orbital-target";
-      element.setAttribute(
-        "aria-label",
-        tr(
-          "Punto de anticipación Orbital Lookahead",
-          "Orbital Lookahead guidance target"
-        )
-      );
-      element.innerHTML="<span></span><i></i>";
-      orbitalTargetRef.current=new maplibregl.Marker({
-        element,
-        anchor:"center"
-      })
-        .setLngLat([
-          orbitalLookahead.coordinate.longitude,
-          orbitalLookahead.coordinate.latitude
-        ])
-        .addTo(map);
-    }
-
-    if(
-      gpsActive &&
-      trajectoryPrediction &&
-      trajectoryPrediction.risk!=="stable"
-    ){
-      const element=document.createElement("div");
-      element.className=
-        "navibori-trajectory-ghost "+trajectoryPrediction.risk;
-      element.setAttribute(
-        "aria-label",
-        tr(
-          "Posición proyectada por Trajectory Shield",
-          "Trajectory Shield projected position"
-        )
-      );
-      element.innerHTML="<span></span><i></i>";
-      trajectoryGhostRef.current=new maplibregl.Marker({
-        element,
-        anchor:"center"
-      })
-        .setLngLat([
-          trajectoryPrediction.futureCoordinate.longitude,
-          trajectoryPrediction.futureCoordinate.latitude
-        ])
-        .addTo(map);
-    }
+    // Orbital Lookahead and Photon Corridor remain in navigation calculations.
+    // Their extra blue map pins and projected ghost are not needed by drivers.
+    // GPS position, selected destination and next-turn marker stay visible.
 
     return ()=>{
       nextTurnMarkerRef.current?.remove();
@@ -1217,13 +1147,6 @@ export default function NaviboriMap({
     nextCue?.distanceMeters,
     vectorGateState,
     deviceLocale.language,
-    navigationProgress?.snapped.latitude,
-    navigationProgress?.snapped.longitude,
-    orbitalLookahead?.coordinate.latitude,
-    orbitalLookahead?.coordinate.longitude,
-    trajectoryPrediction?.futureCoordinate.latitude,
-    trajectoryPrediction?.futureCoordinate.longitude,
-    trajectoryPrediction?.risk,
     distanceUnits,
     routeResult,
     selected?.mapLocation?.latitude,
