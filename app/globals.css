@@ -3471,3 +3471,10 @@ html[data-motion="reduced"] .navibori-drift-bridge-marker i{
   .navibori-drive-summary>div>strong{font-size:.75rem}
   .navibori-drive-summary>button{min-width:37px}
 }
+
+
+/* MapLibre/OpenStreetMap attribution must remain readable above the active
+   navigation strip rather than being covered by the new controls. */
+.map-panel[data-navigation-active="true"] .maplibregl-ctrl-bottom-right{
+  bottom:max(96px,calc(env(safe-area-inset-bottom) + 86px));
+}
