@@ -30,3 +30,15 @@ jobs:
             -destination 'generic/platform=iOS Simulator' \
             CODE_SIGNING_ALLOWED=NO \
             build
+      - name: Generate iPhone Personal Team project without CarPlay entitlement
+        working-directory: ios/NAVIBORI
+        run: xcodegen generate --spec project-phone.yml
+      - name: Compile iPhone preview for iOS Simulator without Apple signing
+        working-directory: ios/NAVIBORI
+        run: |
+          xcodebuild -project NAVIBORIPhone.xcodeproj \
+            -scheme NAVIBORI \
+            -configuration Debug \
+            -destination 'generic/platform=iOS Simulator' \
+            CODE_SIGNING_ALLOWED=NO \
+            build
