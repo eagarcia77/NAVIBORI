@@ -1,6 +1,6 @@
 import {describe,expect,it} from "vitest";
 import {toCarPlayDestinations} from "./destinations";
-import type {CommerceProfile} from "@/lib/commerce/types";
+import type {CommerceProfile} from "../commerce/types";
 
 function business(partial:Partial<CommerceProfile>={}):CommerceProfile{
   return {
