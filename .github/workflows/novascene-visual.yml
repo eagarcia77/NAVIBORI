@@ -1,0 +1,61 @@
+name: NovaScene GPU 3D Smoke
+
+on:
+  pull_request:
+    branches:
+      - foundation/navibori-v0.1
+    paths:
+      - components/navibori-map.tsx
+      - public/data/novascene/**
+      - scripts/novascene-visual-smoke.mjs
+      - .github/workflows/novascene-visual.yml
+
+permissions:
+  contents: read
+
+jobs:
+  browser-3d:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    env:
+      NEXT_TELEMETRY_DISABLED: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install application
+        run: npm ci
+      - name: Install standalone visual browser
+        run: |
+          npm install --no-save playwright
+          npx playwright install --with-deps chromium webkit
+      - name: Build production application
+        run: npm run build
+      - name: Start local production server
+        run: |
+          (npm run start -- -p 3200 >/tmp/navibori-next.log 2>&1 &)
+          for i in $(seq 1 45); do
+            if curl -sf http://127.0.0.1:3200 >/dev/null; then exit 0; fi
+            sleep 2
+          done
+          cat /tmp/navibori-next.log
+          exit 1
+      - name: Prove actual WebGL 3D walls in desktop and mobile contexts
+        run: node scripts/novascene-visual-smoke.mjs
+      - name: Verify mobile GPS granted and denied behavior
+        run: node scripts/navibori-gps-browser-smoke.mjs
+      - name: Verify continuous geolocation updates and false jumps
+        run: node scripts/navibori-gps-stream-smoke.mjs
+      - name: Save spatial smoke screenshots and server log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: novascene-visual-qa
+          if-no-files-found: ignore
+          path: |
+            /tmp/novascene-*.png
+            /tmp/navibori-gps-*.png
+            /tmp/navibori-gps-stream-*.png
+            /tmp/navibori-next.log
