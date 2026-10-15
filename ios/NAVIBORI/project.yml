@@ -21,5 +21,10 @@ targets:
         CODE_SIGN_ENTITLEMENTS: Config/CarPlay.entitlements
         TARGETED_DEVICE_FAMILY: "1"
         SWIFT_EMIT_LOC_STRINGS: YES
-    scheme:
-      testTargets: []
+schemes:
+  NAVIBORI:
+    build:
+      targets:
+        NAVIBORI: all
+    run:
+      config: Debug
