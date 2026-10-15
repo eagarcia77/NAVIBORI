@@ -1,0 +1,32 @@
+name: NAVIBORI iOS CarPlay
+
+on:
+  pull_request:
+    paths:
+      - 'ios/NAVIBORI/**'
+      - '.github/workflows/navibori-ios-carplay.yml'
+  workflow_dispatch:
+
+jobs:
+  ios-simulator-build:
+    runs-on: macos-15
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Select Xcode
+        run: sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
+      - name: Install XcodeGen
+        run: brew install xcodegen
+      - name: Generate Xcode project
+        working-directory: ios/NAVIBORI
+        run: xcodegen generate
+      - name: Compile for iOS Simulator (no Apple signing)
+        working-directory: ios/NAVIBORI
+        run: |
+          xcodebuild -project NAVIBORI.xcodeproj \
+            -scheme NAVIBORI \
+            -configuration Debug \
+            -destination 'generic/platform=iOS Simulator' \
+            CODE_SIGNING_ALLOWED=NO \
+            build
