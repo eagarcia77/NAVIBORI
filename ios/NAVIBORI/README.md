@@ -64,3 +64,58 @@ Apple official references:
 - No Developer enrollment, entitlement approval, provisioning profiles,
   commercial domain or App Store submission has been performed.
 - Backend deployment to Render is separate and does not install an app.
+
+
+## Instalación guiada sin membresía pagada: NAVIBORI Preview para iPhone
+
+### Antes de empezar
+
+1. Verifica membresía en https://developer.apple.com/account/.
+   Un equipo "Personal Team" en Xcode es gratuito y **no autoriza CarPlay**.
+2. Instala Xcode desde Mac App Store y abre Xcode al menos una vez.
+3. En Terminal verifica: `xcodebuild -version`.
+4. Instala XcodeGen con Homebrew si no está disponible: `brew install xcodegen`.
+5. Descarga el código:
+
+    git clone -b foundation/navibori-v0.1 https://github.com/eagarcia77/NAVIBORI.git
+    cd NAVIBORI/ios/NAVIBORI
+
+### Crear únicamente la app para iPhone
+
+**No** uses el proyecto CarPlay principal si todavía no tienes aprobado
+com.apple.developer.carplay-maps; Xcode no podrá firmarlo con Personal Team.
+
+    xcodegen generate --spec project-phone.yml
+    open NAVIBORIPhone.xcodeproj
+
+En Xcode elige target NAVIBORI > Signing & Capabilities,
+activa "Automatically manage signing", selecciona tu "Personal Team",
+y modifica el Bundle Identifier si Xcode indica que ya está registrado.
+Conecta el iPhone, confía en la Mac y selecciona el dispositivo
+en la barra superior. Activa "Developer Mode" si iOS lo solicita
+(Settings > Privacy & Security > Developer Mode). Presiona Run (▶).
+
+La pantalla instalada se llamará **NAVIBORI Preview**.
+Puede buscar lugares reales y probar la ubicación del iPhone.
+No aparecerá como aplicación en CarPlay ni permitirá la navegación
+CarPlay; la cuenta gratuita generalmente requiere renovar la
+instalación/prueba cada siete días.
+
+### Cuando Apple autorice la categoría CarPlay Navigation
+
+    xcodegen generate --spec project.yml
+    open NAVIBORI.xcodeproj
+
+En el Apple Developer portal habilita la capacidad aprobada para
+com.zenqavio.navibori (o el Bundle ID final) y crea un provisioning
+profile que contenga el permiso. Ajusta Code Signing y selecciona
+el equipo aprobado antes de construir e instalar en un iPhone.
+
+Documentación oficial:
+- https://developer.apple.com/help/account/basics/about-your-developer-account
+- https://developer.apple.com/documentation/carplay/requesting-carplay-entitlements
+- https://developer.apple.com/documentation/xcode/enabling-developer-mode-on-a-device
+
+**Nota de seguridad:** el código compilado por CI no constituye
+una autorización de CarPlay ni significa que el GPS esté validado
+en tráfico real. No pruebes la interfaz mientras conduces.
