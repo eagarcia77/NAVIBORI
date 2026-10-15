@@ -1,6 +1,6 @@
-import {isPuertoRicoCoordinate} from "@/lib/commerce/in-map-routing";
-import {canHandoffCommerceDirections} from "@/lib/commerce/navigation-eligibility";
-import type {CommerceProfile} from "@/lib/commerce/types";
+import {isPuertoRicoCoordinate} from "../commerce/in-map-routing";
+import {canHandoffCommerceDirections} from "../commerce/navigation-eligibility";
+import type {CommerceProfile} from "../commerce/types";
 
 /** The native vehicle display must never use mock, pending or unverified coordinates. */
 export interface CarPlayDestination {
