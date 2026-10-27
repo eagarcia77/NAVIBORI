@@ -3,6 +3,7 @@ import "./nearby-specials.css";
 import {useEffect,useState,useRef} from "react";
 import Link from "next/link";
 import {nearbyPromotions,type NearbyPosition} from "@/lib/commerce/nearby-promotions";
+import {deliverNearbyOffer} from "@/lib/commerce/nearby-delivery";
 import {mayNotifyNearby} from "@/lib/commerce/nearby-alert-policy";
 import type {CommerceProfile} from "@/lib/commerce/types";
 export default function NearbySpecials(){
@@ -13,6 +14,8 @@ export default function NearbySpecials(){
   const [radius,setRadius]=useState(1000);
   const [message,setMessage]=useState("");
   const [clock,setClock]=useState(Date.now());
+  const fetchedAt=useRef(0);
+  const sending=useRef(false);
   const memory=useRef<Record<string,number>>({});
   useEffect(()=>{
     try{
@@ -33,7 +36,7 @@ export default function NearbySpecials(){
         const response=await fetch("/api/commerce/public",{cache:"no-store",signal:controller.signal});
         if(!response.ok)throw new Error();
         const data=await response.json();
-        if(alive)setBusinesses(data.businesses??[]);
+        if(alive){fetchedAt.current=Date.now();setBusinesses(data.businesses??[]);}
       }catch{if(alive){setBusinesses([]);setMessage("No se pudieron actualizar las ofertas.");}}
       finally{fetching=false;}
     }
@@ -62,28 +65,40 @@ export default function NearbySpecials(){
   useEffect(()=>{
     if(!enabled||!notifications||document.visibilityState!=="visible"||!("Notification" in window)||Notification.permission!=="granted")return;
     let alive=true;
+    let ownsDelivery=false;
     void(async()=>{
       const registration=await navigator.serviceWorker.register("/sw.js",{scope:"/"});
-      await navigator.serviceWorker.ready;
-      for(const offer of JSON.parse(offerKey) as ReturnType<typeof nearbyPromotions>){
-        if(!alive)break;
-        const key="navibori:nearby-notified:"+offer.id;
-        const deviceKey="navibori:nearby-last-alert";
-        let previous=memory.current[key]??0;
-        let lastDevice=memory.current[deviceKey]??0;
-        try{previous=Number(localStorage.getItem(key)??previous);lastDevice=Number(localStorage.getItem(deviceKey)??lastDevice);}catch{}
-        if(!mayNotifyNearby(Date.now(),previous,lastDevice))continue;
-        await registration.showNotification(offer.businessName+" · "+offer.title,{
-          body:offer.description+" · A "+offer.distance+" m",tag:"navibori-nearby-"+offer.id,
-          icon:"/brand/navibori-app-icon.webp",data:{url:offer.url}
-        });
-        const time=Date.now();memory.current[key]=time;memory.current[deviceKey]=time;
-        try{localStorage.setItem(key,String(time));localStorage.setItem(deviceKey,String(time));}catch{}
-        break;
-      }
-    })().catch(()=>setMessage("No se pudo mostrar el aviso. Las ofertas siguen visibles aquí."));
+      await deliverNearbyOffer({
+        ready:()=>navigator.serviceWorker.ready,
+        allowed:()=>alive&&!sending.current&&document.visibilityState==="visible"&&
+          Notification.permission==="granted"&&Date.now()-fetchedAt.current<60000,
+        offers:()=>position?nearbyPromotions(businesses,position,radius,Date.now()):[],
+        eligible:offer=>{
+          const key="navibori:nearby-notified:"+offer.id;
+          const deviceKey="navibori:nearby-last-alert";
+          let previous=memory.current[key]??0;
+          let lastDevice=memory.current[deviceKey]??0;
+          try{previous=Number(localStorage.getItem(key)??previous);lastDevice=Number(localStorage.getItem(deviceKey)??lastDevice);}catch{}
+          return mayNotifyNearby(Date.now(),previous,lastDevice);
+        },
+        show:async offer=>{
+          sending.current=true;ownsDelivery=true;
+          await registration.showNotification(offer.businessName+" · "+offer.title,{
+            body:offer.description+" · A "+offer.distance+" m",tag:"navibori-nearby-"+offer.id,
+            icon:"/brand/navibori-app-icon.webp",data:{url:offer.url}
+          });
+        },
+        record:offer=>{
+          const key="navibori:nearby-notified:"+offer.id;
+          const deviceKey="navibori:nearby-last-alert";
+          const time=Date.now();memory.current[key]=time;memory.current[deviceKey]=time;
+          try{localStorage.setItem(key,String(time));localStorage.setItem(deviceKey,String(time));}catch{}
+        }
+      });
+    })().catch(()=>{if(alive)setMessage("No se pudo mostrar el aviso. Las ofertas siguen visibles aquí.");})
+      .finally(()=>{if(ownsDelivery)sending.current=false;});
     return ()=>{alive=false;};
-  },[enabled,notifications,offerKey]);
+  },[enabled,notifications,offerKey,businesses,position,radius]);
   async function enableNotifications(){
     if(!("Notification" in window)||!("serviceWorker" in navigator)){
       setMessage("En iPhone, añade NAVIBORI a la pantalla de inicio y ábrelo desde su icono para activar avisos.");return;

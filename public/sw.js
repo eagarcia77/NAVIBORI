@@ -4,7 +4,7 @@ function safeTarget(value){
   try{
     const target=new URL(typeof value==="string"?value:"/comercios",self.location.origin);
     return target.origin===self.location.origin&&/^\/comercios(?:\/|$)/.test(target.pathname)
-      ? target.pathname+target.search : "/comercios";
+      ? target.pathname+target.search+target.hash : "/comercios";
   }catch{return "/comercios";}
 }
 self.addEventListener("push",event=>{

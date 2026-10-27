@@ -15,9 +15,9 @@ export function nearbyPromotions(businesses:CommerceProfile[],position:NearbyPos
       Math.cos(rad(position.latitude))*Math.cos(rad(location.latitude))*Math.sin(rad(location.longitude-position.longitude)/2)**2;
     const distance=6371000*2*Math.asin(Math.sqrt(Math.min(1,a)));
     if(distance+position.accuracy>radius)return [];
-    return currentVerifiedPromotions(b,new Date(now)).map(p=>({
+    return currentVerifiedPromotions(b,new Date(now),Infinity).map(p=>({
       id:p.id,title:p.title,description:p.description,businessName:b.name,
-      distance:Math.round(distance),url:"/comercios/"+encodeURIComponent(b.slug)
+      distance:Math.round(distance),url:"/comercios/"+encodeURIComponent(b.slug)+"#promotion-"+encodeURIComponent(p.id)
     }));
   }).sort((a,b)=>a.distance-b.distance);
 }

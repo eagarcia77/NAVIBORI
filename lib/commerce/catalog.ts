@@ -20,7 +20,7 @@ export function filterCommerce(
 
     const promotionMatch =
       !filter.promotionsOnly ||
-      business.promotions.some((promotion) => promotion.active);
+      business.promotions.some((promotion) => isPromotionActive(promotion));
 
     const text = [
       business.name,
@@ -46,8 +46,12 @@ export function isPromotionActive(
   const starts = promotion.startsAt ? new Date(promotion.startsAt).getTime() : null;
   const ends = promotion.endsAt ? new Date(promotion.endsAt).getTime() : null;
 
+  if (!Number.isFinite(now)) return false;
+  if (starts !== null && !Number.isFinite(starts)) return false;
+  if (ends !== null && !Number.isFinite(ends)) return false;
+  if (starts !== null && ends !== null && starts >= ends) return false;
   if (starts !== null && now < starts) return false;
-  if (ends !== null && now > ends) return false;
+  if (ends !== null && now >= ends) return false;
   return true;
 }
 
