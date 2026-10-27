@@ -4,6 +4,7 @@ import "maplibre-gl/dist/maplibre-gl.css";
 import "./globals.css";
 import PeripheralAdapter from "@/components/system/peripheral-adapter";
 import GamepadFocusController from "@/components/system/gamepad-focus-controller";
+import NearbySpecials from "@/components/commerce/nearby-specials";
 import SpecialAlertsControl from "@/components/commerce/special-alerts-control";
 import DeviceLanguage from "@/components/system/device-language";
 
@@ -32,6 +33,7 @@ export default function RootLayout({ children }: Readonly<{ children: ReactNode 
         <PeripheralAdapter />
         <GamepadFocusController />
         {children}
+        <NearbySpecials />
         <SpecialAlertsControl />
       </body>
     </html>

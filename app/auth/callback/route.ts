@@ -42,6 +42,10 @@ export async function GET(request: Request) {
     ));
   }
 
+  if (url.searchParams.get("flow") === "merchant") {
+    return NextResponse.redirect(new URL("/merchant", trustedOrigin));
+  }
+
   return NextResponse.redirect(new URL(
     "/login?message=" + encodeURIComponent(
       "Correo verificado correctamente. Ya puedes iniciar sesión."

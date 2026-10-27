@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { login, signup, resendConfirmation } from "./actions";
+import { login, signup, resendConfirmation, socialLogin } from "./actions";
 
 export const dynamic = "force-dynamic";
 
@@ -9,12 +9,21 @@ export default async function LoginPage({
   searchParams: Promise<{ error?: string; message?: string }>;
 }) {
   const params = await searchParams;
+  let providers: Record<string, boolean> = {};
+  try {
+    const response = await fetch(process.env.NEXT_PUBLIC_SUPABASE_URL + "/auth/v1/settings", {
+      headers: { apikey: process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ?? "" },
+      cache: "no-store", signal: AbortSignal.timeout(5000)
+    });
+    if (response.ok) providers = (await response.json()).external ?? {};
+  } catch {}
+
 
   return (
     <main className="auth-shell">
       <section className="auth-card" aria-labelledby="login-title">
-        <p className="eyebrow">NAVIBORI Studio</p>
-        <h1 id="login-title">Acceso espacial</h1>
+        <p className="eyebrow">NAVIBORI · Comerciantes</p>
+        <h1 id="login-title">Accede a tu comercio</h1>
         <p>
           El inicio de sesión identifica al usuario; los permisos de edición dependen de
           membresías asignadas en cada venue.
@@ -23,6 +32,16 @@ export default async function LoginPage({
         {params.error && <p className="auth-alert error" role="alert">{params.error}</p>}
         {params.message && <p className="auth-alert" role="status">{params.message}</p>}
 
+        <div className="auth-form" aria-label="Acceso con otras cuentas">
+          {([ ["google", "Google"], ["azure", "Microsoft"], ["apple", "Apple"] ] as const).map(([provider, label]) => (
+            <form action={socialLogin} key={provider}>
+              <input type="hidden" name="provider" value={provider} />
+              <button type="submit" disabled={!providers[provider]}>Continuar con {label}</button>
+              {!providers[provider] && <small>{label}: pendiente de configuración.</small>}
+            </form>
+          ))}
+          <p>Crear tu cuenta identifica al titular. La publicación del comercio requiere revisión.</p>
+        </div>
         <form className="auth-form">
           <label htmlFor="email">Correo electrónico</label>
           <input id="email" name="email" type="email" autoComplete="email" required />
