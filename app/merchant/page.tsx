@@ -32,6 +32,8 @@ export default function MerchantPage() {
           <p>Perfil comercial, catálogo y promociones con revisión y permisos por establecimiento.</p>
         </div>
         <div className="subpage-actions">
+          <Link href="/login">Crear cuenta / Iniciar sesión</Link>
+          <Link href="/merchant/promotions">Mis anuncios</Link>
           <Link href="/comercios">Ver comercios</Link>
           <Link href="/">Volver al mapa</Link>
         </div>

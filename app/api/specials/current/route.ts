@@ -1,5 +1,5 @@
 import {NextResponse} from "next/server";
-import {activePromotions} from "@/lib/commerce/catalog";
+import {currentVerifiedPromotions} from "@/lib/commerce/verified-promotions";
 import {getPublicCommerce} from "@/lib/commerce/public-data";
 
 export const dynamic="force-dynamic";
@@ -9,7 +9,7 @@ export async function GET(){
     const businesses=await getPublicCommerce();
 
     const specials=businesses.flatMap((business)=>
-      activePromotions(business).map((promotion)=>({
+      currentVerifiedPromotions(business).map((promotion)=>({
         id:promotion.id,
         title:promotion.title,
         description:promotion.description,

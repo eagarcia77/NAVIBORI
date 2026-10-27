@@ -24,7 +24,7 @@ export async function login(formData: FormData) {
     redirect("/login?error=" + encodeURIComponent(error.message));
   }
 
-  redirect("/studio");
+  redirect("/merchant");
 }
 
 export async function signup(formData: FormData) {
@@ -79,4 +79,23 @@ export async function logout() {
   const supabase = await createClient();
   await supabase.auth.signOut();
   redirect("/");
+}
+
+export async function socialLogin(formData: FormData) {
+  const provider = String(formData.get("provider"));
+  if (provider !== "google" && provider !== "azure" && provider !== "apple") {
+    redirect("/login?error=" + encodeURIComponent("Proveedor no válido."));
+  }
+  const supabase = await createClient();
+  const { data, error } = await supabase.auth.signInWithOAuth({
+    provider,
+    options: {
+      redirectTo: NAVIBORI_AUTH_CALLBACK_URL + "?flow=merchant",
+      ...(provider === "azure" ? { scopes: "email" } : {})
+    }
+  });
+  if (error || !data.url) {
+    redirect("/login?error=" + encodeURIComponent("Este acceso todavía no está disponible. Utiliza tu correo electrónico."));
+  }
+  redirect(data.url);
 }
