@@ -112,7 +112,7 @@ export default async function BusinessProfilePage({
             <section>
               <h2>Promociones</h2>
               {activePromotions(business).map((promotion)=>(
-                <article className="promo-card" key={promotion.id}>
+                <article className="promo-card" id={"promotion-"+promotion.id} key={promotion.id}>
                   <strong>{promotion.title}</strong>
                   <p>{promotion.description}</p>
                 </article>

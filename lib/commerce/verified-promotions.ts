@@ -1,4 +1,5 @@
 import type {CommerceProfile,CommercePromotion} from "./types";
+import {isPromotionActive} from "./catalog";
 
 /** Public map must never advertise synthetic, unverified or expired promotions.
  * Invalid publisher dates fail closed; the device clock is only used for
@@ -6,19 +7,13 @@ import type {CommerceProfile,CommercePromotion} from "./types";
  */
 export function currentVerifiedPromotions(
   business:CommerceProfile|null,
-  now:Date=new Date()
+  now:Date=new Date(),
+  limit=2
 ):CommercePromotion[]{
   if(!business||business.demo||business.verification!=="verified"||
      !business.verifiedLocation||!business.mapLocation?.verified||
      !Number.isFinite(now.getTime()))return [];
-  const current=now.getTime();
-  return business.promotions.filter(promotion=>{
-    if(!promotion.active||!promotion.title.trim())return false;
-    const start=promotion.startsAt?Date.parse(promotion.startsAt):null;
-    const end=promotion.endsAt?Date.parse(promotion.endsAt):null;
-    if(start!==null&&!Number.isFinite(start))return false;
-    if(end!==null&&!Number.isFinite(end))return false;
-    if(start!==null&&end!==null&&start>end)return false;
-    return (start===null||start<=current)&&(end===null||current<=end);
-  }).slice(0,2);
+  return business.promotions.filter(promotion=>
+    promotion.title.trim() && isPromotionActive(promotion,now)
+  ).slice(0,limit);
 }

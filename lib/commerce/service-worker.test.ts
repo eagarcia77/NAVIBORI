@@ -35,3 +35,8 @@ describe("phone notification worker",()=>{
   expect(w.openWindow).toHaveBeenCalledWith("/comercios");
  });
 });
+it("preserves the exact promotion anchor when a phone notification is opened",async()=>{
+ const w=worker();let task:Promise<unknown>|undefined;
+ w.handlers.notificationclick({notification:{close:()=>{},data:{url:"/comercios/tienda#promotion-p3"}},waitUntil:(p:Promise<unknown>)=>{task=p;}});await task;
+ expect(w.openWindow).toHaveBeenCalledWith("/comercios/tienda#promotion-p3");
+});

@@ -24,3 +24,9 @@ describe("nearby offers",()=>{
   expect(nearbyPromotions([business],{...position,accuracy:200},100,now)).toEqual([]);
  });
 });
+it("includes offers beyond the map preview and links the exact advertisement",()=>{
+ const many={...business,promotions:[1,2,3].map(n=>({...business.promotions[0],id:"p"+n}))};
+ const offers=nearbyPromotions([many],position,1000,now);
+ expect(offers).toHaveLength(3);
+ expect(offers[2].url).toBe("/comercios/comercio#promotion-p3");
+});

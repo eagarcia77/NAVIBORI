@@ -6,7 +6,7 @@ export function publishedSpecials(businesses:CommerceProfile[],id:string|null=nu
     const selected=id?{...business,promotions:business.promotions.filter(p=>p.id===id)}:business;
     return currentVerifiedPromotions(selected,now).map(promotion=>({
       id:promotion.id,title:promotion.title,description:promotion.description,startsAt:promotion.startsAt??null,
-      businessName:business.name,url:"/comercios/"+encodeURIComponent(business.slug)
+      businessName:business.name,url:"/comercios/"+encodeURIComponent(business.slug)+"#promotion-"+encodeURIComponent(promotion.id)
     }));
   }).sort((a,b)=>(b.startsAt?Date.parse(b.startsAt):0)-(a.startsAt?Date.parse(a.startsAt):0));
 }
