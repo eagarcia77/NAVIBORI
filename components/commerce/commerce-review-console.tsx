@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import MapFailureBoundary from "@/components/commerce/map-failure-boundary";
 import VerifiedLocationPicker from "@/components/commerce/verified-location-picker";
 import { createClient } from "@/lib/supabase/client";
 import type { Database } from "@/lib/supabase/database.types";
@@ -169,11 +170,13 @@ export default function CommerceReviewConsole({
               </label>
             </div>
 
+            <MapFailureBoundary fallback={<p role="status">El selector de mapa no está disponible. Puedes introducir la dirección y las coordenadas verificadas en los campos siguientes.</p>}>
             <VerifiedLocationPicker
               latitude={form.latitude}
               longitude={form.longitude}
               onChange={(next)=>update(business.id,next)}
             />
+            </MapFailureBoundary>
 
             <div className="review-route-location">
               <label>
