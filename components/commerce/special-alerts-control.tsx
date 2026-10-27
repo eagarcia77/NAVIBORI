@@ -35,7 +35,8 @@ function installedStandalone(){
 
 export default function SpecialAlertsControl(){
   const [state,setState]=useState<PushState>("checking");
-  const [busy,setBusy]=useState(false);
+  const [activity,setActivity]=useState<"enable"|"disable"|"test"|null>(null);
+  const busy=activity!==null;
   const [expanded,setExpanded]=useState(false);
   const [message,setMessage]=useState("");
   const [standalone,setStandalone]=useState(false);
@@ -57,9 +58,12 @@ export default function SpecialAlertsControl(){
   },[]);
 
   useEffect(()=>{
+    if(activity)return;
     let active=true;
+    let generation=0;
 
-    (async()=>{
+    const verify=async()=>{
+      const current=++generation;
       setStandalone(installedStandalone());
 
       if(
@@ -76,7 +80,7 @@ export default function SpecialAlertsControl(){
         await navigator.serviceWorker.ready;
         const subscription=await registration.pushManager.getSubscription();
 
-        if(!active) return;
+        if(!active||current!==generation)return;
 
         if(Notification.permission==="denied"){
           setState("denied");
@@ -84,13 +88,13 @@ export default function SpecialAlertsControl(){
           const {data,error}=await createClient().functions.invoke("push-subscribe",{
             body:{action:"status",installationId:getInstallationId(),endpoint:subscription.endpoint}
           });
-          if(!active)return;
+          if(!active||current!==generation)return;
           setState(!error&&data?.enabled?"enabled":"default");
         }else{
           setState("default");
         }
       }catch{
-        if(active){
+        if(active&&current===generation){
           setState("error");
           setMessage(
             language==="en"
@@ -99,13 +103,16 @@ export default function SpecialAlertsControl(){
           );
         }
       }
-    })();
-
-    return ()=>{active=false};
-  },[]);
+    };
+    const visible=()=>{if(document.visibilityState==="visible")void verify();};
+    void verify();
+    window.addEventListener("focus",visible);
+    document.addEventListener("visibilitychange",visible);
+    return ()=>{active=false;window.removeEventListener("focus",visible);document.removeEventListener("visibilitychange",visible);};
+  },[activity]);
 
   async function enable(){
-    setBusy(true);
+    setActivity("enable");
     setMessage("");
 
     try{
@@ -179,12 +186,12 @@ export default function SpecialAlertsControl(){
             : "No se pudieron activar las notificaciones."
       );
     }finally{
-      setBusy(false);
+      setActivity(null);
     }
   }
 
   async function disable(){
-    setBusy(true);
+    setActivity("disable");
     setMessage("");
 
     try{
@@ -221,11 +228,34 @@ export default function SpecialAlertsControl(){
           : "No se pudo desactivar la suscripción."
       );
     }finally{
-      setBusy(false);
+      setActivity(null);
     }
   }
 
-  if(state==="checking" || state==="unsupported") return null;
+  async function testDevice(){
+    if(busy)return;
+    setActivity("test");setMessage("");
+    try{
+      const registration=await navigator.serviceWorker.ready;
+      const subscription=await registration.pushManager.getSubscription();
+      if(!subscription||Notification.permission!=="granted"){
+        setState("default");throw new Error(language==="en"?"Enable alerts on this device first.":"Activa los avisos en este dispositivo primero.");
+      }
+      const {data,error}=await createClient().functions.invoke("push-subscribe",{
+        body:{action:"test",installationId:getInstallationId(),endpoint:subscription.endpoint}
+      });
+      if(error){
+        const rateLimited=error.context?.status===429;
+        throw new Error(rateLimited?(language==="en"?"Wait one minute before testing again.":"Espera un minuto antes de repetir la prueba."):
+          (language==="en"?"The test could not be sent. Check your notification settings.":"No se pudo enviar la prueba. Verifica los ajustes de notificaciones."));
+      }
+      if(!data?.accepted)throw new Error(language==="en"?"The push service did not accept the test.":"El servicio push no aceptó la prueba.");
+      setMessage(language==="en"?"The push service accepted the test for this device. Check whether the notification appeared.":"El servicio push aceptó la prueba para este dispositivo. Comprueba si apareció la notificación.");
+    }catch(error){setMessage(error instanceof Error?error.message:(language==="en"?"The test failed.":"La prueba no se pudo completar."));}
+    finally{setActivity(null);}
+  }
+
+  if(state==="checking") return null;
 
   return (
     <aside className={"special-alert-control "+state+(expanded ? " expanded" : " collapsed")} aria-live="polite">
@@ -234,19 +264,23 @@ export default function SpecialAlertsControl(){
         <strong>
           {state==="enabled"
             ? language==="en" ? "🔔 Alerts enabled" : "🔔 Avisos activados"
+            : state==="unsupported"
+              ? language==="en" ? "🔕 Push unavailable" : "🔕 Avisos no disponibles"
             : state==="denied"
               ? language==="en" ? "🔕 Alerts blocked" : "🔕 Avisos bloqueados"
               : language==="en" ? "🔔 Receive specials" : "🔔 Recibir especiales"}
         </strong>
       </div>
 
-      <button type="button" className="special-alert-toggle" onClick={()=>setExpanded(value=>!value)} aria-expanded={expanded} aria-label={language==="en" ? "Show or hide special alert settings" : "Mostrar u ocultar ajustes de especiales"}>{expanded ? "−" : "⚙"}</button>
+      <button type="button" className="special-alert-toggle" style={{opacity:1}} onClick={()=>setExpanded(value=>!value)} aria-expanded={expanded} aria-label={language==="en" ? "Show or hide special alert settings" : "Mostrar u ocultar ajustes de especiales"}>{expanded ? "−" : "⚙"}</button>
       {expanded && (state==="enabled" ? (
         <button type="button" onClick={disable} disabled={busy}>
-          {busy
+          {activity==="disable"
             ? language==="en" ? "Disabling…" : "Desactivando…"
             : language==="en" ? "Disable" : "Desactivar"}
         </button>
+      ) : state==="unsupported" ? (
+        <small>{language==="en"?"This browser does not support push here. On iPhone/iPad, add NAVIBORI to the Home Screen and open its icon.":"Este navegador no permite avisos push aquí. En iPhone/iPad, añade NAVIBORI a la pantalla de inicio y ábrelo desde su icono."}</small>
       ) : (
         <button
           type="button"
@@ -259,7 +293,10 @@ export default function SpecialAlertsControl(){
         </button>
       ))}
 
-      {expanded && !standalone && state!=="enabled" && (
+      {expanded&&state==="enabled"&&<button type="button" onClick={testDevice} disabled={busy}>
+        {activity==="test"?(language==="en"?"Testing…":"Probando…"):(language==="en"?"Test this phone":"Probar en este celular")}
+      </button>}
+      {expanded && state!=="unsupported" && !standalone && state!=="enabled" && (
         <small>
           {language==="en"
             ? "On iPhone/iPad, install NAVIBORI on the Home Screen to receive push alerts."

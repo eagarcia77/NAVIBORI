@@ -14,7 +14,13 @@ export function safePromotionPath(value:unknown):string{
   try{const u=new URL(value,"https://navibori.onrender.com");return u.origin==="https://navibori.onrender.com"&&/^\/comercios(?:\/|$)/.test(u.pathname)?u.pathname+u.search:"/comercios";}catch{return "/comercios";}
 }
 export function notificationPayload(business:{name:string;slug:string},promotion:{id:string;title:string;description?:string|null;ends_at?:string|null}){
-  return {id:promotion.id,businessName:business.name.slice(0,120),title:promotion.title.slice(0,120),
-    description:(promotion.description??"").slice(0,1000),url:safePromotionPath("/comercios/"+encodeURIComponent(business.slug)),
+  const path=safePromotionPath("/comercios/"+encodeURIComponent(business.slug));
+  const payload={id:promotion.id,businessName:business.name.slice(0,120),title:promotion.title.slice(0,120),
+    description:(promotion.description??"").slice(0,1000),url:path.length<=512?path:"/comercios",
     endsAt:promotion.ends_at??null};
+  const points=Array.from(payload.description);
+  while(new TextEncoder().encode(JSON.stringify(payload)).byteLength>3000&&points.length){
+    points.splice(Math.max(0,points.length-128));payload.description=points.join("");
+  }
+  return payload;
 }

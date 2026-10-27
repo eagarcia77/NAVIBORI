@@ -2,6 +2,7 @@
 
 import {useCallback,useEffect,useState} from "react";
 import {createClient} from "@/lib/supabase/client";
+import {promotionStatus,pushResultMessage} from "@/lib/commerce/promotion-status";
 import type {Database} from "@/lib/supabase/database.types";
 
 type Promotion=Database["public"]["Tables"]["business_promotions"]["Row"];
@@ -50,21 +51,13 @@ function validate(draft:Draft,allowActivation:boolean){
   if(description.length>1000)throw new Error("La descripción no puede exceder 1,000 caracteres.");
   const start=toIso(draft.startsAt);
   const end=toIso(draft.endsAt);
-  if(start&&end&&Date.parse(start)>Date.parse(end))
+  if(start&&end&&Date.parse(start)>=Date.parse(end))
     throw new Error("La fecha final debe ser posterior al comienzo.");
   if(draft.active&&!allowActivation)
     throw new Error("Solo los comercios activos y verificados pueden activar ofertas.");
   return {title,description,starts_at:start,ends_at:end,active:draft.active};
 }
 
-function visibleState(promotion:Promotion,canActivate:boolean){
-  if(!promotion.active)return "Pausada";
-  if(!canActivate)return "En borrador";
-  const now=Date.now();
-  if(promotion.starts_at&&Date.parse(promotion.starts_at)>now)return "Programada";
-  if(promotion.ends_at&&Date.parse(promotion.ends_at)<now)return "Vencida";
-  return "Vigente";
-}
 
 export default function MerchantPromotionManager({
   businesses
@@ -72,6 +65,13 @@ export default function MerchantPromotionManager({
   const [businessId,setBusinessId]=useState(businesses[0]?.id??"");
   const business=businesses.find(item=>item.id===businessId);
   const canActivate=business?.status==="active"&&business.verificationStatus==="verified"&&business.locationVerified&&business.ownershipVerified;
+  const [clock,setClock]=useState(Date.now());
+  useEffect(()=>{
+    const update=()=>setClock(Date.now());
+    const timer=setInterval(update,30000);
+    document.addEventListener("visibilitychange",update);
+    return ()=>{clearInterval(timer);document.removeEventListener("visibilitychange",update);};
+  },[]);
   const [records,setRecords]=useState<Promotion[]>([]);
   const [draft,setDraft]=useState<Draft>(emptyDraft);
   const [loading,setLoading]=useState(false);
@@ -148,7 +148,7 @@ export default function MerchantPromotionManager({
       }
       setDraft(emptyDraft);
       await refresh(businessId);
-      setMessage("Promoción guardada en Supabase.");
+      setMessage("Promoción guardada en tu cuenta.");
     }catch(caught){
       setError(caught instanceof Error?caught.message:"No se pudo guardar la promoción.");
     }finally{
@@ -180,15 +180,15 @@ export default function MerchantPromotionManager({
   }
 
   async function sendPush(row:Promotion){
-    if(busy||!canActivate||visibleState(row,true)!=="Vigente")return;
+    if(busy||!canActivate||promotionStatus(row,true,Date.now())!=="Vigente")return;
     setBusy(true);setError("");setMessage("");
     try{
       const {data,error}=await createClient().functions.invoke("send-promotion-push",{
         body:{businessId,promotionId:row.id}
       });
       if(error)throw error;
-      setMessage(data?.duplicate?"Este anuncio ya se envió.":data?.noSubscribers?"No hay dispositivos suscritos todavía.":
-        "Envío aceptado por el servicio push para "+Number(data?.sentCount??0)+" dispositivo(s). La recepción depende del celular.");
+      if(data?.status==="failed")setError(pushResultMessage(data));
+      else setMessage(pushResultMessage(data??{}));
     }catch{setError("No se pudo enviar el anuncio. Verifica que siga vigente y que tengas acceso al comercio.");}
     finally{setBusy(false);}
   }
@@ -207,14 +207,14 @@ export default function MerchantPromotionManager({
       <div>
         <p className="eyebrow">NAVIBORI · PROMOCIONES</p>
         <h2>Administrar promociones</h2>
-        <p>Los cambios se guardan en Supabase. Solo puedes editar tus comercios
+        <p>Los cambios se guardan en tu cuenta. Solo puedes editar tus comercios
           y tu membresía debe estar vigente.</p>
       </div>
     </div>
 
     <label>
       Comercio
-      <select value={businessId} onChange={event=>setBusinessId(event.target.value)}>
+      <select disabled={busy} value={businessId} onChange={event=>setBusinessId(event.target.value)}>
         {businesses.map(item=><option key={item.id} value={item.id}>
           {item.name} · {item.status==="active"?"Publicado":"Borrador"}
         </option>)}
@@ -234,7 +234,7 @@ export default function MerchantPromotionManager({
             {records.map(row=><li key={row.id}>
               <div>
                 <strong>{row.title}</strong>
-                <small>{visibleState(row,Boolean(canActivate))}</small>
+                <small>{promotionStatus(row,Boolean(canActivate),clock)}</small>
                 {row.description&&<p>{row.description}</p>}
               </div>
               <div className="merchant-promotion-row-actions">
@@ -245,7 +245,7 @@ export default function MerchantPromotionManager({
                   onClick={()=>void changeStatus(row)}>
                   {row.active?"Pausar":"Activar"}
                 </button>
-                <button type="button" disabled={busy||!canActivate||visibleState(row,true)!=="Vigente"} onClick={()=>void sendPush(row)}>
+                <button type="button" disabled={busy||!canActivate||promotionStatus(row,true,clock)!=="Vigente"} onClick={()=>void sendPush(row)}>
                   Enviar aviso general
                 </button>
               </div>
@@ -257,26 +257,26 @@ export default function MerchantPromotionManager({
         <h3>{draft.id?"Editar promoción":"Nueva promoción"}</h3>
         <label>
           Título (máximo 120 caracteres)
-          <input required maxLength={120} value={draft.title}
+          <input disabled={busy} required maxLength={120} value={draft.title}
             onChange={event=>setDraft(v=>({...v,title:event.target.value}))}/>
         </label>
         <label>
           Descripción
-          <textarea maxLength={1000} rows={4} value={draft.description}
+          <textarea disabled={busy} maxLength={1000} rows={4} value={draft.description}
             onChange={event=>setDraft(v=>({...v,description:event.target.value}))}/>
         </label>
         <label>
           Inicio (opcional)
-          <input type="datetime-local" value={draft.startsAt}
+          <input disabled={busy} type="datetime-local" value={draft.startsAt}
             onChange={event=>setDraft(v=>({...v,startsAt:event.target.value}))}/>
         </label>
         <label>
           Fin (opcional)
-          <input type="datetime-local" value={draft.endsAt}
+          <input disabled={busy} type="datetime-local" value={draft.endsAt}
             onChange={event=>setDraft(v=>({...v,endsAt:event.target.value}))}/>
         </label>
         <label className="merchant-promotion-checkbox">
-          <input type="checkbox" checked={draft.active} disabled={!canActivate}
+          <input type="checkbox" checked={draft.active} disabled={busy||!canActivate}
             onChange={event=>setDraft(v=>({...v,active:event.target.checked}))}/>
           Promoción activa
         </label>

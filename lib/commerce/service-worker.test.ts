@@ -23,6 +23,12 @@ describe("phone notification worker",()=>{
   await w.push({id:"12345678-1234-1234-1234-123456789012"});expect(w.showNotification.mock.calls[0][0]).toBe("Novedades de NAVIBORI");
   w.fetch.mockClear();await w.push(null);expect(w.fetch).not.toHaveBeenCalled();
  });
+ it("shows a device test independently of any advertisement",async()=>{
+  const w=worker();await w.push({kind:"test",url:"https://evil.test"});
+  expect(w.fetch).not.toHaveBeenCalled();
+  expect(w.showNotification.mock.calls[0][0]).toBe("NAVIBORI · Prueba de notificaciones");
+  expect(w.showNotification.mock.calls[0][1]).toMatchObject({data:{url:"/comercios"}});
+ });
  it("cannot open an external page from a notification",async()=>{
   const w=worker();let task:Promise<unknown>|undefined;
   w.handlers.notificationclick({notification:{close:()=>{},data:{url:"https://evil.test"}},waitUntil:(p:Promise<unknown>)=>{task=p;}});await task;

@@ -7,6 +7,11 @@ describe("push delivery policy",()=>{
   for(const endpoint of ["https://127.0.0.1/token","https://evil.test/token","http://web.push.apple.com/token","https://web.push.apple.com.evil.test/token","https://user:pass@web.push.apple.com/token","https://web.push.apple.com:8443/token"])
    expect(allowedPushEndpoint(endpoint)).toBe(false);
  });
+ it("bounds multilingual payloads without losing the exact advertisement identity",()=>{
+  const payload=notificationPayload({name:"漢".repeat(120),slug:"negocio"},{id:"id-exacto",title:"漢".repeat(120),description:"漢".repeat(1000)});
+  expect(new TextEncoder().encode(JSON.stringify(payload)).byteLength).toBeLessThanOrEqual(3000);
+  expect(payload.id).toBe("id-exacto");expect(payload.url).toBe("/comercios/negocio");
+ });
  it("keeps notification links inside the commerce directory",()=>{
   expect(safePromotionPath("//evil.test/path")).toBe("/comercios");
   expect(safePromotionPath("/comercios/../../login")).toBe("/comercios");
