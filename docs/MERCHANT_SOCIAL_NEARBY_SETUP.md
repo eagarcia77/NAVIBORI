@@ -25,7 +25,7 @@ Current provider documentation:
 - https://supabase.com/docs/guides/auth/social-login/auth-apple
 
 ## Remaining operational requirements
-Social authentication does not grant merchant or administrator privileges. A venue administrator must assign merchant access and review business ownership/location. At review time businesses and venue memberships were both empty. Public merchant onboarding and initial administrator provisioning still require completion; no role has been silently assigned.
+Social authentication does not grant administrator privileges. A confirmed account can register its own merchant draft at `/merchant/register`; enrollment grants only ownership-bound merchant access. An independent administrator must review ownership and location before publication. The owner's existing account has administrative membership, but still needs email confirmation. See `AUDIT_2026_10_27.md` for the completed integration checks. No email verification was bypassed.
 
 Existing remote push notifications are a separate general-specials subscription, not proximity targeting. Automatic arrival notifications while the app is closed require a native background-location/geofencing implementation and corresponding permission UX. Do not market existing general broadcasts as nearby notifications.
 

@@ -1,59 +1,45 @@
-self.addEventListener("push",(event)=>{
+self.addEventListener("install",event=>event.waitUntil(self.skipWaiting()));
+self.addEventListener("activate",event=>event.waitUntil(self.clients.claim()));
+function safeTarget(value){
+  try{
+    const target=new URL(typeof value==="string"?value:"/comercios",self.location.origin);
+    return target.origin===self.location.origin&&/^\/comercios(?:\/|$)/.test(target.pathname)
+      ? target.pathname+target.search : "/comercios";
+  }catch{return "/comercios";}
+}
+self.addEventListener("push",event=>{
   event.waitUntil((async()=>{
+    let payload=null;
+    try{payload=event.data?.json()??null;}catch{}
     let special=null;
-
-    try{
-      const response=await fetch("/api/specials/current",{
-        cache:"no-store",
-        credentials:"same-origin"
-      });
-      if(response.ok){
-        const data=await response.json();
-        special=data.special ?? null;
-      }
-    }catch{}
-
-    const title=special
-      ? special.businessName+" · "+special.title
-      : "Nuevo especial en NAVIBORI";
-    const body=special?.description
-      ? special.description
-      : "Abre NAVIBORI para ver los especiales disponibles ahora.";
-    const url=special?.url ?? "/comercios";
-
-    await self.registration.showNotification(title,{
-      body,
-      icon:"/brand/navibori-app-icon.webp",
-      badge:"/brand/navibori-app-icon.webp",
-      tag:special?.id ? "navibori-special-"+special.id : "navibori-special",
-      renotify:true,
-      data:{url},
-      actions:[
-        {action:"open",title:"Ver especial"}
-      ]
+    // Verify the exact advertised offer; never substitute another merchant's ad.
+    if(typeof payload?.id==="string"&&/^[0-9a-f-]{36}$/i.test(payload.id)){
+      try{
+        const response=await fetch("/api/specials/current?id="+encodeURIComponent(payload.id),{
+          cache:"no-store",credentials:"omit",signal:AbortSignal.timeout(8000)
+        });
+        if(response.ok)special=(await response.json()).special??null;
+      }catch{}
+    }
+    await self.registration.showNotification(special?special.businessName+" · "+special.title:"Novedades de NAVIBORI",{
+      body:special?.description||"Abre NAVIBORI para consultar las ofertas vigentes.",
+      icon:"/brand/navibori-app-icon.webp",badge:"/brand/navibori-app-icon.webp",
+      tag:special?.id?"navibori-special-"+special.id:"navibori-special",
+      data:{url:safeTarget(special?.url??payload?.url)},
+      actions:[{action:"open",title:"Ver ofertas"}]
     });
   })());
 });
-
-self.addEventListener("notificationclick",(event)=>{
+self.addEventListener("notificationclick",event=>{
   event.notification.close();
-  const target=event.notification?.data?.url || "/comercios";
-
+  const target=safeTarget(event.notification?.data?.url);
   event.waitUntil((async()=>{
-    const clientsList=await clients.matchAll({
-      type:"window",
-      includeUncontrolled:true
-    });
-
-    for(const client of clientsList){
+    const windows=await self.clients.matchAll({type:"window",includeUncontrolled:true});
+    for(const client of windows){
       if("focus" in client){
-        try{
-          await client.navigate(target);
-        }catch{}
-        return client.focus();
+        try{await client.navigate(target);return client.focus();}catch{}
       }
     }
-
-    return clients.openWindow(target);
+    return self.clients.openWindow(target);
   })());
 });

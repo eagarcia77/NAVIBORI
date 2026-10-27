@@ -1,4 +1,5 @@
-import { createClient } from "npm:@supabase/supabase-js@2";
+import {allowedPushEndpoint} from "../_shared/push-policy.ts";
+import { createClient } from "npm:@supabase/supabase-js@2.117.2";
 
 const VAPID_PUBLIC_KEY="BEdUyyPZWN3Hhj-ecrZH-Nxs-reG4eJo3nBwXckRK5J-4pBej6LMYUqkpHw2xix-ak1OgT9OMiwdadHaJJQW8Og";
 const allowedOrigins=new Set([
@@ -51,11 +52,18 @@ Deno.serve(async(req)=>{
   if(!uuid(installationId)) return json(req,{error:"Instalación inválida."},400);
 
   const endpoint=typeof body.endpoint==="string" ? body.endpoint.trim() : "";
-  if(!endpoint.startsWith("https://") || endpoint.length>2048){
+  if(!allowedPushEndpoint(endpoint)){
     return json(req,{error:"Suscripción push inválida."},400);
   }
 
   const supabase=admin();
+
+  if(body.action==="status"){
+    const {data,error}=await supabase.from("push_subscriptions").select("specials_enabled")
+      .eq("installation_id",installationId).eq("endpoint",endpoint).maybeSingle();
+    if(error)return json(req,{error:"No se pudo verificar la suscripción."},500);
+    return json(req,{ok:true,enabled:data?.specials_enabled===true});
+  }
 
   if(body.action==="unsubscribe"){
     const {error}=await supabase
@@ -75,6 +83,10 @@ Deno.serve(async(req)=>{
     return json(req,{error:"Claves push inválidas."},400);
   }
 
+  const {data:existing,error:lookupError}=await supabase.from("push_subscriptions")
+    .select("installation_id,p256dh,auth").eq("endpoint",endpoint).maybeSingle();
+  if(lookupError)return json(req,{error:"No se pudo verificar la suscripción."},500);
+  if(existing&&existing.installation_id!==installationId&&(existing.p256dh!==p256dh||existing.auth!==authKey))return json(req,{error:"Esta suscripción pertenece a otra instalación. Desactiva y vuelve a activar los avisos en este dispositivo."},409);
   const now=new Date().toISOString();
   const {error}=await supabase
     .from("push_subscriptions")

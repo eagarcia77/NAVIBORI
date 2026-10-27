@@ -4,7 +4,8 @@ import {getPublicCommerce} from "@/lib/commerce/public-data";
 
 export const dynamic="force-dynamic";
 
-export async function GET(){
+export async function GET(request:Request){
+  const id=new URL(request.url).searchParams.get("id");
   try{
     const businesses=await getPublicCommerce();
 
@@ -26,7 +27,7 @@ export async function GET(){
     });
 
     return NextResponse.json(
-      {special:specials[0] ?? null},
+      {special:(id?specials.find(s=>s.id===id):specials[0]) ?? null},
       {headers:{"Cache-Control":"no-store, max-age=0"}}
     );
   }catch{

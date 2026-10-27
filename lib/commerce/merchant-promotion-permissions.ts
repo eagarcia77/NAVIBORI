@@ -9,6 +9,8 @@ export interface MerchantPromotionBusinessContext{
   venueId:string;
   status:string;
   verificationStatus:string;
+  locationVerified?:boolean;
+  ownershipVerified?:boolean;
 }
 
 /** UX guard mirrors server RLS. The database is the ultimate authority.
@@ -29,7 +31,7 @@ export function canManageMerchantPromotion(
   if(!member)return false;
   if(business.status==="draft"&&business.verificationStatus==="pending")return false;
   if(operation==="activate"){
-    return business.status==="active"&&business.verificationStatus==="verified";
+    return business.status==="active"&&business.verificationStatus==="verified"&&business.locationVerified===true&&business.ownershipVerified===true;
   }
   return true;
 }

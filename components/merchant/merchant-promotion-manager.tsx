@@ -10,6 +10,8 @@ export type MerchantPromotionBusiness={
   name:string;
   status:string;
   verificationStatus:string;
+  locationVerified:boolean;
+  ownershipVerified:boolean;
 };
 
 type Draft={
@@ -69,7 +71,7 @@ export default function MerchantPromotionManager({
 }:{businesses:MerchantPromotionBusiness[]}){
   const [businessId,setBusinessId]=useState(businesses[0]?.id??"");
   const business=businesses.find(item=>item.id===businessId);
-  const canActivate=business?.status==="active"&&business.verificationStatus==="verified";
+  const canActivate=business?.status==="active"&&business.verificationStatus==="verified"&&business.locationVerified&&business.ownershipVerified;
   const [records,setRecords]=useState<Promotion[]>([]);
   const [draft,setDraft]=useState<Draft>(emptyDraft);
   const [loading,setLoading]=useState(false);
@@ -177,11 +179,25 @@ export default function MerchantPromotionManager({
     }
   }
 
+  async function sendPush(row:Promotion){
+    if(busy||!canActivate||visibleState(row,true)!=="Vigente")return;
+    setBusy(true);setError("");setMessage("");
+    try{
+      const {data,error}=await createClient().functions.invoke("send-promotion-push",{
+        body:{businessId,promotionId:row.id}
+      });
+      if(error)throw error;
+      setMessage(data?.duplicate?"Este anuncio ya se envió.":data?.noSubscribers?"No hay dispositivos suscritos todavía.":
+        "Envío aceptado por el servicio push para "+Number(data?.sentCount??0)+" dispositivo(s). La recepción depende del celular.");
+    }catch{setError("No se pudo enviar el anuncio. Verifica que siga vigente y que tengas acceso al comercio.");}
+    finally{setBusy(false);}
+  }
+
   if(!businesses.length){
     return <section className="merchant-promotion-manager" role="status">
       <h2>Aún no tienes un comercio autorizado</h2>
-      <p>Inicia sesión con una cuenta merchant vinculada a un venue y crea o reclama
-        tu comercio. Solo el propietario puede administrar sus promociones.</p>
+      <p>Registra tu comercio desde la consola. Solo puedes administrar anuncios propios; publicarlos requiere revisar el negocio.</p>
+      <a href="/merchant">Ir a mi comercio</a>
     </section>;
   }
 
@@ -229,6 +245,9 @@ export default function MerchantPromotionManager({
                   onClick={()=>void changeStatus(row)}>
                   {row.active?"Pausar":"Activar"}
                 </button>
+                <button type="button" disabled={busy||!canActivate||visibleState(row,true)!=="Vigente"} onClick={()=>void sendPush(row)}>
+                  Enviar aviso general
+                </button>
               </div>
             </li>)}
           </ul>}
@@ -271,7 +290,7 @@ export default function MerchantPromotionManager({
     </div>
     {message&&<p role="status" className="merchant-promotion-success">{message}</p>}
     {error&&<p role="alert" className="merchant-promotion-error">{error}</p>}
-    <small>Una promoción no garantiza inventario ni disponibilidad. La publicación
+    <small>Los avisos generales se envían solo a dispositivos suscritos; los avisos de cercanía requieren ubicación y permiso en el celular. Una promoción no garantiza inventario ni disponibilidad. La publicación
       en el mapa exige un comercio verificado y una oferta vigente.</small>
   </section>;
 }

@@ -43,10 +43,15 @@ export async function resolveMerchantBackendContext():Promise<MerchantBackendCon
     throw membershipError;
   }
 
-  const membership=memberships?.find((item)=>
+  const allowed=memberships?.filter((item)=>
     ["merchant","platform_owner","municipality_admin","venue_manager"].includes(item.role)
   );
 
+  const {data:owned,error:ownedError}=await supabase.from("businesses")
+    .select("venue_id").eq("created_by",user.id).order("created_at").limit(10);
+  if(ownedError)throw ownedError;
+  const firstOwned=owned?.find(b=>allowed?.some(m=>m.venue_id===b.venue_id));
+  const membership=allowed?.find(m=>m.venue_id===firstOwned?.venue_id)??allowed?.[0];
   if(!membership){
     return {mode:"no-role",userId:user.id};
   }
@@ -121,7 +126,7 @@ export async function saveMerchantDraftToBackend(draft:MerchantDraft){
     venue_id:context.venueId,
     created_by:context.userId,
     name:draft.name.trim(),
-    slug:slugifyBusinessName(draft.name),
+    slug:existing?.slug ?? slugifyBusinessName(draft.name),
     category:draft.category,
     description:draft.description.trim() || null,
     phone:draft.phone.trim() || null,
