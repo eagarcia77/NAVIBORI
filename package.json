@@ -15,22 +15,22 @@
     "predev": "node scripts/sync-maplibre-worker.mjs"
   },
   "dependencies": {
+    "@supabase/ssr": "0.12.7",
+    "@supabase/supabase-js": "2.117.2",
     "maplibre-gl": "6.11.2",
-    "next": "16.3.8",
+    "next": "16.4.3",
+    "qrcode-generator": "2.0.4",
     "react": "19.3.0",
     "react-dom": "19.3.0",
-    "three": "0.186.1",
-    "@supabase/supabase-js": "2.117.2",
-    "@supabase/ssr": "0.12.7",
-    "qrcode-generator": "2.0.4"
+    "three": "0.186.1"
   },
   "devDependencies": {
     "@types/node": "^24.0.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
+    "@types/three": "^0.180.0",
     "typescript": "^5.9.0",
-    "vitest": "5.0.3",
-    "@types/three": "^0.180.0"
+    "vitest": "5.0.3"
   },
   "packageManager": "npm@10.9.9"
 }
