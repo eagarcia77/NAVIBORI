@@ -26,7 +26,9 @@ export const metadata = {
 };
 
 export const dynamic="force-dynamic";
-export default async function MerchantPage() {
+export default async function MerchantPage({searchParams}:{searchParams:Promise<{passwordUpdated?:string}>}) {
+  const {passwordUpdated}=await searchParams;
+  const passwordNotice=passwordUpdated === "1" ? <p className="auth-alert" role="status">Tu contraseña se actualizó. Ya puedes administrar tu comercio.</p> : null;
   const supabase=await createClient();
   const {data:{user}}=await supabase.auth.getUser();
   if(!user)redirect("/login");
@@ -37,7 +39,7 @@ export default async function MerchantPage() {
   if(businessError)throw new Error("No pudimos cargar tus comercios.");
   const business=owned?.find(b=>allowed.some(m=>m.venue_id===b.venue_id));
   if(!business)return <main className="commerce-page"><section className="auth-card">
-    <h1>Tu cuenta de comerciante</h1><p>Sesión: {user.email}</p>
+    {passwordNotice}<h1>Tu cuenta de comerciante</h1><p>Sesión: {user.email}</p>
     {owned?.length?<p>Tu comercio requiere revisar los permisos. Comunícate con el administrador; registrarte nuevamente no recupera un permiso retirado.</p>:
       <><p>Registra tu comercio para preparar sus anuncios y solicitar su publicación.</p><Link href="/merchant/register">Registrar mi comercio</Link></>}
     {allowed.some(m=>m.role!=="merchant")&&<p><Link href="/commerce-review">Revisar comercios</Link></p>}
@@ -58,6 +60,7 @@ export default async function MerchantPage() {
 
   return (
     <main className="commerce-page">
+      {passwordNotice}
       <header className="subpage-header">
         <div>
           <NaviboriBrand compact />

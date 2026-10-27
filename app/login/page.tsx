@@ -25,8 +25,8 @@ export default async function LoginPage({
         <p className="eyebrow">NAVIBORI · Comerciantes</p>
         <h1 id="login-title">Accede a tu comercio</h1>
         <p>
-          El inicio de sesión identifica al usuario; los permisos de edición dependen de
-          membresías asignadas en cada venue.
+          Inicia sesión para registrar tu negocio y administrar sus anuncios.
+          Cada cuenta solo puede editar los comercios para los que tiene permiso.
         </p>
 
         {params.error && <p className="auth-alert error" role="alert">{params.error}</p>}
@@ -47,13 +47,15 @@ export default async function LoginPage({
           <input id="email" name="email" type="email" autoComplete="email" required />
 
           <label htmlFor="password">Contraseña</label>
-          <input id="password" name="password" type="password" autoComplete="current-password" minLength={8} required />
+          <input id="password" name="password" type="password" autoComplete="current-password" required />
 
           <div className="auth-actions">
             <button formAction={login}>Iniciar sesión</button>
             <button className="secondary" formAction={signup}>Crear cuenta</button>
           </div>
         </form>
+
+        <p><Link href="/forgot-password">¿Olvidaste tu contraseña?</Link></p>
 
         <section className="auth-resend-section" aria-labelledby="resend-confirmation-title">
           <h2 id="resend-confirmation-title">¿No recibiste el correo de confirmación?</h2>
