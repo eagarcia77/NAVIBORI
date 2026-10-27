@@ -4,24 +4,17 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { normalizeConfirmationEmail, NAVIBORI_AUTH_CALLBACK_URL } from "@/lib/auth/email-confirmation";
 
-function credentials(formData: FormData) {
-  const email = String(formData.get("email") ?? "").trim();
-  const password = String(formData.get("password") ?? "");
-
-  if (!email || !password) {
-    throw new Error("Email y contraseña son requeridos.");
-  }
-
-  return { email, password };
-}
+import {accountCredentials,accountError} from "@/lib/auth/account-input";
 
 export async function login(formData: FormData) {
   const supabase = await createClient();
-  const { email, password } = credentials(formData);
+  const input=accountCredentials(formData);
+  if(input.error)redirect("/login?error="+encodeURIComponent(input.error));
+  const {email,password}=input;
   const { error } = await supabase.auth.signInWithPassword({ email, password });
 
   if (error) {
-    redirect("/login?error=" + encodeURIComponent(error.message));
+    redirect("/login?error=" + encodeURIComponent(accountError(error.code)));
   }
 
   redirect("/merchant");
@@ -29,7 +22,9 @@ export async function login(formData: FormData) {
 
 export async function signup(formData: FormData) {
   const supabase = await createClient();
-  const { email, password } = credentials(formData);
+  const input=accountCredentials(formData,true);
+  if(input.error)redirect("/login?error="+encodeURIComponent(input.error));
+  const {email,password}=input;
   const { error } = await supabase.auth.signUp({
     email,
     password,
@@ -40,7 +35,7 @@ export async function signup(formData: FormData) {
   });
 
   if (error) {
-    redirect("/login?error=" + encodeURIComponent(error.message));
+    redirect("/login?error=" + encodeURIComponent(accountError(error.code)));
   }
 
   redirect("/login?message=" + encodeURIComponent("Cuenta creada. Si Supabase solicita confirmación, revise su correo antes de iniciar sesión."));

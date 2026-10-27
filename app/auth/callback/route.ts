@@ -21,12 +21,15 @@ export async function GET(request: Request) {
 
   const supabase = await createClient();
   let error: {message:string}|null=null;
+  let recovery=false;
   if (code) {
     const result = await supabase.auth.exchangeCodeForSession(code);
     error = result.error;
-  } else if (tokenHash && (type === "signup" || type === "email")) {
+    recovery="redirectType" in result.data && result.data.redirectType === "recovery";
+  } else if (tokenHash && (type === "signup" || type === "email" || type === "recovery")) {
     const result = await supabase.auth.verifyOtp({type,token_hash:tokenHash});
     error = result.error;
+    recovery=type === "recovery";
   } else {
     return NextResponse.redirect(new URL(
       "/login?error=" + encodeURIComponent("El enlace de confirmación no es válido."),
@@ -37,10 +40,12 @@ export async function GET(request: Request) {
   if (error) {
     return NextResponse.redirect(new URL(
       "/login?error=" + encodeURIComponent(
-        "No se pudo verificar el enlace. Solicita otro correo de confirmación."
+        "No se pudo verificar el enlace. Solicita uno nuevo de confirmación o recuperación y ábrelo en el mismo navegador."
       ),trustedOrigin
     ));
   }
+
+  if(recovery)return NextResponse.redirect(new URL("/reset-password",trustedOrigin));
 
   if (url.searchParams.get("flow") === "merchant") {
     return NextResponse.redirect(new URL("/merchant", trustedOrigin));
