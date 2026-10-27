@@ -1,3 +1,4 @@
+import {sendPromotionPush} from "../_shared/web-push.ts";
 import {allowedPushEndpoint} from "../_shared/push-policy.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.117.2";
 
@@ -57,6 +58,34 @@ Deno.serve(async(req)=>{
   }
 
   const supabase=admin();
+
+  if(body.action==="test"){
+    const {data:subscription,error:lookupError}=await supabase.from("push_subscriptions")
+      .select("id,endpoint,p256dh,auth").eq("installation_id",installationId)
+      .eq("endpoint",endpoint).eq("specials_enabled",true).maybeSingle();
+    if(lookupError)return json(req,{error:"No se pudo verificar este dispositivo."},500);
+    if(!subscription)return json(req,{error:"Activa los avisos en este dispositivo antes de probarlos."},404);
+    const {data:privateKey,error:configError}=await supabase.rpc("get_navibori_vapid_private");
+    if(configError||typeof privateKey!=="string")return json(req,{error:"Configuración push no disponible."},503);
+    const now=new Date().toISOString();
+    const cutoff=new Date(Date.now()-60000).toISOString();
+    const {data:claimed,error:claimError}=await supabase.from("push_subscriptions")
+      .update({last_test_at:now}).eq("id",subscription.id).eq("specials_enabled",true)
+      .or("last_test_at.is.null,last_test_at.lt."+cutoff).select("id").maybeSingle();
+    if(claimError)return json(req,{error:"No se pudo preparar la prueba."},500);
+    if(!claimed)return json(req,{error:"Espera un minuto antes de repetir la prueba."},429);
+    try{
+      const response=await sendPromotionPush(subscription,privateKey,{
+        kind:"test",title:"Prueba de notificaciones",url:"/comercios"
+      });
+      if(!response.ok){
+        if(response.status===404||response.status===410)await supabase.from("push_subscriptions")
+          .update({specials_enabled:false}).eq("id",subscription.id);
+        return json(req,{error:"El servicio push no aceptó la prueba. Vuelve a activar los avisos."},502);
+      }
+      return json(req,{ok:true,accepted:true});
+    }catch{return json(req,{error:"No se pudo enviar la prueba. Inténtalo más tarde."},502);}
+  }
 
   if(body.action==="status"){
     const {data,error}=await supabase.from("push_subscriptions").select("specials_enabled")

@@ -2,6 +2,7 @@
 import {createECDH,generateKeyPairSync,randomBytes} from "node:crypto";
 import {strict as assert} from "node:assert";
 import ece from "npm:http_ece@1.2.0";
+import {notificationPayload} from "../supabase/functions/_shared/push-policy.ts";
 import {preparePromotionPush} from "../supabase/functions/_shared/web-push.ts";
 const userKey=createECDH("prime256v1");userKey.generateKeys();
 const auth=randomBytes(16);
@@ -18,4 +19,9 @@ assert.deepEqual(JSON.parse(clear.toString()),payload);
 let denied=false;
 try{await preparePromotionPush({...subscription,endpoint:"https://127.0.0.1/blocked"},pkcs8,payload,publicKey);}catch{denied=true;}
 assert.equal(denied,true);
+const large=notificationPayload({name:"漢".repeat(120),slug:"comercio"},{id:"exact-large",title:"漢".repeat(120),description:"漢".repeat(1000)});
+const largeDetails=await preparePromotionPush(subscription,pkcs8,large,publicKey);
+assert.ok(largeDetails.body.byteLength<4096);
+const largeClear=ece.decrypt(largeDetails.body,{version:"aes128gcm",privateKey:userKey,authSecret:auth});
+assert.deepEqual(JSON.parse(largeClear.toString()),large);
 console.log("PASS: encrypted payload round-trip, exact promotion and blocked outbound host; no network delivery");

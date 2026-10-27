@@ -11,6 +11,13 @@ self.addEventListener("push",event=>{
   event.waitUntil((async()=>{
     let payload=null;
     try{payload=event.data?.json()??null;}catch{}
+    if(payload?.kind==="test"){
+      await self.registration.showNotification("NAVIBORI · Prueba de notificaciones",{
+        body:"Si ves este aviso, tu celular recibió la prueba de NAVIBORI.",
+        icon:"/brand/navibori-app-icon.webp",tag:"navibori-device-test",data:{url:"/comercios"}
+      });
+      return;
+    }
     let special=null;
     // Verify the exact advertised offer; never substitute another merchant's ad.
     if(typeof payload?.id==="string"&&/^[0-9a-f-]{36}$/i.test(payload.id)){
