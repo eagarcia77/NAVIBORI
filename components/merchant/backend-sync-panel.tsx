@@ -1,5 +1,6 @@
 "use client";
 
+import {useRouter} from "next/navigation";
 import { useEffect, useState } from "react";
 import {
   getOwnedMerchantBusiness,
@@ -20,6 +21,7 @@ type Draft={
 };
 
 export default function BackendSyncPanel(){
+  const router=useRouter();
   const [context,setContext]=useState<MerchantBackendContext>({mode:"anonymous"});
   const [businessId,setBusinessId]=useState<string|null>(null);
   const [businessStatus,setBusinessStatus]=useState<string|null>(null);
@@ -48,10 +50,10 @@ export default function BackendSyncPanel(){
                 ? "Comercio publicado · operación diaria habilitada."
                 : owned.verificationStatus==="pending"
                   ? "Comercio pendiente de revisión administrativa."
-                  : "Borrador conectado a Supabase."
+                  : "Borrador guardado en tu cuenta."
             );
           }else{
-            setStatus("Supabase listo · todavía no existe un comercio para esta cuenta.");
+            setStatus("Tu cuenta todavía no tiene un comercio registrado.");
           }
           return;
         }
@@ -103,7 +105,7 @@ export default function BackendSyncPanel(){
       setBusinessId(saved.businessId);
       setBusinessStatus(saved.businessStatus ?? "draft");
       setVerificationStatus(saved.verificationStatus ?? "unverified");
-      setStatus("Borrador sincronizado con Supabase.");
+      setStatus("Cambios guardados en tu cuenta.");
     }catch(error){
       setStatus(error instanceof Error ? error.message : "No se pudo sincronizar.");
     }finally{
@@ -119,6 +121,7 @@ export default function BackendSyncPanel(){
       setBusinessStatus("draft");
       setVerificationStatus("pending");
       setStatus("Comercio enviado a revisión. Un administrador debe verificar ubicación y titularidad.");
+      router.refresh();
     }catch(error){
       setStatus(error instanceof Error ? error.message : "No se pudo enviar a revisión.");
     }finally{
@@ -130,11 +133,11 @@ export default function BackendSyncPanel(){
     <section className="merchant-backend-sync">
       <div className="merchant-section-head">
         <div>
-          <p className="eyebrow">BACKEND SYNC</p>
-          <h2>Supabase + RLS</h2>
+          <p className="eyebrow">MI COMERCIO</p>
+          <h2>Guardar y solicitar publicación</h2>
         </div>
         <div className="backend-status-stack">
-          <span className={"backend-mode "+context.mode}>{context.mode}</span>
+          <span className={"backend-mode "+context.mode}>{context.mode==="authorized"?"Cuenta conectada":context.mode==="anonymous"?"Sin sesión":"Acceso pendiente"}</span>
           {businessStatus && <span className={"commerce-lifecycle "+businessStatus}>{businessStatus}</span>}
         </div>
       </div>
@@ -151,7 +154,7 @@ export default function BackendSyncPanel(){
             ? "Procesando…"
             : businessStatus==="active"
               ? "Actualizar operación"
-              : "Sincronizar borrador"}
+              : "Guardar cambios del comercio"}
         </button>
 
         <button
@@ -169,7 +172,7 @@ export default function BackendSyncPanel(){
       </div>
 
       <small>
-        La seguridad la aplica Supabase RLS. El perfil estructural requiere revisión; un comercio activo puede actualizar únicamente su operación diaria.
+        Guarda primero los cambios de perfil, horarios y catálogo en sus editores. Luego guárdalos en tu cuenta. La publicación requiere revisar titularidad y ubicación.
       </small>
     </section>
   );

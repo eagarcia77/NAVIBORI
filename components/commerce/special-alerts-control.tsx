@@ -81,7 +81,11 @@ export default function SpecialAlertsControl(){
         if(Notification.permission==="denied"){
           setState("denied");
         }else if(subscription){
-          setState("enabled");
+          const {data,error}=await createClient().functions.invoke("push-subscribe",{
+            body:{action:"status",installationId:getInstallationId(),endpoint:subscription.endpoint}
+          });
+          if(!active)return;
+          setState(!error&&data?.enabled?"enabled":"default");
         }else{
           setState("default");
         }
@@ -162,8 +166,8 @@ export default function SpecialAlertsControl(){
       setState("enabled");
       setMessage(
         language==="en"
-          ? "You will receive NAVIBORI LIVE specials and promotions."
-          : "Recibirás especiales y promociones LIVE de NAVIBORI."
+          ? "You will receive general promotion alerts. Enable Nearby offers for location-based alerts."
+          : "Recibirás avisos generales de promociones vigentes. Para avisos por ubicación, activa Ofertas cercanas."
       );
     }catch(error){
       setState("error");
@@ -189,7 +193,7 @@ export default function SpecialAlertsControl(){
 
       if(subscription){
         const supabase=createClient();
-        await supabase.functions.invoke(
+        const {error}=await supabase.functions.invoke(
           "push-subscribe",
           {
             body:{
@@ -199,6 +203,7 @@ export default function SpecialAlertsControl(){
             }
           }
         );
+        if(error)throw error;
         await subscription.unsubscribe();
       }
 

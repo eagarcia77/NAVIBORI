@@ -1295,6 +1295,15 @@ export type Database = {
       }
     }
     Functions: {
+      merchant_registration_venues: {
+        Args: never
+        Returns: {id:string;name:string;status:string}[]
+      }
+      register_merchant_business: {
+        Args: {p_venue_id:string;p_name:string;p_category:string;p_description:string;p_phone?:string;p_whatsapp?:string;p_website?:string;p_address?:string}
+        Returns: string
+      }
+
       approve_spatial_revision: {
         Args: { p_note?: string; p_revision_id: string }
         Returns: {

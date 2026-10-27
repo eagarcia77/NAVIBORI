@@ -88,9 +88,9 @@ export default function MerchantConsole() {
   return (
     <section className="merchant-console">
       <div className="merchant-status">
-        <div><span>MODE</span><strong>Local draft</strong></div>
-        <div><span>PUBLISH</span><strong>Review required</strong></div>
-        <div><span>BACKEND</span><strong>RLS active</strong></div>
+        <div><span>EDICIÓN</span><strong>Borrador local</strong></div>
+        <div><span>PUBLICACIÓN</span><strong>Requiere revisión</strong></div>
+        <div><span>GUARDADO</span><strong>En este dispositivo</strong></div>
       </div>
 
       <div className="merchant-form-grid">

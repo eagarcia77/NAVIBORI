@@ -1,42 +1,8 @@
-import { createClient } from "npm:@supabase/supabase-js@2";
+import { createClient } from "npm:@supabase/supabase-js@2.117.2";
 
-const VAPID_PUBLIC_KEY="BEdUyyPZWN3Hhj-ecrZH-Nxs-reG4eJo3nBwXckRK5J-4pBej6LMYUqkpHw2xix-ak1OgT9OMiwdadHaJJQW8Og";
-const VAPID_SUBJECT="https://navibori.onrender.com";
+import {sendPromotionPush} from "../_shared/web-push.ts";
+import {notificationPayload} from "../_shared/push-policy.ts";
 
-function bytesFromBase64(value:string){
-  return Uint8Array.from(atob(value),c=>c.charCodeAt(0));
-}
-function b64url(data:Uint8Array){
-  let binary="";
-  for(const byte of data) binary+=String.fromCharCode(byte);
-  return btoa(binary).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,"");
-}
-function b64urlText(value:string){
-  return b64url(new TextEncoder().encode(value));
-}
-async function vapidJwt(endpoint:string,privateKeyB64:string){
-  const aud=new URL(endpoint).origin;
-  const header=b64urlText(JSON.stringify({typ:"JWT",alg:"ES256"}));
-  const payload=b64urlText(JSON.stringify({
-    aud,
-    exp:Math.floor(Date.now()/1000)+12*60*60,
-    sub:VAPID_SUBJECT
-  }));
-  const unsigned=header+"."+payload;
-  const key=await crypto.subtle.importKey(
-    "pkcs8",
-    bytesFromBase64(privateKeyB64),
-    {name:"ECDSA",namedCurve:"P-256"},
-    false,
-    ["sign"]
-  );
-  const signature=new Uint8Array(await crypto.subtle.sign(
-    {name:"ECDSA",hash:"SHA-256"},
-    key,
-    new TextEncoder().encode(unsigned)
-  ));
-  return unsigned+"."+b64url(signature);
-}
 function cors(req:Request){
   const origin=req.headers.get("origin") ?? "";
   const allowed=origin==="https://navibori.onrender.com" || origin==="http://localhost:3000";
@@ -64,18 +30,6 @@ function activeNow(p:any,now:number){
   const ends=p.ends_at ? Date.parse(p.ends_at) : Infinity;
   return Boolean(p.active && starts<=now && now<ends);
 }
-async function sendEmptyPush(endpoint:string,privateKeyB64:string){
-  const token=await vapidJwt(endpoint,privateKeyB64);
-  return fetch(endpoint,{
-    method:"POST",
-    headers:{
-      "TTL":"86400",
-      "Urgency":"normal",
-      "Authorization":`vapid t=${token}, k=${VAPID_PUBLIC_KEY}`
-    }
-  });
-}
-
 Deno.serve(async(req)=>{
   if(req.method==="OPTIONS") return new Response("ok",{headers:cors(req)});
   if(req.method!=="POST") return respond(req,{error:"Método no permitido."},405);
@@ -103,7 +57,7 @@ Deno.serve(async(req)=>{
 
   const {data:business,error:businessError}=await supabase
     .from("businesses")
-    .select("id,name,slug,status,verification_status,created_by,venue_id,location_verified")
+    .select("id,name,slug,status,verification_status,created_by,venue_id,location_verified,ownership_verified")
     .eq("id",businessId)
     .maybeSingle();
 
@@ -124,7 +78,7 @@ Deno.serve(async(req)=>{
   }
   if(business.status!=="active" ||
      business.verification_status!=="verified" ||
-     !business.location_verified){
+     !business.location_verified || !business.ownership_verified){
     return respond(req,{error:"El comercio debe estar LIVE y verificado."},409);
   }
 
@@ -138,7 +92,7 @@ Deno.serve(async(req)=>{
 
   const now=Date.now();
   const promotion=(promotions ?? [])
-    .filter((p:any)=>activeNow(p,now))
+    .filter((p:any)=>activeNow(p,now)&&(!body.promotionId||p.id===body.promotionId))
     .sort((a:any,b:any)=>Date.parse(b.starts_at ?? b.created_at)-Date.parse(a.starts_at ?? a.created_at))[0];
 
   if(!promotion){
@@ -157,7 +111,7 @@ Deno.serve(async(req)=>{
 
   const {data:subscriptions,error:subscriptionsError}=await supabase
     .from("push_subscriptions")
-    .select("id,endpoint")
+    .select("id,endpoint,p256dh,auth")
     .eq("specials_enabled",true)
     .limit(1000);
 
@@ -190,7 +144,7 @@ Deno.serve(async(req)=>{
 
   for(const subscription of subscriptions){
     try{
-      const response=await sendEmptyPush(subscription.endpoint,privateKey);
+      const response=await sendPromotionPush(subscription,privateKey,notificationPayload(business,promotion));
       if(response.ok){
         sent+=1;
       }else{

@@ -3,7 +3,7 @@ import {canManageMerchantPromotion,type MerchantPromotionBusinessContext} from "
 
 const business:MerchantPromotionBusinessContext={
   businessId:"business-1",createdBy:"owner-1",venueId:"venue-1",
-  status:"active",verificationStatus:"verified"
+  status:"active",verificationStatus:"verified",locationVerified:true,ownershipVerified:true
 };
 const merchant=[{venueId:"venue-1",role:"merchant" as const}];
 
@@ -11,6 +11,10 @@ describe("merchant promotion permissions",()=>{
   it("grants active owner with same-venue merchant membership",()=>{
     for(const action of ["view","create","edit","activate","pause"] as const)
       expect(canManageMerchantPromotion("owner-1",merchant,business,action)).toBe(true);
+  });
+  it("requires ownership and location checks before activation",()=>{
+    expect(canManageMerchantPromotion("owner-1",merchant,{...business,locationVerified:false},"activate")).toBe(false);
+    expect(canManageMerchantPromotion("owner-1",merchant,{...business,ownershipVerified:false},"activate")).toBe(false);
   });
   it("denies foreign business and cross-venue role",()=>{
     expect(canManageMerchantPromotion("foreign",merchant,business,"edit")).toBe(false);

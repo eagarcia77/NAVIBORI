@@ -1,77 +1,36 @@
-import { createClient } from "npm:@supabase/supabase-js@2";
+import { createClient } from "npm:@supabase/supabase-js@2.117.2";
 
-const VAPID_PUBLIC_KEY="BEdUyyPZWN3Hhj-ecrZH-Nxs-reG4eJo3nBwXckRK5J-4pBej6LMYUqkpHw2xix-ak1OgT9OMiwdadHaJJQW8Og";
-const VAPID_SUBJECT="https://navibori.onrender.com";
+import {sendPromotionPush} from "../_shared/web-push.ts";
+import {notificationPayload} from "../_shared/push-policy.ts";
 
-function bytesFromBase64(value:string){
-  return Uint8Array.from(atob(value),c=>c.charCodeAt(0));
-}
-function b64url(data:Uint8Array){
-  let binary="";
-  for(const byte of data) binary+=String.fromCharCode(byte);
-  return btoa(binary).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,"");
-}
-function b64urlText(value:string){
-  return b64url(new TextEncoder().encode(value));
-}
-async function vapidJwt(endpoint:string,privateKeyB64:string){
-  const aud=new URL(endpoint).origin;
-  const header=b64urlText(JSON.stringify({typ:"JWT",alg:"ES256"}));
-  const payload=b64urlText(JSON.stringify({
-    aud,
-    exp:Math.floor(Date.now()/1000)+12*60*60,
-    sub:VAPID_SUBJECT
-  }));
-  const unsigned=header+"."+payload;
-  const key=await crypto.subtle.importKey(
-    "pkcs8",
-    bytesFromBase64(privateKeyB64),
-    {name:"ECDSA",namedCurve:"P-256"},
-    false,
-    ["sign"]
-  );
-  const signature=new Uint8Array(await crypto.subtle.sign(
-    {name:"ECDSA",hash:"SHA-256"},
-    key,
-    new TextEncoder().encode(unsigned)
-  ));
-  return unsigned+"."+b64url(signature);
-}
 function admin(){
   const keys=JSON.parse(Deno.env.get("SUPABASE_SECRET_KEYS")!);
   return createClient(Deno.env.get("SUPABASE_URL")!,keys.default,{
     auth:{persistSession:false,autoRefreshToken:false}
   });
 }
-async function sendEmptyPush(endpoint:string,privateKeyB64:string){
-  const token=await vapidJwt(endpoint,privateKeyB64);
-  return fetch(endpoint,{
-    method:"POST",
-    headers:{
-      "TTL":"86400",
-      "Urgency":"normal",
-      "Authorization":`vapid t=${token}, k=${VAPID_PUBLIC_KEY}`
-    }
-  });
-}
-
 Deno.serve(async(req)=>{
   if(req.method!=="POST"){
     return Response.json({error:"Método no permitido."},{status:405});
   }
 
+  const supplied=req.headers.get("x-navibori-cron-token");
+  if(!supplied)return Response.json({error:"cron_auth_required"},{status:401});
   const supabase=admin();
+  const {data:cronToken,error:cronError}=await supabase.rpc("get_navibori_push_cron_token");
+  if(cronError||typeof cronToken!=="string"||supplied!==cronToken){
+    return Response.json({error:"cron_auth_invalid"},{status:401});
+  }
 
   const {data:privateKey,error:privateKeyError}=await supabase.rpc("get_navibori_vapid_private");
   if(privateKeyError || typeof privateKey!=="string"){
     return Response.json({error:"push_config_unavailable"},{status:503});
   }
 
-  const nowIso=new Date().toISOString();
 
   const {data:subscriptions,error:subscriptionsError}=await supabase
     .from("push_subscriptions")
-    .select("id,endpoint")
+    .select("id,endpoint,p256dh,auth")
     .eq("specials_enabled",true)
     .limit(1000);
 
@@ -90,14 +49,7 @@ Deno.serve(async(req)=>{
     });
   }
 
-  const {data:promotions,error:promoError}=await supabase
-    .from("business_promotions")
-    .select("id,business_id,title,starts_at,ends_at,active,created_at")
-    .eq("active",true)
-    .not("starts_at","is",null)
-    .lte("starts_at",nowIso)
-    .order("starts_at",{ascending:true})
-    .limit(20);
+  const {data:promotions,error:promoError}=await supabase.rpc("due_promotion_pushes");
 
   if(promoError){
     return Response.json({error:"promotion_query_failed"},{status:500});
@@ -114,11 +66,11 @@ Deno.serve(async(req)=>{
   for(const promotion of candidates){
     const {data:business}=await supabase
       .from("businesses")
-      .select("id,status,verification_status")
+      .select("id,name,slug,status,verification_status,location_verified,ownership_verified")
       .eq("id",promotion.business_id)
       .maybeSingle();
 
-    if(!business || business.status!=="active" || business.verification_status!=="verified"){
+    if(!business || business.status!=="active" || business.verification_status!=="verified" || !business.location_verified || !business.ownership_verified){
       continue;
     }
 
@@ -148,7 +100,7 @@ Deno.serve(async(req)=>{
 
     for(const subscription of subscriptions){
       try{
-        const response=await sendEmptyPush(subscription.endpoint,privateKey);
+        const response=await sendPromotionPush(subscription,privateKey,notificationPayload(business,promotion));
         if(response.ok){
           sent+=1;
           deliveries+=1;

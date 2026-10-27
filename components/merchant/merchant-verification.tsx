@@ -13,7 +13,7 @@ type Draft={
   closes?:string;
 };
 
-export default function MerchantVerification(){
+export default function MerchantVerification({locationVerified=false,ownerMembershipVerified=false,published=false}:{locationVerified?:boolean;ownerMembershipVerified?:boolean;published?:boolean}){
   const [draft,setDraft]=useState<Draft>({});
   const [catalogCount,setCatalogCount]=useState(0);
 
@@ -44,8 +44,8 @@ export default function MerchantVerification(){
     contact:Boolean(draft.phone?.trim() || draft.whatsapp?.trim() || draft.website?.trim()),
     hours:Boolean(draft.opens && draft.closes),
     catalog:catalogCount>0,
-    locationVerified:false,
-    ownerMembershipVerified:false
+    locationVerified,
+    ownerMembershipVerified
   });
 
   return (
@@ -53,7 +53,7 @@ export default function MerchantVerification(){
       <div className="merchant-section-head">
         <div>
           <p className="eyebrow">MERCHANT VERIFICATION</p>
-          <h2>{state.verified ? "Verificado" : state.readyForReview ? "Listo para revisión" : "Perfil incompleto"}</h2>
+          <h2>{published ? "Publicado y verificado" : state.verified ? "Verificado" : state.readyForReview ? "Listo para revisión" : "Perfil incompleto"}</h2>
         </div>
         <strong>{state.completed}/{state.total}</strong>
       </div>
