@@ -99,7 +99,7 @@ export default async function MerchantPage({searchParams}:{searchParams:Promise<
         </div>
         <Link href="/merchant/promotions">Administrar promociones</Link>
       </section>
-      <MerchantVerification locationVerified={business.location_verified} ownerMembershipVerified={true} published={business.status==="active"&&business.verification_status==="verified"}/>
+      <MerchantVerification locationVerified={business.location_verified} ownerMembershipVerified={business.ownership_verified} pending={business.verification_status==="pending"} published={business.status==="active"&&business.verification_status==="verified"}/>
       <CustomerRequestInbox />
       <MerchantFulfillmentBoard />
       <CapacityDashboard />

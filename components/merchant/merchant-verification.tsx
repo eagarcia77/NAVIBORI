@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import {validMerchantHours,merchantVerificationLabel} from "@/lib/commerce/merchant-hours";
 import { assessMerchantVerification } from "@/lib/commerce/verification";
 
 type Draft={
@@ -13,18 +14,20 @@ type Draft={
   closes?:string;
 };
 
-export default function MerchantVerification({locationVerified=false,ownerMembershipVerified=false,published=false}:{locationVerified?:boolean;ownerMembershipVerified?:boolean;published?:boolean}){
+export default function MerchantVerification({locationVerified=false,ownerMembershipVerified=false,published=false,pending=false}:{locationVerified?:boolean;ownerMembershipVerified?:boolean;published?:boolean;pending?:boolean}){
   const [draft,setDraft]=useState<Draft>({});
+  const [hoursReady,setHoursReady]=useState(false);
   const [catalogCount,setCatalogCount]=useState(0);
 
   function refresh(){
     try{
       setDraft(JSON.parse(localStorage.getItem("navibori:merchant-draft") ?? "{}"));
       const catalog=JSON.parse(localStorage.getItem("navibori:merchant-catalog") ?? "[]");
-      setCatalogCount(Array.isArray(catalog)?catalog.length:0);
+      setCatalogCount(Array.isArray(catalog)?catalog.filter(item=>typeof item?.title==="string"&&item.title.trim()).length:0);
+      setHoursReady(validMerchantHours(JSON.parse(localStorage.getItem("navibori:merchant-hours")??"null")));
     }catch{
       setDraft({});
-      setCatalogCount(0);
+      setCatalogCount(0);setHoursReady(false);
     }
   }
 
@@ -32,9 +35,11 @@ export default function MerchantVerification({locationVerified=false,ownerMember
     refresh();
     window.addEventListener("navibori:merchant-draft-updated",refresh);
     window.addEventListener("navibori:merchant-catalog-updated",refresh);
+    window.addEventListener("navibori:merchant-hours-updated",refresh);
     return ()=>{
       window.removeEventListener("navibori:merchant-draft-updated",refresh);
       window.removeEventListener("navibori:merchant-catalog-updated",refresh);
+      window.removeEventListener("navibori:merchant-hours-updated",refresh);
     };
   },[]);
 
@@ -42,7 +47,7 @@ export default function MerchantVerification({locationVerified=false,ownerMember
     name:Boolean(draft.name?.trim()),
     description:Boolean(draft.description?.trim()),
     contact:Boolean(draft.phone?.trim() || draft.whatsapp?.trim() || draft.website?.trim()),
-    hours:Boolean(draft.opens && draft.closes),
+    hours:hoursReady,
     catalog:catalogCount>0,
     locationVerified,
     ownerMembershipVerified
@@ -53,7 +58,7 @@ export default function MerchantVerification({locationVerified=false,ownerMember
       <div className="merchant-section-head">
         <div>
           <p className="eyebrow">MERCHANT VERIFICATION</p>
-          <h2>{published ? "Publicado y verificado" : state.verified ? "Verificado" : state.readyForReview ? "Listo para revisión" : "Perfil incompleto"}</h2>
+          <h2>{merchantVerificationLabel(published,pending,state.readyForReview)}</h2>
         </div>
         <strong>{state.completed}/{state.total}</strong>
       </div>
@@ -66,7 +71,7 @@ export default function MerchantVerification({locationVerified=false,ownerMember
           : "Todos los requisitos están completos."}
       </p>
       <small>
-        Ubicación y titularidad solo podrán marcarse como verificadas mediante el flujo oficial del venue.
+        Este indicador revisa tus borradores. Guarda los cambios en tu cuenta y solicita la revisión. La ubicación, la titularidad y la publicación requieren aprobación oficial.
       </small>
     </section>
   );
