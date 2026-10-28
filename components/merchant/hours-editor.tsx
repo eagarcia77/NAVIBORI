@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import {validMerchantHours,emptyMerchantHours} from "@/lib/commerce/merchant-hours";
 import type { CommerceHours } from "@/lib/commerce/types";
 
 const dayLabels:Record<CommerceHours["day"],string>={
@@ -13,36 +14,32 @@ const dayLabels:Record<CommerceHours["day"],string>={
   sun:"Domingo"
 };
 
-const initial:CommerceHours[]=[
-  {day:"mon",opens:"10:00",closes:"18:00",closed:false},
-  {day:"tue",opens:"10:00",closes:"18:00",closed:false},
-  {day:"wed",opens:"10:00",closes:"18:00",closed:false},
-  {day:"thu",opens:"10:00",closes:"18:00",closed:false},
-  {day:"fri",opens:"10:00",closes:"19:00",closed:false},
-  {day:"sat",opens:"09:00",closes:"19:00",closed:false},
-  {day:"sun",opens:null,closes:null,closed:true}
-];
-
 export default function HoursEditor(){
-  const [hours,setHours]=useState<CommerceHours[]>(initial);
+  const [hours,setHours]=useState<CommerceHours[]>(emptyMerchantHours);
+  const [error,setError]=useState("");
   const [saved,setSaved]=useState(false);
 
   useEffect(()=>{
     try{
       const stored=localStorage.getItem("navibori:merchant-hours");
-      if(stored) setHours(JSON.parse(stored));
+      if(stored){const parsed=JSON.parse(stored);if(validMerchantHours(parsed))setHours(parsed);else setError("Revisa y guarda los siete días del horario. El borrador anterior no tiene un formato válido.");}
     }catch{}
   },[]);
 
   function update(day:CommerceHours["day"],patch:Partial<CommerceHours>){
-    setSaved(false);
+    setSaved(false);setError("");
     setHours((current)=>current.map((item)=>item.day===day?{...item,...patch}:item));
   }
 
   function save(){
-    localStorage.setItem("navibori:merchant-hours",JSON.stringify(hours));
-    window.dispatchEvent(new Event("navibori:merchant-hours-updated"));
-    setSaved(true);
+    setSaved(false);setError("");
+    if(!validMerchantHours(hours)){setError("Completa los siete días. En días abiertos, la hora de cierre debe ser posterior a la apertura.");return;}
+    try{
+      localStorage.setItem("navibori:merchant-hours",JSON.stringify(hours));
+      window.dispatchEvent(new Event("navibori:merchant-hours-updated"));
+      setSaved(true);
+    }catch{setError("No se pudo guardar el borrador. Verifica el almacenamiento del navegador e inténtalo de nuevo.");}
+
   }
 
   return (
@@ -54,6 +51,7 @@ export default function HoursEditor(){
         </div>
       </div>
 
+      <p>Indica los días y horas de atención. Este editor admite un intervalo dentro de cada día.</p>
       <div className="merchant-hours-list">
         {hours.map((item)=>(
           <article key={item.day}>
@@ -90,9 +88,10 @@ export default function HoursEditor(){
         ))}
       </div>
 
+      {error&&<p role="alert">{error}</p>}
       <div className="merchant-actions">
-        <button type="button" onClick={save}>Guardar horarios</button>
-        {saved && <span role="status">Horarios guardados.</span>}
+        <button type="button" onClick={save}>Guardar borrador de horarios</button>
+        {saved && <span role="status">Borrador guardado en este navegador. Usa “Guardar cambios del comercio” para guardarlo en tu cuenta.</span>}
       </div>
     </section>
   );
