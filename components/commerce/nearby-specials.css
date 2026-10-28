@@ -1,0 +1,7 @@
+
+.nearby-specials{position:fixed;right:12px;bottom:90px;z-index:35;max-width:min(350px,calc(100vw - 24px));background:#fff;color:#153047;border:1px solid #b8cddd;border-radius:12px;box-shadow:0 4px 20px #1234;}
+.nearby-specials summary{padding:12px;cursor:pointer;font-weight:700;}
+.nearby-specials section{padding:0 14px 14px;max-height:55dvh;overflow:auto;}
+.nearby-specials button,.nearby-specials select{padding:8px;margin:5px;border:1px solid #537c95;border-radius:6px;background:#f0f7fb;color:#153047;}
+.nearby-specials p{font-size:14px;line-height:1.5;}
+.nearby-specials label{display:block;}

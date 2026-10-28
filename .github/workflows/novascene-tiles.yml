@@ -1,0 +1,64 @@
+name: NovaScene 2.1 expanded building coverage
+
+on:
+  push:
+    branches: [feature/novascene-21-tiled-coverage-20261013]
+    paths:
+      - scripts/build_novascene_tiles.py
+      - scripts/build_novascene_snapshot.py
+      - .github/workflows/novascene-tiles.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  regional-tiles:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@v4
+      - name: Install Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install Overture tool
+        run: python -m pip install --disable-pip-version-check overturemaps
+      - name: Extract Overture buildings from wider Juana Diaz corridor
+        run: |
+          overturemaps download \
+            --bbox=-66.565,18.015,-66.458,18.095 \
+            --type=building -f geojson -o /tmp/novascene-regional.geojson
+          test -s /tmp/novascene-regional.geojson
+      - name: Generate local tiled geometry
+        run: |
+          python scripts/build_novascene_tiles.py \
+            --input /tmp/novascene-regional.geojson \
+            --output public/data/novascene/tiles/v2
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          root=Path("public/data/novascene/tiles")
+          m=json.loads((root/"manifest-v2.json").read_text())
+          assert m["uniqueBuildings"] > 7512, "Regional coverage must improve on existing snapshot"
+          assert len(m["tiles"]) >= 35, "Expected multiple geographical tiles"
+          all_ids=set()
+          for tile in m["tiles"].values():
+              p=Path("public")/tile["path"].lstrip("/")
+              data=json.loads(p.read_text())
+              assert data["type"] == "FeatureCollection"
+              assert len(data["features"]) == tile["count"]
+              all_ids.update(str(f["id"]) for f in data["features"])
+          assert len(all_ids)==m["uniqueBuildings"], "Tile union must retain every footprint"
+          print("Verified",len(all_ids),"unique buildings in",len(m["tiles"]),"tiles")
+          PY
+      - name: Commit verified regional tiles
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add public/data/novascene/tiles
+          if ! git diff --cached --quiet; then
+            git commit -m "data(novascene): publish expanded locally hosted 3D cells"
+            git push origin "HEAD:${GITHUB_REF_NAME}"
+          fi

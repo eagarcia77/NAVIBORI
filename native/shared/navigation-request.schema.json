@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://navibori.onrender.com/schemas/navigation-request.json",
+  "title": "NAVIBORI Navigation Request",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["mode", "origin", "destination"],
+  "properties": {
+    "mode": {
+      "type": "string",
+      "enum": ["driving", "walking", "cycling", "scooter"]
+    },
+    "origin": {
+      "$ref": "#/$defs/coordinate"
+    },
+    "destination": {
+      "$ref": "#/$defs/coordinate"
+    }
+  },
+  "$defs": {
+    "coordinate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["latitude", "longitude"],
+      "properties": {
+        "latitude": {"type": "number", "minimum": -90, "maximum": 90},
+        "longitude": {"type": "number", "minimum": -180, "maximum": 180}
+      }
+    }
+  }
+}

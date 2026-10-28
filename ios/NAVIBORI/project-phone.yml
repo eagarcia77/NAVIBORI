@@ -1,0 +1,32 @@
+# Phone-only development target for Apple ID / Personal Team.
+# Does not request managed com.apple.developer.carplay-maps.
+# This app WILL NOT appear in Apple CarPlay; use project.yml after Apple approval.
+name: NAVIBORIPhone
+options:
+  minimumXcodeGenVersion: 2.38.0
+settings:
+  base:
+    SWIFT_VERSION: 5.0
+    IPHONEOS_DEPLOYMENT_TARGET: 17.0
+targets:
+  NAVIBORI:
+    type: application
+    platform: iOS
+    deploymentTarget: "17.0"
+    sources:
+      - path: Sources
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.zenqavio.navibori.preview
+        PRODUCT_NAME: NAVIBORI
+        INFOPLIST_FILE: Config/PhoneOnly-Info.plist
+        GENERATE_INFOPLIST_FILE: NO
+        TARGETED_DEVICE_FAMILY: "1"
+        SWIFT_EMIT_LOC_STRINGS: YES
+schemes:
+  NAVIBORI:
+    build:
+      targets:
+        NAVIBORI: all
+    run:
+      config: Debug
