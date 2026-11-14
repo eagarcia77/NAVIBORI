@@ -12,3 +12,6 @@ supabase/.temp/
 public/maplibre/
 tsconfig.tsbuildinfo
 next-env.d.ts
+
+# Netlify local state
+.netlify/

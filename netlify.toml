@@ -1,0 +1,10 @@
+[build]
+  command = "npm run build"
+  publish = ".next"
+
+[build.environment]
+  NODE_VERSION = "22"
+
+# Netlify automatically installs its maintained Next.js/OpenNext adapter.
+# Configure NEXT_PUBLIC_APP_URL and Supabase public values in the dashboard
+# before building. Never add secret/service-role keys to this file.
